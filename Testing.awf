@@ -1,0 +1,6 @@
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+Load Algebra.awf
+Def Test[T : *, U : *]
+  (Equal_U : Function U (Function U Logical), f : Function T U, x : List (Pair T U)) : List (Pair (Pair T U) U) =
+    Filter_List (y -> Not (Equal_U (Second (First y)) (Second y))) (Map_List (y -> Pair y (f (First y))) x)
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

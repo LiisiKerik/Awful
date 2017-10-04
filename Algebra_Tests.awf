@@ -1,0 +1,11 @@
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+Load Algebra.awf
+Load Testing.awf
+Def Add_Logical_Test : List (Pair (Pair (Pair Logical Logical) Logical) Logical) =
+  Test
+    Equal_Logical
+    (x -> Add_Logical (First x) (Second x))
+    (Cons
+      (Pair (Pair False False) False)
+      (Cons (Pair (Pair False True) True) (Cons (Pair (Pair True False) True) (Cons (Pair (Pair True True) False) Empty))))
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

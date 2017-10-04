@@ -1,0 +1,160 @@
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+Struct Complex[T : *](Real : T, Imaginary : T)
+Algebraic Either[A : *, B : *](Left(A), Right(B))
+Algebraic List[A : *](Cons(A, List A), Empty)
+Algebraic Logical(False, True)
+Struct Pair[A : *, B : *](First : A, Second : B)
+Struct Polynomial[T : *](Coefficients : List T)
+Struct Trivial
+Def Add_Functor[T : *, F : * -> *]
+  (
+    Add_T : Function T (Function T T),
+    Apply_F : Function (F (Function T T)) (Function (F T) (F T)),
+    Map_F : Function (Function T (Function T T)) (Function (F T) (F (Function T T))),
+    x : F T,
+    y : F T) :
+      F T =
+        Zip_Functor Apply_F Map_F Add_T x y
+Def Add_Logical : Function Logical (Function Logical Logical) = Not_Equal Equal_Logical
+Def Add_Pair[A : *, B : *] :
+  Function
+    (Function A (Function A A))
+    (Function (Function B (Function B B)) (Function (Pair A B) (Function (Pair A B) (Pair A B)))) =
+      Zip_Pair
+~/
+Def Apply_Array[A : *, B : *](x : Array (Function A B), y : Array A) : Maybe (Array B) =
+  Match Equal_Int (Length x) (Length y) {
+    False -> Nothing,
+    True -> Array (Length x) (z -> (Unsafe_Index x z) (Unsafe_Index y z))}
+/~
+Def Apply_Either[A : *, B : *, C : *](x : Either A (Function B C), y : Either A B) : Either A C = Match x {
+  Left z -> Left z,
+  Right f -> Map_Either f y}
+Def Apply_Function[A : *, B : *, C : *](f : Function A (Function B C), g : Function A B, x : A) : C = f x (g x)
+Def Apply_List[T : *, U : *](x : List (Function T U), y : List T) : List U = Match x {
+  Cons f z -> Apply_List' f z y y,
+  Empty -> Empty}
+Def Apply_List'[T : *, U : *](f : Function T U, x : List (Function T U), y : List T, z : List T) : List U = Match z {
+  Cons a b -> Cons (f a) (Apply_List' f x y b),
+  Empty -> Apply_List x y}
+Def Apply_Maybe[A : *, B : *](x : Maybe (Function A B), y : Maybe A) : Maybe B = Match x {
+  Nothing -> Nothing,
+  Wrap f -> Map_Maybe f y}
+Def Clean[T : *](Equal_T : Function T (Function T Logical), x : List T) : List T = Match x {
+  Cons y z -> (w -> (a -> Match Equal_T y Crash {
+    False -> a,
+    True -> Match w {
+      Cons -> a,
+      Empty -> Empty}}) (Cons y w)) (Clean Equal_T z),
+  Empty -> Empty}
+Def Compare_Logical(x : Logical, y : Logical) : Comparison = Match x {
+  False -> Match y {
+    False -> EQ,
+    True -> LT},
+  True -> Match y {
+    False -> GT,
+    True -> EQ}}
+Def Convert_Complex[T : *](Convert_T : Function Int T, x : Int) : Complex T = Complex (Convert_T x) (Zero Convert_T)
+Def Convert_Int : Function Int Int = Id
+Def Convert_Logical(x : Int) : Logical = Equal_Int (Mod_Int x 2) 1
+Def Convert_Polynomial[T : *](Convert_T : Function Int T, Equal_T : Function T (Function T Logical), x : Int) : Polynomial T =
+  Polynomial (Clean Equal_T (Lift_List (Convert_T x)))
+Def Convert_Trivial : Function Int Trivial = Lift_Function Trivial
+`Def Equal_Array[A : *](Equal_A : Function A (Function A Logical), x : Array A, y : Array A) : Logical = Crash
+Def Equal_Compare[T : *](f : Function T (Function T Comparison), x : T, y : T) : Logical = Match f x y {
+  EQ -> True,
+  Default -> False}
+Def Equal_Either
+  [A : *, B : *]
+  (Equal_A : Function A (Function A Logical), Equal_B : Function B (Function B Logical), x : Either A B, y : Either A B) :
+  Logical =
+    Match x {
+      Left z -> Match y {
+        Left w -> Equal_A z w,
+        Right -> False},
+      Right z -> Match y {
+        Left -> False,
+        Right w -> Equal_B z w}}
+Def Equal_Int : Function Int (Function Int Logical) = Equal_Compare Compare_Int
+Def Equal_Logical : Function Logical (Function Logical Logical) = Equal_Compare Compare_Logical
+Def Equal_Maybe[A : *](Equal_A : Function A (Function A Logical), x : Maybe A, y : Maybe A) : Logical = Match x {
+  Nothing -> Match y {
+    Nothing -> True,
+    Wrap -> False},
+  Wrap z -> Match y {
+    Nothing -> False,
+    Wrap w -> Equal_A z w}}
+Def Equal_Pair
+  [A : *, B : *]
+  (Equal_A : Function A (Function A Logical), Equal_B : Function B (Function B Logical), x : Pair A B, y : Pair A B) :
+  Logical =
+    Multiply_Logical (Equal_A (First x) (First y)) (Equal_B (Second x) (Second y))
+Def Filter_List[T : *](f : Function T Logical, x : List T) : List T = Match x {
+  Cons y z -> (w -> Match f y {
+    False -> w,
+    True -> Cons y w}) (Filter_List f z),
+  Empty -> Empty}
+Def Filter_Maybe[T : *](f : Function T Logical, x : Maybe T) : Maybe T = Match x {
+  Nothing -> Nothing,
+  Wrap y -> Match f y {
+    False -> Nothing,
+    True -> x}}
+Def Flip[A : *, B : *, C : *](f : Function A (Function B C), x : B, y : A) : C = f y x
+Def Fold_Left[T : *, U : *](f : Function T (Function U T), x : T, y : List U) : T = Match y {
+  Cons z w -> Fold_Left f (f x z) w,
+  Empty -> x}
+Def Fold_Right[T : *, U : *](f : Function T (Function U U), x : U, y : List T) : U = Match y {
+  Cons z w -> f z (Fold_Right f x y),
+  Empty -> x}
+Def Id[A : *](x : A) : A = x
+Def Identity[A : *](Convert_A : Function Int A) : A = Convert_A 1
+~/
+Def Join_Array[A : *](x : Array A, y : Array A) : Array A =
+  Unsafe_Array (Add_Int (Length x) (Length y)) (z -> Match Less_Int z (Length x) {
+    False -> Unsafe_Index y (Minus Add_Int Negate_Int z (Length x)),
+    True -> Unsafe_Index x z})
+/~
+`Def Lift_Array[A : *](x : Int, y : A) : Maybe (Array A) = Array x (Lift_Function y)
+Def Lift_Either[A : *, B : *] : Function B (Either A B) = Right
+Def Lift_Function[A : *, B : *](x : A, _ : B) : A = x
+Def Lift_List[T : *](x : T) : List T = Cons x Empty
+`Def Map_Array[A : *, B : *](f : Function A B, x : Array A) : Array B = Unsafe_Array (Length x) (y -> f (Unsafe_Index x y))
+Def Map_Either[A : *, B : *, C : *](f : Function A B, x : Either C A) : Either C B = Match x {
+  Left y -> Left y,
+  Right y -> Right (f y)}
+Def Map_Function[A : *, B : *, C : *](f : Function A B, g : Function C A, x : C) : B = f (g x)
+Def Map_List[T : *, U : *](f : Function T U, x : List T) : List U = Match x {
+  Cons y z -> Cons (f y) (Map_List f z),
+  Empty -> Empty}
+Def Map_Maybe[A : *, B : *](f : Function A B, x : Maybe A) : Maybe B = Match x {
+  Nothing -> Nothing,
+  Wrap y -> Wrap (f y)}
+Def Map_Pair[A : *, B : *, C : *](f : Function A B, x : Pair C A) : Pair C B = Pair (First x) (f (Second x))
+Def Map_Polynomial[T : *, U : *](f : Function T U, x : Polynomial T) : Polynomial U =
+  Polynomial (Map_List f (Coefficients x))
+Def Minus[A : *](Add_A : Function A (Function A A), Negate_A : Function A A, x : A, y : A) : A = Add_A x (Negate_A y)
+Def Multiply_Logical(x : Logical, y : Logical) : Logical = Match x {
+  False -> False,
+  True -> y}
+Def Not(x : Logical) : Logical = Match x {
+  False -> True,
+  True -> False}
+Def Not_Equal[A : *](Equal_A : Function A (Function A Logical), x : A, y : A) : Logical = Not (Equal_A x y)
+Def Zero[A : *](Convert_A : Function Int A) : A = Convert_A 0
+Def Sum[T : *, F : * -> *]
+  (Add_T : Function T (Function T T) , Convert_T : Function Int T, f : Function (Function T (Function T T)) (Function T (Function (F T) T))) : Function (F T) T = f Add_T (Zero Convert_T)
+Def Zip_Functor
+  [F : * -> *, A : *, B : *, C : *]
+  (
+    Apply_F : Function (F (Function A B)) (Function (F A) (F B)),
+    Map_F : Function (Function C (Function A B)) (Function (F C) (F (Function A B))),
+    f : Function C (Function A B),
+    x : F C) :
+  Function (F A) (F B) =
+    Apply_F (Map_F f x)
+Def Zip_Pair
+  [A : *, B : *, C : *, D : *, E : *, F : *]
+  (f : Function A (Function B C), g : Function D (Function E F), x : Pair A D, y : Pair B E) :
+  Pair C F =
+    Pair (f (First x) (First y)) (g (Second x) (Second y))
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

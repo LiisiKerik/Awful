@@ -3,9 +3,19 @@ Load Algebra.awf
 Load Testing.awf
 Def Add_Logical_Test : List (Pair (Pair (Pair Logical Logical) Logical) Logical) =
   Test
-    Equal_Logical
+    (Equal Compare_Logical)
     (x -> Add_Logical (First x) (Second x))
     (Cons
       (Pair (Pair False False) False)
       (Cons (Pair (Pair False True) True) (Cons (Pair (Pair True False) True) (Cons (Pair (Pair True True) False) Empty))))
+Def Equal_Trivial_Test : List (Pair (Pair (Pair Trivial Trivial) Logical) Logical) =
+  Test
+    (Equal Compare_Logical)
+    (x -> Equal Compare_Trivial (First x) (Second x))
+    (Cons (Pair (Pair Trivial Trivial) True) Empty)
+Def Inverse_Trivial_Test : List (Pair (Pair Trivial (Maybe Trivial)) (Maybe Trivial)) =
+  Test
+    (Equal (Compare_Maybe Compare_Trivial))
+    Inverse_Trivial
+    (Cons (Pair Trivial (Wrap Trivial)) Empty)
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

@@ -6,6 +6,14 @@ module Eval where
   import Tokenise
   import Tree
   import Typing
+{-
+  div_finite :: Integer -> Integer -> Integer -> Maybe Integer
+  div_finite a b c = case a of
+    1 -> Just 0
+    _ -> case c of
+      0 -> Nothing
+      _ -> (\d -> div (a * d + b) c) <$> div_finite c (mod (- b) c) (mod a c)
+-}
   eval :: Defs -> Expression_2 -> Expression_2
   eval a b = case eval' a b of
     Just c -> c

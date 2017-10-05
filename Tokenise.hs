@@ -18,11 +18,13 @@ module Tokenise where
   data Location_0 = Location_0 Integer Integer deriving (Eq, Ord, Show)
   data Location_1 = Location_1 String Location_0 deriving Show
   data Token_0 =
+    -- Abstract_token |
     Algebraic_token |
     Case_token |
     Comma_token |
     Def_token |
     Default_token |
+    -- Instance_token |
     Int_token Integer |
     Left_curly_token |
     Left_round_token |
@@ -160,10 +162,12 @@ module Tokenise where
     _ -> tokenise_operator a b
   word_token :: String -> Token_0
   word_token a = case a of
+    -- "Abstract" -> Abstract_token
     "Algebraic" -> Algebraic_token
     "Case" -> Case_token
     "Def" -> Def_token
     "Default" -> Default_token
+    -- "Instance" -> Instance_token
     "Load" -> Load_token
     "Match" -> Match_token
     "Struct" -> Struct_token

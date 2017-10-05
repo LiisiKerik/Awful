@@ -34,8 +34,31 @@ module Typing where
   import Standard
   import Tokenise
   import Tree
+{-
+  data Abstract_3 = Abstract_3 String Kind [Argument_tree String Kind] Type_1
+  type Abstracts = Map' Abstract_3
+-}
   type Algebraics = Map' (([(String, Kind)], Map' [Type_1], Type_1), Status) -- TODO: REM STRINGS FROM FST MAP
+{-
+  type Constraint = Set String
+  type Constraints = Map' Constraint
+  data Constraint_1 = Constraint_1 String String deriving Show
+-}
   type Constrs = Map' (String, Status)
+{-
+  data Def_4 =
+    Basic_def_4 String Kinds [Constraint_0] Type_1 Expression_tree_1 |
+    Instance_def_4
+      String
+      Kind
+      [Argument_tree String Kind]
+      Type_1
+      String
+      [Pattern_branch]
+      [Constraint_0]
+      Expression_tree_1
+        deriving Show
+-}
   data Def_4 = Basic_def_4 Location_0 String [(String, Kind)] (Map' Kind) Type_1 Expression_1 deriving Show
   type Defs = Map' Expression_2
   data Expression_2 =
@@ -60,12 +83,21 @@ module Typing where
       deriving Show
   data File = File Kinds Algebraics Constrs Types deriving Show
   data Form_2 = Form_2 String [Type_1] deriving Show
+{-
+  data Instance_type = Instance_type Location' [Pattern_branch] [Constraint_0] deriving Show
+  type Instance_types = Map' Instance_type
+-}
   type Kinds = Map' (Kind, Status)
   data Match_Algebraic_2 = Match_Algebraic_2 [Pattern_0] Expression_2 deriving Show
   data Matches_2 =
     Matches_Algebraic_2 (Map' Match_Algebraic_2) (Maybe Expression_2) | Matches_Int_2 (Map Integer Expression_2) Expression_2
       deriving Show
   data Status' = Fixed | Flexible deriving Show
+{-
+  data Type_1' =
+    Abstract_type_1 Kind [Argument_tree String Kind] Type_1 Instance_types | Basic_type_1 Kinds Type_1 [Constraint_0]
+      deriving Show
+-}
   data Type_1 = Application_type_1 Type_1 Type_1 | Name_type_1 String deriving (Eq, Show)
   data Type_1' = Basic_type_1 [(String, Kind)] Type_1 | Local_type_1 Type_1 deriving Show
   type Types = Map' (Type_1', Status)
@@ -193,6 +225,17 @@ module Typing where
       case c of
         Application_type_1 d e -> Application_type_1 (f d) (f e)
         Name_type_1 d -> if d == a then b else c
+{-
+  type_abstract :: Abstract_tree_2 -> Kinds -> Types -> Err Types
+  type_abstract (Abstract_tree_2 a b c d e) f g =
+    (
+      (\h -> Data.Map.insert a (Abstract_type_1 c d (repl b (Name_type_1 "!") h) empty) g) <$>
+      type_type e (fst (type_kinds d (insert b c f))) Star_kind)
+  type_abstracts :: [Abstract_tree_2] -> Kinds -> Types -> Err Types
+  type_abstracts a b c = case a of
+    [] -> Right c
+    d : e -> type_abstract d b c >>= type_abstracts e b
+-}
   type_case :: (Location_0 -> Location_1) -> Name -> Map' String -> [Pattern_0] -> [Type_1] -> Types -> Err Types
   type_case j (m @ (Name k l)) a b c d = case b of
     [] -> Right d
@@ -276,6 +319,25 @@ module Typing where
     d : e -> type_data_2 f d b c >>= type_datas_2 f e b
   type_def_1 :: (Location_0 -> Location_1) -> Def_2 -> Kinds -> Map' Kind -> Types -> Err (Def_4, Types)
   type_def_1 l a b k c = case a of
+{-
+    Basic_def_3 d e f g i ->
+      let
+        (j, k) = type_kinds e b
+      in (\h -> (Basic_def_4 d k f h i, insert d (Basic_type_1 k h f) c)) <$> type_type g j Star_kind
+    Instance_def_3 (Name_tree d e f) (Name_tree p q g) h i t -> case Data.Map.lookup f c of
+      Just j -> case j of
+        Abstract_type_1 l m n o -> case Data.Map.lookup g b of
+          Just r -> 
+            (
+              check_kind (p, q) l r h >>
+              bimap
+                (\(Instance_type s _ _) -> location_err ("instances of " ++ f ++ "{" ++ g ++ "}") s (d, e))
+                (\s -> (Instance_def_4 f l m n g h i t, Data.Map.insert f (Abstract_type_1 l m n s) c))
+                (add o g (Instance_type (Library (d, e)) h i)))
+          Nothing -> Left ("Unknown type " ++ g ++ " at" ++ location (p, q) ++ ".")
+        _ -> Left ("Unknown abstract " ++ f ++ " at" ++ location (d, e) ++ ".")
+      Nothing -> Left ("Unknown abstract " ++ f ++ " at" ++ location (d, e) ++ ".")
+-}
     Basic_def_2 f d e g i ->
       let
         (j_glob, j_loc) = type_kinds_4 e (k, fst <$> b)
@@ -570,6 +632,10 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
   typevars e a b = case a of
     [] -> b
     c : d -> typevars e d (typevar e c b)
+{-
+  typing (Tree_4 a b c) d =
+    type_datas a d >>= \(e, f, g) -> type_abstracts b e g >>= \h -> (\(i, j) -> (e, i, j)) <$> type_defs c e (f, h)
+-}
   typing :: (Location_0 -> Location_1) -> Tree_5 -> (File, Defs, Map' Kind) -> Err (File, Defs, Map' Kind)
   typing k (Tree_5 a c) (d, l, m) =
     (

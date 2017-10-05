@@ -5,8 +5,22 @@ module Tree where
   import Control.Monad
   import Data.Bifunctor
   import Tokenise
+  -- data Abstract_tree_0 = Abstract_tree_0 Name_tree Name_tree Kind [Argument_tree Name_tree Kind] Type_0 deriving Show
+  -- data Constraint_0 = Constraint_0 Name_tree Name_tree deriving Show
   data Data_0 = Data_0 Name [(Name, Kind)] Data_branch_0 deriving Show
   data Data_branch_0 = Algebraic_data_0 [Form_0] | Struct_data_0 [(Name, Type_0)] deriving Show
+{-
+  data Def_branch =
+    Basic_def
+      Name_tree
+      [Argument_tree Name_tree Kind]
+      [Constraint_0]
+      [Argument_tree Pattern_tree Type_0]
+      Type_0
+      Expression_tree |
+    Instance_def Name_tree Name_tree [Pattern_tree] [Constraint_0] [Name_tree] Expression_tree
+      deriving Show
+-}
   data Def_0 = Basic_def_0 Name [(Name, Kind)] [(Pattern_1, Type_0)] Type_0 Expression_0 deriving Show
   data Expression_0 = Expression_0 Location_0 Expression_branch_0 deriving Show
   data Expression_branch_0 =
@@ -27,6 +41,7 @@ module Tree where
   data Pattern_0 = Blank_pattern | Name_pattern String deriving Show
   newtype Parser t = Parser {parser :: State -> Either Location_0 (t, State)}
   data State = State Tokens Location_0 deriving Show
+  -- data Tree = Tree [Data_tree] [Abstract_tree_0] [Def_branch] deriving Show
   data Tree_0 = Tree_0 [Data_0] [Def_0] deriving Show
   data Tree_1 = Tree_1 [Name] Tree_0 deriving Show
   data Type_branch_0 = Application_type_0 Type_0 Type_0 | Name_type_0 String deriving Show
@@ -54,6 +69,21 @@ module Tree where
   instance Monad Parser where
     Parser a >>= b = Parser (a >=> \(c, d) -> parser (b c) d)
     return = lift_parser
+{-
+  abstract_tree :: Parser Abstract_tree_0
+  abstract_tree =
+    Abstract_tree_0 <$
+    token_tree Abstract_token <*>
+    name_tree' <*
+    delimiter_tree Left_curly <*>
+    name_tree' <*
+    colon_tree <*>
+    kind_branch <*
+    delimiter_tree Right_curly <*>
+    optional_square_list_tree (argument_tree name_tree' kind_branch) <*
+    colon_tree <*>
+    type_tree
+-}
   init_location :: Location_0
   init_location = Location_0 0 0
   left_bind :: (t -> Either u v) -> Either t v -> Either u v
@@ -101,6 +131,7 @@ module Tree where
       Basic_def_0 <$>
       parse_name'' Def_token <*>
       parse_kinds <*>
+      -- parse_constraints <*>
       parse_arguments' parse_pattern_1 <*
       parse_colon <*>
       parse_type <*
@@ -122,12 +153,18 @@ module Tree where
   parse_comma = parse_token Comma_token
   parse_composite_expression :: Parser Expression_branch_0
   parse_composite_expression = parse_application_expression <|> parse_function <|> parse_match_expression
+{-
+  parse_constraint :: Parser Constraint_0
+  parse_constraint = Constraint_0 <$> name_tree' <*> name_tree'
+  parse_constraints :: Parser [Constraint_0]
+  parse_constraints = optional_angular_list_tree parse_constraint
+-}
   parse_data :: Parser Data_0
   parse_data = parse_algebraic <|> parse_struct
   parse_data' :: Token_0 -> Parser Data_branch_0 -> Parser Data_0
   parse_data' a b = Data_0 <$> parse_name'' a <*> parse_kinds <*> b
   parse_def :: Parser Def_0
-  parse_def = parse_basic
+  parse_def = parse_basic -- <|> parse_instance_def
   parse_default :: Parser Expression_0
   parse_default = parse_comma *> parse_token Default_token *> parse_arrow *> parse_expression'
   parse_elementary :: (Token_0 -> Maybe t) -> Parser t
@@ -153,6 +190,20 @@ module Tree where
   parse_form = Form_0 <$> parse_name' <*> parse_optional parse_round parse_type
   parse_function :: Parser Expression_branch_0
   parse_function = parse_arrow' (Function_expression_0 <$> parse_pattern_1)
+{-
+  parse_instance_def :: Parser Def_branch
+  parse_instance_def =
+    Instance_def <$
+    token_tree Instance_token <*>
+    name_tree' <*
+    delimiter_tree Left_curly <*>
+    name_tree' <*>
+    many pattern_tree <*
+    delimiter_tree Right_curly <*>
+    parse_constraints <*>
+    many name_tree' <*>
+    expression_tree'
+-}
   parse_int :: Parser Integer
   parse_int = parse_elementary (\a -> case a of
     Int_token b -> Just b
@@ -236,6 +287,7 @@ module Tree where
   parse_tree :: (Location_0 -> Location_1) -> String -> Err Tree_1
   parse_tree = parse parse_tree'
   parse_tree' :: Parser Tree_1
+  -- tree' = end_tree (Tree <$> many data_tree <*> many abstract_tree <*> many def_branch)
   parse_tree' = Tree_1 <$> many parse_load <*> (Tree_0 <$> many parse_data <*> many parse_def)
   parse_type :: Parser Type_0
   parse_type = Type_0 <&> parse_type_branch

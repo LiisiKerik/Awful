@@ -4,11 +4,19 @@ module Standard where
   import Data.Bifunctor
   import Tokenise
   import Tree
+{-
+  data Def_branch' =
+    Basic_def' Name_tree [Argument_tree Name_tree Kind] [Constraint_0] Type_0 Expression_tree |
+    Instance_def' Name_tree Name_tree [Pattern_tree] [Constraint_0] Expression_tree
+      deriving Show
+-}
   data Def_1 = Basic_def_1 Name [(Name, Kind)] Type_0 Expression_0 deriving Show
+  -- data Tree' = Tree' [Data_tree] [Abstract_tree_0] [Def_branch'] deriving Show
   data Tree_2 = Tree_2 [Data_0] [Def_1] deriving Show
   data Tree_3 = Tree_3 [Name] Tree_2 deriving Show
   standard :: (Location_0 -> Location_1) -> String -> Err Tree_3
   standard a b = standard_0 <$> parse_tree a b
+  -- standard (Tree a b c) = Tree' a b (standard_defs c)
   standard_0 :: Tree_1 -> Tree_3
   standard_0 (Tree_1 a b) = Tree_3 a (standard_1 b)
   standard_1 :: Tree_0 -> Tree_2
@@ -19,6 +27,10 @@ module Standard where
   standard_arguments = foldr standard_argument
   standard_def :: Def_0 -> Def_1
   standard_def a = case a of
+{-
+    Basic_def b c d e f g -> uncurry (Basic_def' b c d) (standard_arguments (f, g) e)
+    Instance_def b c d e f g -> Instance_def' b c d e (standard_arguments' g f)
+-}
     Basic_def_0 b c d e f -> uncurry (Basic_def_1 b c) (standard_arguments (e, f) d)
   standard_defs :: [Def_0] -> [Def_1]
   standard_defs = (<$>) standard_def

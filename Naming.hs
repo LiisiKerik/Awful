@@ -6,9 +6,23 @@ module Naming where
   import Standard
   import Tokenise
   import Tree
+{-
+  data Abstract_tree_1 = Abstract_tree_1 String Name_tree Kind [Argument_tree Name_tree Kind] Type_0 deriving Show
+  data Abstract_tree_2 = Abstract_tree_2 String String Kind [Argument_tree String Kind] Type_0 deriving Show
+-}
   data Data_branch_1 = Algebraic_data_1 [Form_1] | Struct_data_1 [(String, Type_0)] deriving Show
   data Data_1 = Data_1 String [(Name, Kind)] Data_branch_1 deriving Show
   data Data_2 = Data_2 String [(String, Kind)] Data_branch_1 deriving Show
+{-
+  data Def_branch_2 =
+    Basic_def_2 String [Argument_tree Name_tree Kind] [Constraint_0] Type_0 Expression_tree |
+    Instance_def_2 Name_tree Name_tree [Pattern_tree] [Constraint_0] Expression_tree
+      deriving Show
+  data Def_branch_3 =
+    Basic_def_3 String [Argument_tree String Kind] [Constraint_0] Type_0 Expression_tree_1 |
+    Instance_def_3 Name_tree Name_tree [Pattern_branch] [Constraint_0] Expression_tree_1
+      deriving Show
+-}
   data Def_2 = Basic_def_2 Location_0 String [(String, Kind)] Type_0 Expression_1 deriving Show
   data Expression_branch_1 =
     Application_expression_1 Expression_1 Expression_1 |
@@ -27,6 +41,10 @@ module Naming where
   data Matches_1 = Matches_Algebraic_1 [Match_Algebraic_1] (Maybe Expression_1) | Matches_Int_1 [Match_Int_1] Expression_1
     deriving Show
   data Status = New | Old deriving (Eq, Show)
+{-
+  data Tree_3 = Tree_3 [Data_tree_1] [Abstract_tree_1] [Def_branch_2] deriving Show
+  data Tree_4 = Tree_4 [Data_tree_2] [Abstract_tree_2] [Def_branch_3] deriving Show
+-}
   data Tree_4 = Tree_4 [Data_1] [Def_1] deriving Show
   data Tree_5 = Tree_5 [Data_2] [Def_2] deriving Show
   add :: Ord t => Map t u -> t -> u -> Either u (Map t u)
@@ -40,6 +58,21 @@ module Naming where
     Library e -> location e) ++ " and" ++ location' d
   naming :: String -> Tree_2 -> Locations -> Err (Locations, Tree_5)
   naming f a b = naming_1 f a b >>= \(c, d) -> ((,) c) <$> naming_2 f d c
+{-
+  naming_abstract_0 :: Abstract_tree_0 -> Locations -> Err (Abstract_tree_1, Locations)
+  naming_abstract_0 (Abstract_tree_0 a b u c d) e = (\(t, f) -> (Abstract_tree_1 f b u c d, t)) <$> naming_name a e
+  naming_abstracts_0 :: [Abstract_tree_0] -> Locations -> Err ([Abstract_tree_1], Locations)
+  naming_abstracts_0 a b = case a of
+    [] -> Right ([], b)
+    c : d -> naming_abstract_0 c b >>= \(e, f) -> first ((:) e) <$> naming_abstracts_0 d f
+  naming_abstract_1 :: Abstract_tree_1 -> Locations -> Err (Abstract_tree_2)
+  naming_abstract_1 (Abstract_tree_1 a b t c d) e =
+    naming_name b e >>= \(f, g) -> flip (Abstract_tree_2 a g t) d <$> naming_arguments' naming_name c f
+  naming_abstracts_1 :: [Abstract_tree_1] -> Locations -> Err [Abstract_tree_2]
+  naming_abstracts_1 a b = case a of
+    [] -> Right []
+    c : d -> naming_abstract_1 c b >>= \e -> ((:) e) <$> naming_abstracts_1 d b
+-}
   naming_argument ::
     (String -> t -> Locations -> Err (Locations, u)) -> String -> (t, v) -> Locations -> Err (Locations, (u, v))
   naming_argument a e (b, c) d = second (flip (,) c) <$> a e b d
@@ -48,8 +81,13 @@ module Naming where
   naming_arguments = naming_list <$> naming_argument
   naming_arguments' :: String -> (String -> t -> Locations -> Err (Locations, u)) -> [(t, v)] -> Locations -> Err [(u, v)]
   naming_arguments' c a b = (<$>) snd <$> naming_arguments a c b
+{-
+  naming_1 (Tree' a t b) c =
+    naming_datas_1 a c >>= \(d, e) -> naming_abstracts_0 t d >>= \(u, v) -> second (Tree_3 e u) <$> naming_defs_1 b v
+-}
   naming_1 :: String -> Tree_2 -> Locations -> Err (Locations, Tree_4)
   naming_1 f (Tree_2 a b) c = naming_datas_1 f a c >>= \(d, e) -> flip (,) (Tree_4 e b) <$> naming_defs_1 f b d
+--naming_2 (Tree_3 a t b) c = naming_datas_2 a c >>= \d -> naming_abstracts_1 t c >>= \u -> Tree_4 d u <$> naming_defs_2 b c
   naming_2 :: String -> Tree_4 -> Locations -> Err Tree_5
   naming_2 e (Tree_4 a b) c = naming_datas_2 e a c >>= \d -> Tree_5 d <$> naming_defs_2 e b c
   naming_data_1 :: String -> Data_0 -> Locations -> Err (Locations, Data_1)
@@ -69,9 +107,17 @@ module Naming where
     c : d -> naming_data_2 f c b >>= \e -> (:) e <$> naming_datas_2 f d b
   naming_def_1 :: String -> Def_1 -> Locations -> Err Locations
   naming_def_1 i a = case a of
+{-
+    Basic_def' c d e f g -> second (\h -> Basic_def_2 h d e f g) <$> naming_name c b
+    Instance_def' c d e f g -> Right (b, Instance_def_2 c d e f g)
+-}
     Basic_def_1 c _ _ _ -> (<$>) fst <$> naming_name i c
   naming_def_2 :: String -> Def_1 -> Locations -> Err Def_2
   naming_def_2 j a b = case a of
+{-
+    Basic_def_2 c d e f g -> naming_arguments naming_name d b >>= \(h, i) -> Basic_def_3 c i e f <$> naming_expression g h
+    Instance_def_2 c d e f g -> naming_patterns e b >>= \(h, i) -> Instance_def_3 c d i f <$> naming_expression g h
+-}
     Basic_def_1 (Name k c) d f g ->
       naming_arguments naming_name j d b >>= \(h, i) -> Basic_def_2 k c i f <$> naming_expression j g h
   naming_defs_1 :: String -> [Def_1] -> Locations -> Err Locations

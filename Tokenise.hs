@@ -95,6 +95,7 @@ module Tokenise where
   location' a = location a ++ "."
   name_char :: Char' -> Maybe Char
   name_char a = case a of
+    Int_char b -> Just b
     Name_char b -> Just b
     _ -> Nothing
   next_char :: Location_1 -> Location_1

@@ -23,7 +23,7 @@ internal: make the system of specifying built-in algebraic data types and things
 Allow hiding things to functions outside module - so that helper functions are not exported from the module
 internal: remove locations from expressions except from lowest-level things where some checks are necessary (name)?
 switch expression that is less strict and more flexible than match?
-allow numbers in names
+some limited pattern matching in function arguments (and maybe also variables introduced through algebraic matching?)
 -}
 -----------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}

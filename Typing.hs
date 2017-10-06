@@ -1,7 +1,5 @@
 {-
 let expression
-make match work with negative ints (modify parser)
-check whether kinds of everything are ok (ending with a star) - potential failure to catch very stupid bugs
 protection against duplicate file loading - what happens now? if crashes - fix, give a nice error/warning. if nothing - warn?
 implement all necessary operations for ints and bools
 graph examples

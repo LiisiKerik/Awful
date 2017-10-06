@@ -238,7 +238,7 @@ module Tree where
       parse_matches <*
       parse_token Right_curly_token)
   parse_match_int :: Parser Match_Int_0
-  parse_match_int = parse_arrow' (Match_Int_0 <$> parse_int)
+  parse_match_int = parse_arrow' (((\a -> Match_Int_0 (- a)) <$ parse_operator "~" <|> return Match_Int_0) <*> parse_int)
   parse_matches :: Parser Matches_0
   parse_matches = parse_matches_algebraic <|> parse_matches_int
   parse_matches_algebraic :: Parser Matches_0

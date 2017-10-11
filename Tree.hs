@@ -187,7 +187,7 @@ module Tree where
   parse_expression_branch :: Parser Expression_branch_0
   parse_expression_branch = parse_composite_expression <|> parse_elementary_expression
   parse_form :: Parser Form_0
-  parse_form = Form_0 <$> parse_name' <*> parse_optional parse_round parse_type
+  parse_form = Form_0 <$> parse_name' <*> many parse_bracketed_type
   parse_function :: Parser Expression_branch_0
   parse_function = parse_arrow' (Function_expression_0 <$> parse_pattern_1)
 {-

@@ -1,8 +1,8 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 `Struct Array[N : #, T : *](Array_function : Finite N -> T)
 Struct Complex[T : *](Real : T, Imaginary : T)
-Algebraic Either[A : *, B : *](Left(A), Right(B))
-Algebraic List[A : *](Cons(A, List A), Empty)
+Algebraic Either[A : *, B : *](Left A, Right B)
+Algebraic List[A : *](Cons A (List A), Empty)
 Algebraic Logical(False, True)
 Struct Pair[A : *, B : *](First : A, Second : B)
 Struct Polynomial[T : *](Coefficients : List T)
@@ -134,20 +134,25 @@ Def Compare_Maybe[T : *](Compare_T : Function T (Function T Comparison), x : May
     Nothing -> GT,
     Wrap w -> Compare_T z w}}
 Def Compare_Pair[T : *, U : *]
-  (Compare_T : Function T (Function T Comparison), Compare_U : Function U (Function U Comparison), x : Pair T U, y : Pair T U) :
-    Comparison =
-      Match Compare_T (First x) (First y) {
-        EQ -> Compare_U (Second x) (Second y),
-        GT -> GT,
-        LT -> LT}
+  (
+    Compare_T : Function T (Function T Comparison),
+    Compare_U : Function U (Function U Comparison),
+    x : Pair T U,
+    y : Pair T U) :
+      Comparison =
+        Match Compare_T (First x) (First y) {
+          EQ -> Compare_U (Second x) (Second y),
+          GT -> GT,
+          LT -> LT}
 Def Compare_Trivial(_ : Trivial, _ : Trivial) : Comparison = EQ
 Def Convert_Complex[T : *](Convert_T : Function Int T, x : Int) : Complex T = Complex (Convert_T x) (Zero Convert_T)
 `Instance Convert{Int} = Id
 Def Convert_Int : Function Int Int = Id
 `Instance Convert{Logical} x = Equal (Mod x 2) 1
 Def Convert_Logical(x : Int) : Logical = Equal Compare_Int (Mod_Int x 2) 1
-Def Convert_Polynomial[T : *](Convert_T : Function Int T, Equal_T : Function T (Function T Logical), x : Int) : Polynomial T =
-  Polynomial (Clean Equal_T (Lift_List (Convert_T x)))
+Def Convert_Polynomial[T : *]
+  (Convert_T : Function Int T, Equal_T : Function T (Function T Logical), x : Int) : Polynomial T =
+    Polynomial (Clean Equal_T (Lift_List (Convert_T x)))
 `Instance Convert{Trivial} _ = Trivial
 Def Convert_Trivial(_ : Int) : Trivial = Trivial
 Def Det_Complex[T : *](Add_T : Function T (Function T T), Multiply_T : Function T (Function T T), x : Complex T) : T =
@@ -165,6 +170,16 @@ Def Filter_Maybe[T : *](f : Function T Logical, x : Maybe T) : Maybe T = Match x
   Wrap y -> Match f y {
     False -> Nothing,
     True -> x}}
+Def Flatten_Either[T : *, U : *](x : Either T (Either T U)) : Either T U = Match x {
+  Left y -> Left y,
+  Right y -> y}
+Def Flatten_Function[T : *, U : *](f : Function T (Function T U), x : T) : U = f x x
+Def Flatten_List[T : *](x : List (List T)) : List T = Match x {
+  Cons y z -> Join_List y (Flatten_List z),
+  Empty -> Empty}
+Def Flatten_Maybe[T : *](x : Maybe (Maybe T)) : Maybe T = Match x {
+  Nothing -> Nothing,
+  Wrap y -> y}
 Def Flip[A : *, B : *, C : *](f : Function A (Function B C), x : B, y : A) : C = f y x
 `Instance Fold{Complex} f x y = Crash
 Def Fold_Left[T : *, U : *](f : Function T (Function U T), x : T, y : List U) : T = Match y {
@@ -173,6 +188,12 @@ Def Fold_Left[T : *, U : *](f : Function T (Function U T), x : T, y : List U) : 
 Def Fold_Right[T : *, U : *](f : Function T (Function U U), x : U, y : List T) : U = Match y {
   Cons z w -> f z (Fold_Right f x y),
   Empty -> x}
+Def Greater[T : *](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Match Compare_T x y {
+  GT -> True,
+  Default -> False}
+Def Greater_or_equal[T : *](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Match Compare_T x y {
+  LT -> False,
+  Default -> True}
 Def Id[A : *](x : A) : A = x
 `Def Identity[T : *]<Convert T> : T = Convert 0
 Def Identity[A : *](Convert_A : Function Int A) : A = Convert_A 1
@@ -188,6 +209,12 @@ Def Join_List[T : *](x : List T, y : List T) : List T = Match x {
   Cons z w -> Cons z (Join_List w y),
   Empty -> y}
 ~/
+Def Less[T : *](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Match Compare_T x y {
+  LT -> True,
+  Default -> False}
+Def Less_or_equal[T : *](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Match Compare_T x y {
+  GT -> False,
+  Default -> True}
 Instance Lift{Array _} = Map Array Lift
 Def Lift_Array[N : #, T : *] : T -> Array N T = Map_Function Array Lift_Function
 Def Lift_Array[A : *](x : Int, y : A) : Maybe (Array A) = Array x (Lift_Function y)
@@ -257,8 +284,14 @@ Def Multiply_Trivial : Function Trivial (Function Trivial Trivial) = Trivial_bin
 Def Not(x : Logical) : Logical = Match x {
   False -> True,
   True -> False}
-`Def Not_Equal[T : *]<Compare T>(x : T, y : T) : Logical = Not (Equal x y)
-Def Not_Equal[T : *](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Not (Equal Compare_T x y)
+~/
+Def Not_Equal[T : *]<Compare T>(x : T, y : T) : Logical = Match Compare x y {
+  EQ -> False,
+  Default -> True}
+/~
+Def Not_Equal[T : *](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Match Compare_T x y {
+  EQ -> False,
+  Default -> True}
 Def Sum[T : *, F : * -> *]
   (
     Add_T : Function T (Function T T),

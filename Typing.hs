@@ -1,12 +1,12 @@
 {-
-let expression
+let expression (sequential? or more powerful, like in Haskell?)
 protection against duplicate file loading - what happens now? if crashes - fix, give a nice error/warning. if nothing - warn?
 implement all necessary operations for ints and bools
 graph examples
 tests
-type synonyms
+type synonyms?
 operators
-type operators
+type operators (minimally for functions, either, pair).
 abstract methods
 if-elif-else?
 eta reduction warnings
@@ -22,6 +22,28 @@ Allow hiding things to functions outside module - so that helper functions are n
 internal: remove locations from expressions except from lowest-level things where some checks are necessary (name)?
 switch expression that is less strict and more flexible than match?
 some limited pattern matching in function arguments (and maybe also variables introduced through algebraic matching?)
+syntactic sugar for lists, vectors, matrices... allow writing (tiny, limited to expression parsing) language extensions?
+show and read
+basic IO operations (output to console, read file, write file, append to file)
+chars
+finite n
+compilation
+nice human-readable output for interpreter through show
+midi and music library
+boolean function library
+set library
+parsing library
+bootstrap compiler
+implement map and set (AVL trees?)
+make match work with finite and char
+allow blank type variables?
+different ways of folding lists, vectors, sets, maps etc
+real numbers (float, fix, fraction), basic arithmetic + real functions (sine, exp etc). Trig also for complex numbers?
+gather naming and type errors and give a list instead of returning only the first one?
+enrich kind system via promotion?
+-}
+{-
+    error("Internal compiler error. Free type variable after type application when trying to derive type.")
 -}
 -----------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}

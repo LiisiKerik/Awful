@@ -30,7 +30,6 @@ compilation
 nice human-readable output for interpreter through show
 midi and music library
 boolean function library
-set library
 parsing library
 implement map and set (AVL trees?)
 make match work with finite and char
@@ -48,6 +47,7 @@ promote primitive data types
 -----------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
 module Typing where
+  import Control.Monad
   import Data.Bifunctor
   import Data.Map
   import Naming
@@ -91,13 +91,12 @@ module Typing where
   data Type_1' = Basic_type_1 [(String, Type_1)] Type_1 | Local_type_1 Type_1 deriving Show
   type Types = Map' (Type_1', Status)
   algebraics :: Map' ([(String, Type_1)], Map' [Type_1], Type_1)
-  algebraics =
-    fromList
-      [
-        ("Comparison", ([], fromList [("EQ", []), ("GT", []), ("LT", [])], comparison_type)),
-        (
-          "Maybe",
-          ([("A", star_kind)], fromList [("Nothing", []), ("Wrap", [Name_type_1 "A"])], maybe_type (Name_type_1 "A")))]
+  algebraics = fromList (second (\(a, b, c) -> (a, fromList b, c)) <$> algebraics')
+  algebraics' :: [(String, ([(String, Type_1)], [(String, [Type_1])], Type_1))]
+  algebraics' =
+    [
+      ("Comparison", ([], [("EQ", []), ("GT", []), ("LT", [])], comparison_type)),
+      ("Maybe", ([("T", star_kind)], [("Nothing", []), ("Wrap", [Name_type_1 "T"])], maybe_type (Name_type_1 "T")))]
   arrow_kind :: Type_1 -> Type_1 -> Type_1
   arrow_kind a = Application_type_1 (Application_type_1 (Name_type_1 "Arrow") a)
   check_kind :: String -> String -> Map' (Type_1, Status') -> Type_1 -> Err Type_1
@@ -110,8 +109,7 @@ module Typing where
   comparison_type :: Type_1
   comparison_type = Name_type_1 "Comparison"
   constrs :: Map' String
-  constrs =
-    fromList [("EQ", "Comparison"), ("GT", "Comparison"), ("LT", "Comparison"), ("Nothing", "Maybe"), ("Wrap", "Maybe")]
+  constrs = fromList (join ((\(a, (_, b, _)) -> (\c -> (c, a)) <$> keys b) <$> assocs algebraics))
   context_union :: File -> File -> File
   context_union (File b i j d a) (File f k l h c) =
     File (Data.Map.union b f) (Data.Map.union i k) (Data.Map.union j l) (Data.Map.union d h) (Data.Map.union a c)
@@ -120,27 +118,24 @@ module Typing where
   defs_and_types :: Map' (Expression_2, Type_1')
   defs_and_types =
     fromList
-      [
-        ("Add_Int", (Add_Int_expression_2, Basic_type_1 [] (function_type int_type (function_type int_type int_type)))),
-        (
-          "Compare_Int",
-          (Compare_Int_expression_2, Basic_type_1 [] (function_type int_type (function_type int_type comparison_type)))),
-        ("Crash", (Crash_expression_2, Basic_type_1 [("T", star_kind)] (Name_type_1 "T"))),
-        ("EQ", (Algebraic_expression_2 "EQ" [], Basic_type_1 [] comparison_type)),
-        ("GT", (Algebraic_expression_2 "GT" [], Basic_type_1 [] comparison_type)),
-        ("LT", (Algebraic_expression_2 "LT" [], Basic_type_1 [] comparison_type)),
-        ("Mod_Int", (Mod_Int_expression_2, Basic_type_1 [] (function_type int_type (function_type int_type int_type)))),
-        (
-          "Multiply_Int",
-          (Multiply_Int_expression_2, Basic_type_1 [] (function_type int_type (function_type int_type int_type)))),
-        ("Negate_Int", (Negate_Int_expression_2, Basic_type_1 [] (function_type int_type int_type))),
-        ("Nothing", (Algebraic_expression_2 "Nothing" [], Basic_type_1 [("T", star_kind)] (maybe_type (Name_type_1 "T")))),
-        (
-          "Wrap",
-          (Function_expression_2 (Name_pattern "x") (Algebraic_expression_2 "Wrap" [Name_expression_2 "x"]),
-          Basic_type_1
-            [("T", star_kind)]
-            (function_type (Name_type_1 "T") (Application_type_1 (Name_type_1 "Maybe") (Name_type_1 "T")))))]
+      (
+        defs_and_types' ++
+        join
+          (
+            (\(_, (b, c, d)) -> (\(e, f) -> (e, (type_alg f e, Basic_type_1 b (Prelude.foldr function_type d f)))) <$> c) <$>
+            algebraics'))
+  defs_and_types' :: [(String, (Expression_2, Type_1'))]
+  defs_and_types' =
+    [
+      ("Add_Int", (Add_Int_expression_2, Basic_type_1 [] (function_type int_type (function_type int_type int_type)))),
+      (
+        "Compare_Int",
+        (Compare_Int_expression_2, Basic_type_1 [] (function_type int_type (function_type int_type comparison_type)))),
+      ("Crash", (Crash_expression_2, Basic_type_1 [("T", star_kind)] (Name_type_1 "T"))),
+      ("Mod_Int", (Mod_Int_expression_2, Basic_type_1 [] (function_type int_type (function_type int_type int_type)))),
+      (
+        "Multiply_Int",
+        (Multiply_Int_expression_2, Basic_type_1 [] (function_type int_type (function_type int_type int_type))))]
   find_and_delete :: Ord t => Map t u -> t -> Maybe (u, Map t u)
   find_and_delete a b = (\c -> (c, Data.Map.delete b a)) <$> Data.Map.lookup b a
   function_type :: Type_1 -> Type_1 -> Type_1
@@ -217,6 +212,11 @@ module Typing where
       case c of
         Application_type_1 d e -> Application_type_1 (f d) (f e)
         Name_type_1 d -> if d == a then b else c
+  type_alg :: [t] -> String -> Expression_2
+  type_alg a b =
+    let
+      c = show <$> [0 .. length a - 1]
+    in Prelude.foldr Function_expression_2 (Algebraic_expression_2 b (Name_expression_2 <$> c)) (Name_pattern <$> c)
   type_case :: (Location_0 -> Location_1) -> Name -> Map' String -> [Pattern_0] -> [Type_1] -> Types -> Err Types
   type_case j (m @ (Name k l)) a b c d = case b of
     [] -> Right d
@@ -237,20 +237,7 @@ module Typing where
         Algebraic_data_1 e ->
           (
             Prelude.foldl (\d -> \(Form_1 n _) -> ins_new n a d) j e,
-            Prelude.foldl
-              (\f -> \(Form_1 g h) ->
-                let
-                  h' = show <$> [0 .. length h - 1]
-                in
-                  insert
-                    g
-                    (Prelude.foldr
-                      Function_expression_2
-                      (Algebraic_expression_2 g (Name_expression_2 <$> h'))
-                      (Name_pattern <$> h'))
-                    f)
-              k
-              e)
+            Prelude.foldl (\f -> \(Form_1 g h) -> insert g (type_alg h g) f) k e)
         Struct_data_1 e ->
           let
             e' = fst <$> e

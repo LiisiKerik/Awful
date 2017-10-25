@@ -396,7 +396,7 @@ module Typing where
               Just (m, _) ->
                 let
                   (n, p, q) = fst (unsafe_lookup m v)
-                  (t, u) = typevars (flip (++) (show s)) n (empty, f)
+                  (t, u) = typevars (\v' -> '#' : v' ++ show s) n (empty, f)
                   l0 = repl t q
                 in (
                   type_expression v w r o (s + 1) u h d c l0 >>=

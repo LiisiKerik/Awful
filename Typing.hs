@@ -2,7 +2,6 @@
 let expression (sequential? or more powerful, like in Haskell?)
 protection against duplicate file loading - what happens now? if crashes - fix, give a nice error/warning. if nothing - warn?
 implement all necessary operations for ints and bools
-graph examples
 tests
 type synonyms?
 operators
@@ -33,7 +32,6 @@ boolean function library
 parsing library
 implement map and set (AVL trees?)
 make match work with finite and char
-allow blank type variables?
 different ways of folding lists, vectors, sets, maps etc
 real numbers (float, fix, fraction), basic arithmetic + real functions (sine, exp etc). Trig also for complex numbers?
 gather naming and type errors and give a list instead of returning only the first one?
@@ -149,13 +147,9 @@ module Typing where
   int_type :: Type_1
   int_type = Name_type_1 "Int"
   kinds :: Map' Type_1
-  kinds =
-    fromList
-      [
-        ("Comparison", star_kind),
-        ("Function", arrow_kind star_kind (arrow_kind star_kind star_kind)),
-        ("Int", star_kind),
-        ("Maybe", arrow_kind star_kind star_kind)]
+  kinds = fromList (kinds' ++ (second (\(a, _, _) -> Prelude.foldr arrow_kind star_kind (snd <$> a)) <$> algebraics'))
+  kinds' :: [(String, Type_1)]
+  kinds' = [("Function", arrow_kind star_kind (arrow_kind star_kind star_kind)), ("Int", star_kind)]
   location_err' :: String -> Location_1 -> Location_1 -> String
   location_err' a b = location_err a (Library b)
   locations :: Locations

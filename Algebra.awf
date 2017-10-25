@@ -1,10 +1,11 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
-`Struct Array[N : #, T : Star](Array_function : Finite N -> T)
+`Struct Array[N : Nat, T : Star](Index : Function (Finite N) T)
 Struct Complex[T : Star](Real : T, Imaginary : T)
 Algebraic Either[A : Star, B : Star](Left A, Right B)
 Struct Fraction[T : Star](Numerator : T, Denominator : T)
 Algebraic List[A : Star](Cons A (List A), Empty)
 Algebraic Logical(False, True)
+Algebraic Nat(Nat_zero, Next Nat)
 Struct Pair[A : Star, B : Star](First : A, Second : B)
 Struct Polynomial[T : Star](Coefficients : List T)
 Struct Quaternion[T : Star](Qx : T, Qy : T, Qz : T, Qw : T)

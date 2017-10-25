@@ -91,10 +91,7 @@ module Typing where
   algebraics :: Map' ([(String, Type_1)], Map' [Type_1], Type_1)
   algebraics = fromList (second (\(a, b, c) -> (a, fromList b, c)) <$> algebraics')
   algebraics' :: [(String, ([(String, Type_1)], [(String, [Type_1])], Type_1))]
-  algebraics' =
-    [
-      ("Comparison", ([], [("EQ", []), ("GT", []), ("LT", [])], comparison_type)),
-      ("Maybe", ([("T", star_kind)], [("Nothing", []), ("Wrap", [Name_type_1 "T"])], maybe_type (Name_type_1 "T")))]
+  algebraics' = [("Comparison", ([], [("EQ", []), ("GT", []), ("LT", [])], comparison_type))]
   arrow_kind :: Type_1 -> Type_1 -> Type_1
   arrow_kind a = Application_type_1 (Application_type_1 (Name_type_1 "Arrow") a)
   check_kind :: String -> String -> Map' (Type_1, Status') -> Type_1 -> Err Type_1
@@ -154,8 +151,6 @@ module Typing where
   location_err' a b = location_err a (Library b)
   locations :: Locations
   locations = fromList (flip (,) (Language) <$> (keys hkinds ++ keys kinds ++ keys defs_and_types))
-  maybe_type :: Type_1 -> Type_1
-  maybe_type = Application_type_1 (Name_type_1 "Maybe")
   naming_typing :: String -> Tree_2 -> (Locations, File, Defs, Map' Type_1) -> Err (Locations, File, Defs, Map' Type_1)
   naming_typing f a (b, c, g, j) =
     naming f a b >>= \(d, e) -> (\(h, i, k) -> (d, h, i, k)) <$> typing (Location_1 f) e (c, g, j)

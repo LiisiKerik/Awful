@@ -206,6 +206,10 @@ Def Id[A : Star](x : A) : A = x
 Def Identity[A : Star](Convert_A : Function Int A) : A = Convert_A 1
 `Instance Inverse{Trivial} = Wrap
 Def Inverse_Trivial : Function Trivial (Maybe Trivial) = Wrap
+Def Inverse_Int(x : Int) : Maybe Int = Match x {
+  -1 -> Wrap -1,
+  1 -> Wrap 1,
+  Default -> Nothing}
 ~/
 Def Join_Array[A : Star](x : Array A, y : Array A) : Array A =
   Unsafe_Array (Add_Int (Length x) (Length y)) (z -> Match Less_Int z (Length x) {

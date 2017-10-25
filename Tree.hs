@@ -1,4 +1,7 @@
 -----------------------------------------------------------------------------------------------------------------------------
+-- expr op op expr - esimene op on binaarne operaator, teine op on unaarne miinus
+-- expr op expr - op on binaarne operaator
+-- op expr - op on unaarne miinus
 {-# OPTIONS_GHC -Wall #-}
 module Tree where
   import Control.Applicative
@@ -200,7 +203,7 @@ module Tree where
     expression_tree'
 -}
   parse_int :: Parser Integer
-  parse_int = parse_elementary (\a -> case a of
+  parse_int = (negate <$ parse_operator "-" <|> return id) <*> parse_elementary (\a -> case a of
     Int_token b -> Just b
     _ -> Nothing)
   parse_int_expression :: Parser Expression_branch_0
@@ -231,7 +234,7 @@ module Tree where
       parse_matches <*
       parse_token Right_curly_token)
   parse_match_int :: Parser Match_Int_0
-  parse_match_int = parse_arrow' (((\a -> Match_Int_0 (- a)) <$ parse_operator "~" <|> return Match_Int_0) <*> parse_int)
+  parse_match_int = parse_arrow' (Match_Int_0 <$> parse_int)
   parse_matches :: Parser Matches_0
   parse_matches = parse_matches_algebraic <|> parse_matches_int
   parse_matches_algebraic :: Parser Matches_0

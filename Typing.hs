@@ -91,7 +91,10 @@ module Typing where
   algebraics :: Map' ([(String, Type_1)], Map' [Type_1], Type_1)
   algebraics = fromList (second (\(a, b, c) -> (a, fromList b, c)) <$> algebraics')
   algebraics' :: [(String, ([(String, Type_1)], [(String, [Type_1])], Type_1))]
-  algebraics' = [("Comparison", ([], [("EQ", []), ("GT", []), ("LT", [])], comparison_type))]
+  algebraics' =
+    (\(a, (b, c)) -> (a, (b, c, Prelude.foldl (\d -> \(_, e) -> Application_type_1 d e) (Name_type_1 a) b))) <$> algebraics''
+  algebraics'' :: [(String, ([(String, Type_1)], [(String, [Type_1])]))]
+  algebraics'' = [("Comparison", ([], [("EQ", []), ("GT", []), ("LT", [])]))]
   arrow_kind :: Type_1 -> Type_1 -> Type_1
   arrow_kind a = Application_type_1 (Application_type_1 (Name_type_1 "Arrow") a)
   check_kind :: String -> String -> Map' (Type_1, Status') -> Type_1 -> Err Type_1

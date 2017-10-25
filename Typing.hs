@@ -241,8 +241,8 @@ module Typing where
                 (insert
                   a
                   (Prelude.foldr
-                    (\f -> Function_expression_2 (Name_pattern ('!' : f)))
-                    (Struct_expression_2 (fromList ((\f -> (f, Name_expression_2 ('!' : f))) <$> e')))
+                    (\f -> Function_expression_2 (Name_pattern ('#' : f)))
+                    (Struct_expression_2 (fromList ((\f -> (f, Name_expression_2 ('#' : f))) <$> e')))
                     e')
                   k)
                 e')

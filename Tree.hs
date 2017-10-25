@@ -173,7 +173,7 @@ module Tree where
   parse_char_expression :: Parser Expression_branch_0
   parse_char_expression = Char_expression_0 <$> parse_char
   parse_char_type :: Parser Type_branch_0
-  parse_char_type = Char_type_0 <$> parse_char
+  parse_char_type = Char_type_0 <$ parse_lift <*> parse_char
   parse_colon :: Parser ()
   parse_colon = parse_operator ":"
   parse_comma :: Parser ()
@@ -238,13 +238,15 @@ module Tree where
   parse_int_expression :: Parser Expression_branch_0
   parse_int_expression = Int_expression_0 <$> parse_int
   parse_int_type :: Parser Type_branch_0
-  parse_int_type = Int_type_0 <$> parse_int
+  parse_int_type = Int_type_0 <$ parse_lift <*> parse_int
   parse_kind :: Parser Kind_0
   parse_kind = Kind_0 <&> parse_kind_branch
   parse_kind_branch :: Parser Kind_branch_0
   parse_kind_branch = parse_application_kind <|> parse_name_kind
   parse_kinds :: Parser [(Name, Kind_0)]
   parse_kinds = parse_arguments (\a -> parse_brackets Left_square_token a Right_square_token) parse_name' parse_kind
+  parse_lift :: Parser ()
+  parse_lift = parse_operator "!"
   parse_list :: Integer -> Parser t -> Parser [t]
   parse_list a b = case a of
     0 -> parse_optional' (parse_list 1 b)

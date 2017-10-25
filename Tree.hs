@@ -28,6 +28,7 @@ module Tree where
   data Expression_0 = Expression_0 Location_0 Expression_branch_0 deriving Show
   data Expression_branch_0 =
     Application_expression_0 Expression_0 Expression_0 |
+    Char_expression_0 Char |
     Function_expression_0 Pattern_1 Expression_0 |
     Int_expression_0 Integer |
     Match_expression_0 Expression_0 Matches_0 |
@@ -35,9 +36,13 @@ module Tree where
       deriving Show
   data Form_0 = Form_0 Name [Type_0] deriving Show
   data Match_Algebraic_0 = Match_Algebraic_0 Name [Pattern_1] Expression_0 deriving Show
+  data Match_char_0 = Match_char_0 Char Expression_0 deriving Show
   data Match_Int_0 = Match_Int_0 Integer Expression_0 deriving Show
-  data Matches_0 = Matches_Algebraic_0 [Match_Algebraic_0] (Maybe Expression_0) | Matches_Int_0 [Match_Int_0] Expression_0
-    deriving Show
+  data Matches_0 =
+    Matches_Algebraic_0 [Match_Algebraic_0] (Maybe Expression_0) |
+    Matches_char_0 [Match_char_0] Expression_0 |
+    Matches_Int_0 [Match_Int_0] Expression_0
+      deriving Show
   data Name = Name Location_0 String deriving Show
   data Pattern_1 = Pattern_1 Location_0 Pattern_0 deriving Show
   data Pattern_0 = Blank_pattern | Name_pattern String deriving Show
@@ -145,6 +150,12 @@ module Tree where
   parse_bracketed_type = Type_0 <&> (parse_name_type <|> parse_round parse_application_type)
   parse_brackets :: Token_0 -> Parser t -> Token_0 -> Parser t
   parse_brackets a b c = parse_token a *> b <* parse_token c
+  parse_char :: Parser Char
+  parse_char = parse_elementary (\a -> case a of
+    Char_token b -> Just b
+    _ -> Nothing)
+  parse_char_expression :: Parser Expression_branch_0
+  parse_char_expression = Char_expression_0 <$> parse_char
   parse_colon :: Parser ()
   parse_colon = parse_operator ":"
   parse_comma :: Parser ()
@@ -175,7 +186,7 @@ module Tree where
         Just i -> Right (i, (State (Tokens g c) h))
         Nothing -> Left h)
   parse_elementary_expression :: Parser Expression_branch_0
-  parse_elementary_expression = parse_int_expression <|> parse_name_expression
+  parse_elementary_expression = parse_char_expression <|> parse_int_expression <|> parse_name_expression
   parse_error :: (Location_0 -> Location_1) -> Location_0 -> Err t
   parse_error a b = Left ("Parse error" ++ location' (a b))
   parse_expression :: String -> Err Expression_0
@@ -224,6 +235,8 @@ module Tree where
   parse_location = Parser (\a -> Right (state_location a, a))
   parse_match_algebraic :: Parser Match_Algebraic_0
   parse_match_algebraic = parse_arrow' (Match_Algebraic_0 <$> parse_name' <*> many parse_pattern_1)
+  parse_match_char :: Parser Match_char_0
+  parse_match_char = parse_arrow' (Match_char_0 <$> parse_char)
   parse_match_expression :: Parser Expression_branch_0
   parse_match_expression =
     (
@@ -236,10 +249,12 @@ module Tree where
   parse_match_int :: Parser Match_Int_0
   parse_match_int = parse_arrow' (Match_Int_0 <$> parse_int)
   parse_matches :: Parser Matches_0
-  parse_matches = parse_matches_algebraic <|> parse_matches_int
+  parse_matches = parse_matches_algebraic <|> parse_matches_char <|> parse_matches_int
   parse_matches_algebraic :: Parser Matches_0
   parse_matches_algebraic =
     Matches_Algebraic_0 <$> parse_list 1 parse_match_algebraic <*> (Just <$> parse_default <|> return Nothing)
+  parse_matches_char :: Parser Matches_0
+  parse_matches_char = Matches_char_0 <$> parse_list 1 parse_match_char <*> parse_default
   parse_matches_int :: Parser Matches_0
   parse_matches_int = Matches_Int_0 <$> parse_list 1 parse_match_int <*> parse_default
   parse_name :: Parser String

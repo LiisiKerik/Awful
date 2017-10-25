@@ -4,15 +4,25 @@ module Tokenise where
   import Data.Bifunctor
   import Data.Char
   data Char' =
-    Delimiter_char Token_0 |
+    Delimiter_char Delimiter |
     Int_char Char |
     Name_char Char |
     Newline_char |
     Operator_char Char |
+    Quote_char |
     Slash_char |
     Space_char |
     Tick_char |
     Tilde_char
+      deriving Show
+  data Delimiter =
+    Comma_delimiter |
+    Left_curly_delimiter |
+    Left_round_delimiter |
+    Left_square_delimiter |
+    Right_curly_delimiter |
+    Right_round_delimiter |
+    Right_square_delimiter
       deriving Show
   type Err t = Either String t
   data Location_0 = Location_0 Integer Integer deriving (Eq, Ord, Show)
@@ -21,6 +31,7 @@ module Tokenise where
     -- Abstract_token |
     Algebraic_token |
     Case_token |
+    Char_token Char |
     Comma_token |
     Def_token |
     Default_token |
@@ -57,15 +68,16 @@ module Tokenise where
   char a = case a of
     '\n' -> Newline_char
     ' ' -> Space_char
-    '(' -> Delimiter_char Left_round_token
-    ')' -> Delimiter_char Right_round_token
-    ',' -> Delimiter_char Comma_token
+    '"' -> Quote_char
+    '(' -> Delimiter_char Left_round_delimiter
+    ')' -> Delimiter_char Right_round_delimiter
+    ',' -> Delimiter_char Comma_delimiter
     '/' -> Slash_char
-    '[' -> Delimiter_char Left_square_token
-    ']' -> Delimiter_char Right_square_token
+    '[' -> Delimiter_char Left_square_delimiter
+    ']' -> Delimiter_char Right_square_delimiter
     '`' -> Tick_char
-    '{' -> Delimiter_char Left_curly_token
-    '}' -> Delimiter_char Right_curly_token
+    '{' -> Delimiter_char Left_curly_delimiter
+    '}' -> Delimiter_char Right_curly_delimiter
     '~' -> Tilde_char
     _ ->
       (if_sequence
@@ -118,15 +130,29 @@ module Tokenise where
         e = next_char a
         f = tokenise_operator a b
       in case c of
-        Delimiter_char g -> add_token a g <$> tokenise' e d
+        Delimiter_char g -> add_token a (case g of
+          Comma_delimiter -> Comma_token
+          Left_curly_delimiter -> Left_curly_token
+          Left_round_delimiter -> Left_round_token
+          Left_square_delimiter -> Left_square_token
+          Right_curly_delimiter -> Right_curly_token
+          Right_round_delimiter -> Right_round_token
+          Right_square_delimiter -> Right_square_token) <$> tokenise' e d
         Int_char _ -> accumulate (Int_token <$> read) int_char a b
         Name_char _ -> accumulate word_token name_char a b
         Newline_char -> tokenise' (next_line a) d
         Operator_char _ -> f
+        Quote_char -> (\(g, h) -> add_token a (Char_token g) h) <$> tokenise_char e d
         Slash_char -> f
         Space_char -> tokenise' e d
         Tick_char -> tokenise_single e d
         Tilde_char -> tokenise_tilde a b e d
+  tokenise_char :: Location_1 -> [Char'] -> Err (Char, Tokens)
+  tokenise_char a b = case b of
+    [] -> Left ("Missing character and end quote " ++ location' a)
+    c : d -> case char'_to_char c of
+      Just e -> (\f -> (e, f)) <$> tokenise_quote (next_char a) d
+      Nothing -> Left ("Newline inside quotes " ++ location' a)
   tokenise_multiline :: Integer -> Location_1 -> [Char'] -> Err Tokens
   tokenise_multiline a b c = case c of
     [] -> Left ("Missing end comment in " ++ file_location b ++ ".")
@@ -145,6 +171,15 @@ module Tokenise where
     _ -> tokenise_multiline a b c
   tokenise_operator :: Location_1 -> [Char'] -> Err Tokens
   tokenise_operator = accumulate Operator_token operator_char
+  tokenise_quote :: Location_1 -> [Char'] -> Err Tokens
+  tokenise_quote a b =
+    let
+      e = Left ("Missing end quote " ++ location' a)
+    in case b of
+      [] -> e
+      c : d -> case c of
+        Quote_char -> tokenise' (next_char a) d
+        _ -> e
   tokenise_single :: Location_1 -> [Char'] -> Err Tokens
   tokenise_single a b = case b of
     [] -> end_tokens a
@@ -161,6 +196,25 @@ module Tokenise where
   tokenise_tilde a b c d = case d of
     Slash_char : e -> tokenise_multiline 1 (next_char c) e
     _ -> tokenise_operator a b
+  char'_to_char :: Char' -> Maybe Char
+  char'_to_char a = case a of
+    Delimiter_char b -> Just (case b of
+        Comma_delimiter -> ','
+        Left_curly_delimiter -> '{'
+        Left_round_delimiter -> '('
+        Left_square_delimiter -> '['
+        Right_curly_delimiter -> '}'
+        Right_round_delimiter -> ')'
+        Right_square_delimiter -> ']')
+    Int_char b -> Just b
+    Name_char b -> Just b
+    Newline_char -> Nothing
+    Operator_char b -> Just b
+    Quote_char -> Just '"'
+    Slash_char -> Just '/'
+    Space_char -> Just ' '
+    Tick_char -> Just '`'
+    Tilde_char -> Just '~'
   word_token :: String -> Token_0
   word_token a = case a of
     -- "Abstract" -> Abstract_token
@@ -171,6 +225,7 @@ module Tokenise where
     -- "Instance" -> Instance_token
     "Load" -> Load_token
     "Match" -> Match_token
+    "Newline" -> Char_token '\n'
     "Struct" -> Struct_token
     _ -> Name_token a
 -----------------------------------------------------------------------------------------------------------------------------

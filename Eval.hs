@@ -63,6 +63,11 @@ module Eval where
             Just o -> o
             Nothing -> undefined
         _ -> undefined
+      Matches_char_2 i j -> case h of
+        Char_expression_2 k -> case Data.Map.lookup k i of
+          Just o -> o
+          Nothing -> j
+        _ -> undefined
       Matches_Int_2 i j -> case h of
         Int_expression_2 k -> case Data.Map.lookup k i of
           Just o -> o
@@ -96,6 +101,7 @@ module Eval where
         Name_pattern g -> if g == a then b else Function_expression_2 d (f e)
       Match_expression_2 d e -> Match_expression_2 (f d) (case e of
         Matches_Algebraic_2 g h -> Matches_Algebraic_2 (subst_algebraic a c <$> g) (f <$> h)
+        Matches_char_2 g h -> Matches_char_2 (f <$> g) (f h)
         Matches_Int_2 g h -> Matches_Int_2 (f <$> g) (f h))
       Name_expression_2 d -> if d == a then c else b
       Struct_expression_2 d -> Struct_expression_2 (f <$> d)

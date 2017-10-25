@@ -23,7 +23,6 @@ some limited pattern matching in function arguments (and maybe also variables in
 syntactic sugar for lists, vectors, matrices... allow writing (tiny, limited to expression parsing) language extensions?
 show and read
 basic IO operations (output to console, read file, write file, append to file)
-chars
 finite n
 compilation
 nice human-readable output for interpreter through show
@@ -38,6 +37,7 @@ gather naming and type errors and give a list instead of returning only the firs
 enrich kind system via promotion?
 normalising constructors for some data types (polynomial, fraction) which assume a certain normal form of fields?
 promote primitive data types
+make match work with chars
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")
@@ -62,6 +62,7 @@ module Typing where
     Add_Int'_expression_2 Integer |
     Algebraic_expression_2 String [Expression_2] |
     Application_expression_2 Expression_2 Expression_2 |
+    Char_expression_2 Char |
     Compare_Int_expression_2 |
     Compare_Int'_expression_2 Integer |
     Crash_expression_2 |
@@ -82,7 +83,9 @@ module Typing where
   data Kind = Arrow_kind Kind Kind | Star_kind deriving (Eq, Show)
   data Match_Algebraic_2 = Match_Algebraic_2 [Pattern_0] Expression_2 deriving Show
   data Matches_2 =
-    Matches_Algebraic_2 (Map' Match_Algebraic_2) (Maybe Expression_2) | Matches_Int_2 (Map Integer Expression_2) Expression_2
+    Matches_Algebraic_2 (Map' Match_Algebraic_2) (Maybe Expression_2) |
+    Matches_char_2 (Map Char Expression_2) Expression_2 |
+    Matches_Int_2 (Map Integer Expression_2) Expression_2
       deriving Show
   data Status' = Fixed | Flexible deriving Show
   data Type_1 = Application_type_1 Type_1 Type_1 | Name_type_1 String deriving (Eq, Show)
@@ -97,6 +100,8 @@ module Typing where
   algebraics'' = [("Comparison", ([], [("EQ", []), ("GT", []), ("LT", [])]))]
   arrow_kind :: Type_1 -> Type_1 -> Type_1
   arrow_kind a = Application_type_1 (Application_type_1 (Name_type_1 "Arrow") a)
+  char_type :: Type_1
+  char_type = Name_type_1 "Int"
   check_kind :: String -> String -> Map' (Type_1, Status') -> Type_1 -> Err Type_1
   check_kind j c a b = case b of
     Application_type_1 d e -> check_kind j c a d >>= \f -> case f of
@@ -368,6 +373,7 @@ module Typing where
             (
               (\(l, m, n, q, u) -> (Application_expression_2 i l, m, n, q, u)) <$>
               type_expression v w r p t j k d g (Name_type_1 (show o))))
+      Char_expression_1 c -> Right (Char_expression_2 c, f, (e, char_type) : h, o, s)
       Function_expression_1 c g ->
         (
           (\(a', b', c', d', e') -> (Function_expression_2 c a', b', c', d', e')) <$>
@@ -413,9 +419,19 @@ module Typing where
                               type_expression v w r g0 h0 e0 f0 d j0 e)
                           Nothing -> Left ("Incomplete match" ++ x'))
               Nothing -> Left y0
+        Matches_char_1 i j ->
+          (
+            type_expression v w r o s f h d c char_type >>=
+            \(k, l, m, n, p) ->
+              (
+                type_matches_char v w r n p l m d empty i e >>=
+                \(q, t, u, x, y) ->
+                  (
+                    (\(a0, b0, c0, d0, e0) -> (Match_expression_2 k (Matches_char_2 q a0), b0, c0, d0, e0)) <$>
+                    type_expression v w r x y t u d j e)))
         Matches_Int_1 i j ->
           (
-            type_expression v w r o s f h d c (Name_type_1 "Int") >>=
+            type_expression v w r o s f h d c int_type >>=
             \(k, l, m, n, p) ->
               (
                 type_matches_int v w r n p l m d empty i e >>=
@@ -540,6 +556,25 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
         \s ->
           (\(t, u, v, w, x) -> (insert k (Match_Algebraic_2 l t) i, u, v, w, x, y)) <$> type_expression a b c d e f g s m n)
     Nothing -> Left q
+  type_match_char ::
+    Algebraics ->
+    Constrs ->
+    (Location_0 -> Location_1) ->
+    Integer ->
+    Integer ->
+    Map' (Type_1, Status') ->
+    [(Type_1, Type_1)] ->
+    Types ->
+    Map Char Expression_2 ->
+    Match_char_1 ->
+    Type_1 ->
+    Err (Map Char Expression_2, Map' (Type_1, Status'), [(Type_1, Type_1)], Integer, Integer)
+  type_match_char a b c d e f g h i (Match_char_1 j k) l =
+-- TODO: PUT A GOOD ERROR MESSAGE HERE. LOCATIONS AND STUFF.
+    (
+      type_expression a b c d e f g h k l >>=
+      \(m, n, o, p, q) ->
+        bimap (\_ -> location_err' ("cases for " ++ show j) undefined undefined) (\r -> (r, n, o, p, q)) (add i j m))
   type_match_int ::
     Algebraics ->
     Constrs ->
@@ -581,6 +616,22 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
       (
         type_match_algebraic a b c d e f g h i l k s u v >>=
         \(n, o, p, q, r, t) -> type_matches_algebraic a b c q r o p h n m k t u v)
+  type_matches_char ::
+    Algebraics ->
+    Constrs ->
+    (Location_0 -> Location_1) ->
+    Integer ->
+    Integer ->
+    Map' (Type_1, Status') ->
+    [(Type_1, Type_1)] ->
+    Types ->
+    Map Char Expression_2 ->
+    [Match_char_1] ->
+    Type_1 ->
+    Err (Map Char Expression_2, Map' (Type_1, Status'), [(Type_1, Type_1)], Integer, Integer)
+  type_matches_char a b c d e f g h i j k = case j of
+    [] -> Right (i, f, g, d, e)
+    l : m -> type_match_char a b c d e f g h i l k >>= \(n, o, p, q, r) -> type_matches_char a b c q r o p h n m k
   type_matches_int ::
     Algebraics ->
     Constrs ->

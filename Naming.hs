@@ -26,6 +26,7 @@ module Naming where
   data Def_2 = Basic_def_2 Location_0 String [(String, Type_0)] Type_0 Expression_1 deriving Show
   data Expression_branch_1 =
     Application_expression_1 Expression_1 Expression_1 |
+    Char_expression_1 Char |
     Function_expression_1 Pattern_0 Expression_1 |
     Int_expression_1 Integer |
     Match_expression_1 Expression_1 Matches_1 |
@@ -37,9 +38,13 @@ module Naming where
   type Locations = Map' Location'
   type Map' t = Map String t
   data Match_Algebraic_1 = Match_Algebraic_1 Name [Pattern_0] Expression_1 deriving Show
+  data Match_char_1 = Match_char_1 Char Expression_1 deriving Show
   data Match_Int_1 = Match_Int_1 Integer Expression_1 deriving Show
-  data Matches_1 = Matches_Algebraic_1 [Match_Algebraic_1] (Maybe Expression_1) | Matches_Int_1 [Match_Int_1] Expression_1
-    deriving Show
+  data Matches_1 =
+    Matches_Algebraic_1 [Match_Algebraic_1] (Maybe Expression_1) |
+    Matches_char_1 [Match_char_1] Expression_1 |
+    Matches_Int_1 [Match_Int_1] Expression_1
+      deriving Show
   data Status = New | Old deriving (Eq, Show)
 {-
   data Tree_3 = Tree_3 [Data_tree_1] [Abstract_tree_1] [Def_branch_2] deriving Show
@@ -131,6 +136,7 @@ module Naming where
   naming_expression_branch :: String -> Expression_branch_0 -> Locations -> Err Expression_branch_1
   naming_expression_branch g a b = case a of
     Application_expression_0 c d -> naming_expression g c b >>= \e -> Application_expression_1 e <$> naming_expression g d b
+    Char_expression_0 c -> Right (Char_expression_1 c)
     Function_expression_0 c d -> naming_pattern g c b >>= \(e, f) -> Function_expression_1 f <$> naming_expression g d e
     Int_expression_0 c -> Right (Int_expression_1 c)
     Match_expression_0 c d -> naming_expression g c b >>= \e -> Match_expression_1 e <$> naming_matches g d b
@@ -152,6 +158,8 @@ module Naming where
   naming_match_algebraic :: String -> Match_Algebraic_0 -> Locations -> Err Match_Algebraic_1
   naming_match_algebraic a (Match_Algebraic_0 b c d) e =
     naming_patterns a c e >>= \(f, g) -> Match_Algebraic_1 b g <$> naming_expression a d f
+  naming_match_char :: String -> Match_char_0 -> Locations -> Err Match_char_1
+  naming_match_char a (Match_char_0 b c) d = Match_char_1 b <$> naming_expression a c d
   naming_match_int :: String -> Match_Int_0 -> Locations -> Err Match_Int_1
   naming_match_int a (Match_Int_0 b c) d = Match_Int_1 b <$> naming_expression a c d
   naming_matches :: String -> Matches_0 -> Locations -> Err Matches_1
@@ -165,11 +173,16 @@ module Naming where
         in case e of
           Just h -> (\i -> g (Just i)) <$> j h
           Nothing -> Right (g Nothing)
+      Matches_char_0 d e -> naming_matches_char a d c >>= \f -> Matches_char_1 f <$> j e
       Matches_Int_0 d e -> naming_matches_int a d c >>= \f -> Matches_Int_1 f <$> j e
   naming_matches_algebraic :: String -> [Match_Algebraic_0] -> Locations -> Err [Match_Algebraic_1]
   naming_matches_algebraic a b c = case b of
     [] -> Right []
     d : e -> naming_match_algebraic a d c >>= \f -> (:) f <$> naming_matches_algebraic a e c
+  naming_matches_char :: String -> [Match_char_0] -> Locations -> Err [Match_char_1]
+  naming_matches_char a b c = case b of
+    [] -> Right []
+    d : e -> naming_match_char a d c >>= \f -> (:) f <$> naming_matches_char a e c
   naming_matches_int :: String -> [Match_Int_0] -> Locations -> Err [Match_Int_1]
   naming_matches_int a b c = case b of
     [] -> Right []

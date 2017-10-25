@@ -11,8 +11,8 @@ module Naming where
   data Abstract_tree_2 = Abstract_tree_2 String String Kind [Argument_tree String Kind] Type_0 deriving Show
 -}
   data Data_branch_1 = Algebraic_data_1 [Form_1] | Struct_data_1 [(String, Type_0)] deriving Show
-  data Data_1 = Data_1 String [(Name, Type_0)] Data_branch_1 deriving Show
-  data Data_2 = Data_2 String [(String, Type_0)] Data_branch_1 deriving Show
+  data Data_1 = Data_1 String [(Name, Kind_0)] Data_branch_1 deriving Show
+  data Data_2 = Data_2 String [(String, Kind_0)] Data_branch_1 deriving Show
 {-
   data Def_branch_2 =
     Basic_def_2 String [Argument_tree Name_tree Kind] [Constraint_0] Type_0 Expression_tree |
@@ -23,7 +23,7 @@ module Naming where
     Instance_def_3 Name_tree Name_tree [Pattern_branch] [Constraint_0] Expression_tree_1
       deriving Show
 -}
-  data Def_2 = Basic_def_2 Location_0 String [(String, Type_0)] Type_0 Expression_1 deriving Show
+  data Def_2 = Basic_def_2 Location_0 String [(String, Kind_0)] Type_0 Expression_1 deriving Show
   data Expression_branch_1 =
     Application_expression_1 Expression_1 Expression_1 |
     Char_expression_1 Char |

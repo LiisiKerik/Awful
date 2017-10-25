@@ -23,60 +23,60 @@ module Eval where
     Application_expression_2 d e -> eval' a d >>= \h -> eval' a e >>= \j -> case h of
       Add_Int_expression_2 -> case j of
         Int_expression_2 l -> Just (Add_Int'_expression_2 l)
-        _ -> ice
+        _ -> undefined
       Add_Int'_expression_2 k -> case j of
         Int_expression_2 n -> Just (Int_expression_2 (k + n))
-        _ -> ice
+        _ -> undefined
       Compare_Int_expression_2 -> case j of
         Int_expression_2 k -> Just (Compare_Int'_expression_2 k)
-        _ -> ice
+        _ -> undefined
       Compare_Int'_expression_2 k -> case j of
         Int_expression_2 l -> Just (Algebraic_expression_2 (show (compare k l)) [])
-        _ -> ice
+        _ -> undefined
       Field_expression_2 k -> case j of
         Struct_expression_2 l -> Just (unsafe_lookup k l)
-        _ -> ice
+        _ -> undefined
       Function_expression_2 k l -> eval' a (case k of
         Blank_pattern -> l
         Name_pattern n -> subst_expr n l j)
       Mod_Int_expression_2 -> case j of
         Int_expression_2 k -> Just (Mod_Int'_expression_2 k)
-        _ -> ice
+        _ -> undefined
       Mod_Int'_expression_2 k -> case j of
         Int_expression_2 l -> Just (Int_expression_2 (mod k (abs l)))
-        _ -> ice
+        _ -> undefined
       Multiply_Int_expression_2 -> case j of
         Int_expression_2 k -> Just (Multiply_Int'_expression_2 k)
-        _ -> ice
+        _ -> undefined
       Multiply_Int'_expression_2 k -> case j of
         Int_expression_2 l -> Just (Int_expression_2 (k * l))
-        _ -> ice
+        _ -> undefined
       Negate_Int_expression_2 -> case j of
         Int_expression_2 k -> Just (Int_expression_2 (- k))
-        _ -> ice
-      _ -> ice
+        _ -> undefined
+      _ -> undefined
     Match_expression_2 d e -> eval' a d >>= \h -> eval' a (case e of
       Matches_Algebraic_2 i j -> case h of
         Algebraic_expression_2 k l -> case Data.Map.lookup k i of
           Just (Match_Algebraic_2 o p) -> eval_match o l p
           Nothing -> case j of
             Just o -> o
-            Nothing -> ice
-        _ -> ice
+            Nothing -> undefined
+        _ -> undefined
       Matches_Int_2 i j -> case h of
         Int_expression_2 k -> case Data.Map.lookup k i of
           Just o -> o
           Nothing -> j
-        _ -> ice)
+        _ -> undefined)
     Name_expression_2 d -> eval' a (unsafe_lookup d a)
     _ -> Just c
   eval_match :: [Pattern_0] -> [Expression_2] -> Expression_2 -> Expression_2
   eval_match a b c = case a of
     [] -> case b of
       [] -> c
-      _ -> ice
+      _ -> undefined
     d : e -> case b of
-      [] -> ice
+      [] -> undefined
       f : g -> eval_match e g (case d of
         Blank_pattern -> c
         Name_pattern h -> subst_expr h c f)
@@ -109,7 +109,8 @@ module Eval where
       in case c of
         Blank_pattern -> f
         Name_pattern e -> e == b || f
-  tokenise_parse_naming_typing_eval :: Locations -> Map' Kind -> (Algebraics, Constrs, Types) -> Defs -> String -> Err String
+  tokenise_parse_naming_typing_eval ::
+    Locations -> Map' Type_1 -> (Algebraics, Constrs, Types) -> Defs -> String -> Err String
   tokenise_parse_naming_typing_eval c f (g, h, i) l b =
     (
       parse_expression b >>=

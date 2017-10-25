@@ -10,7 +10,7 @@ module Standard where
     Instance_def' Name_tree Name_tree [Pattern_tree] [Constraint_0] Expression_tree
       deriving Show
 -}
-  data Def_1 = Basic_def_1 Name [(Name, Kind)] Type_0 Expression_0 deriving Show
+  data Def_1 = Basic_def_1 Name [(Name, Type_0)] Type_0 Expression_0 deriving Show
   -- data Tree' = Tree' [Data_tree] [Abstract_tree_0] [Def_branch'] deriving Show
   data Tree_2 = Tree_2 [Data_0] [Def_1] deriving Show
   data Tree_3 = Tree_3 [Name] Tree_2 deriving Show

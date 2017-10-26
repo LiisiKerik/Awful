@@ -318,11 +318,15 @@ module Typing where
                 (ins_new a (Basic_type_1 b (Prelude.foldr (function_type <$> snd) x i)) e)
                 i)) <$>
           type_fields f h g)
-  type_datas :: (Location_0 -> Location_1) -> [Data_2] -> (File, Defs, Map' Kind_1) -> Err (File, Defs, Map' Kind_1)
-  type_datas h a (File b i j d o, c, m) =
+  type_datas ::
+    (Location_0 -> Location_1) ->
+    [Data_2] ->
+    (Map' (Kind_1, Status), Algebraics, Constrs, Types, Map' (Kind, Status), Defs, Map' Kind_1) ->
+    Err (Map' (Kind_1, Status), Algebraics, Constrs, Types, Map' (Kind, Status), Defs, Map' Kind_1)
+  type_datas h a (b, i, j, d, o, c, m) =
     (
       type_datas_1 h o a (b, j, c, m) >>=
-      \((e, k, f, n), p) -> (\(l, g) -> (File e l k g o, f, n)) <$> type_datas_2 h p (fst <$> e) (i, d))
+      \((e, k, f, n), p) -> (\(l, g) -> (e, l, k, g, o, f, n)) <$> type_datas_2 h p (fst <$> e) (i, d))
   type_datas_1 ::
     (Location_0 -> Location_1) ->
     Map' (Kind, Status) ->
@@ -736,10 +740,10 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     [] -> b
     c : d -> typevars e d (typevar e c b)
   typing :: (Location_0 -> Location_1) -> Tree_5 -> (File, Defs, Map' Kind_1) -> Err (File, Defs, Map' Kind_1)
-  typing k (Tree_5 a c) (d, l, m) =
+  typing k (Tree_5 a c) (File d t u v w, l, m) =
     (
-      type_datas k a (d, l, m) >>=
-      \(File e b h g o, f, n) ->
+      type_datas k a (d, t, u, v, w, l, m) >>=
+      \(e, b, h, g, o, f, n) ->
         (
           (\(i, j) -> (File (rem_old e) (rem_old b) (rem_old h) (rem_old j) (rem_old o), i, n)) <$>
           type_defs k o c (e, b, h) (f, g)))

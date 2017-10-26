@@ -35,8 +35,8 @@ module Tree where
     Name_expression_0 String
       deriving Show
   data Form_0 = Form_0 Name [Type_0] deriving Show
-  data Kind_0 = Kind_0 Location_0 Kind_branch_0 deriving Show
-  data Kind_branch_0 = Application_kind_0 Kind_0 Kind_0 | Name_kind_0 String deriving Show
+  data Kind_0 = Kind_0 Location_0 Kind_branch_0 deriving (Eq, Show)
+  data Kind_branch_0 = Application_kind_0 Kind_0 Kind_0 | Name_kind_0 String deriving (Eq, Show)
   data Match_Algebraic_0 = Match_Algebraic_0 Name [Pattern_1] Expression_0 deriving Show
   data Match_char_0 = Match_char_0 Char Expression_0 deriving Show
   data Match_Int_0 = Match_Int_0 Integer Expression_0 deriving Show

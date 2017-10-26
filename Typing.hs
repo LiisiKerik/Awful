@@ -36,8 +36,7 @@ make match work with finite and char
 different ways of folding lists, vectors, sets, maps etc
 real numbers (float, fix, fraction), basic arithmetic + real functions (sine, exp etc). Trig also for complex numbers?
 gather naming and type errors and give a list instead of returning only the first one?
-enrich kind system via promotion?
-promote primitive data types
+enrich kind system via promotion
 make match work with chars
 make promotion for built-in ADT-s automatic
 modify parser: make promotion of ints and chars to type level explicit (with !)
@@ -51,6 +50,7 @@ simplify hyperkind system because there's no need to keep anything but the numbe
 module Typing where
   import Control.Monad
   import Data.Bifunctor
+  import Data.List
   import Data.Map
   import Naming
   import Standard
@@ -169,7 +169,7 @@ module Typing where
   init_type_context :: File
   init_type_context = File (old kinds) (old algebraics) (old constrs) (old (snd <$> defs_and_types)) (old hkinds)
   ins_new :: Ord t => t -> u -> Map t (u, Status) -> Map t (u, Status)
-  ins_new a b = insert a (b, New)
+  ins_new a b = Data.Map.insert a (b, New)
   int_kind :: Kind_1
   int_kind = Name_kind_1 "!Int"
   int_type :: Type_1
@@ -192,6 +192,10 @@ module Typing where
   naming_typing :: String -> Tree_2 -> (Locations, File, Defs, Map' Kind_1) -> Err (Locations, File, Defs, Map' Kind_1)
   naming_typing f a (b, c, g, j) =
     naming f a b >>= \(d, e) -> (\(h, i, k) -> (d, h, i, k)) <$> typing (Location_1 f) e (c, g, j)
+  promotable :: Data_2 -> Bool
+  promotable (Data_2 _ a _) = Prelude.foldr (&&) True (promotable' <$> snd <$> a)
+  promotable' :: Kind_0 -> Bool
+  promotable' (Kind_0 _ a) = a == Name_kind_0 "Star"
   repl :: Map' String -> Type_1 -> Type_1
   repl a b = case b of
     Application_type_1 c d -> Application_type_1 (repl a c) (repl a d)
@@ -310,6 +314,8 @@ Tüüp Function muutub liigiks Arrow
 Tüübikonstruktor muutub vastavaks edutatud liigikonstruktoriks
 
 Either_Char_Int : Star => !Either_Char_Int : *
+Fun_wrapper : Star -> Star -> Star => !Fun_wrapper : * -> * -> *
+Fun_wrapper[T : Star, U : Star] : (T -> U) -> Fun_wrapper T U => !Fun_wrapper[K : *, L : *] : (K -> L) -> !Fun_wrapper K L
 Left_Char_Int : Char -> Either_Char_Int => !Left_Char_Int : !Char -> !Either_Char_Int
 Pair_Char_Int : Star => !Pair_Char_Int : *
 Pair_Char_Int : Char -> Int -> Pair_Char_Int => !Pair_Char_Int : !Char -> !Int -> !Pair_Char_Int
@@ -327,7 +333,7 @@ Right_Char_Int : Int -> Either_Char_Int => !Right_Char_Int : !Int -> !Either_Cha
         Algebraic_data_1 e ->
           (
             Prelude.foldl (\d -> \(Form_1 n _) -> ins_new n a d) j e,
-            Prelude.foldl (\f -> \(Form_1 g h) -> insert g (type_alg h g) f) k e)
+            Prelude.foldl (\f -> \(Form_1 g h) -> Data.Map.insert g (type_alg h g) f) k e)
         Struct_data_1 e ->
           let
             e' = fst <$> e
@@ -335,8 +341,8 @@ Right_Char_Int : Int -> Either_Char_Int => !Right_Char_Int : !Int -> !Either_Cha
             (
               j,
               Prelude.foldl
-                (flip (\g -> insert g (Field_expression_2 g)))
-                (insert
+                (flip (\g -> Data.Map.insert g (Field_expression_2 g)))
+                (Data.Map.insert
                   a
                   (Prelude.foldr
                     (\f -> Function_expression_2 (Name_pattern ('#' : f)))
@@ -347,7 +353,7 @@ Right_Char_Int : Int -> Either_Char_Int => !Right_Char_Int : !Int -> !Either_Cha
     in (\p ->
       let
         y = Prelude.foldr arrow_kind star_kind (snd <$> p)
-      in ((ins_new a y i, l, m, insert a y x), Data_3 a p c)) <$> type_kinds_5 q o b
+      in ((ins_new a y i, l, m, Data.Map.insert a y x), Data_3 a p c)) <$> type_kinds_5 q o b
   type_data_2 :: (Location_0 -> Location_1) -> Data_3 -> Map' Kind_1 -> (Algebraics, Types) -> Err (Algebraics, Types)
   type_data_2 f (Data_3 a b c) d (p, e) =
     let
@@ -377,7 +383,9 @@ Right_Char_Int : Int -> Either_Char_Int => !Right_Char_Int : !Int -> !Either_Cha
     (Map' (Kind_1, Status), Algebraics, Constrs, Types, Map' (Kind, Status), Defs, Map' Kind_1) ->
     Err (Map' (Kind_1, Status), Algebraics, Constrs, Types, Map' (Kind, Status), Defs, Map' Kind_1)
   type_datas h a (b, i, j, d, o, c, m) =
-    (
+    let
+      (x, y) = Data.List.partition promotable a
+    in (
       type_datas_1 h o a (b, j, c, m) >>=
       \((e, k, f, n), p) -> (\(l, g) -> (e, l, k, g, o, f, n)) <$> type_datas_2 h p (fst <$> e) (i, d))
   type_datas_1 ::
@@ -403,7 +411,7 @@ Right_Char_Int : Int -> Either_Char_Int => !Right_Char_Int : !Int -> !Either_Cha
   type_def_2 :: (Location_0 -> Location_1) -> Def_4 -> (Algebraics, Constrs, Types) -> Defs -> Err Defs
   type_def_2 j a (d, l, k) c = case a of
     Basic_def_4 r e b h i ->
-      flip (insert e) c <$> type_expr ("function " ++ e ++ location (j r)) h j ((\x -> (x, Fixed)) <$> b, d, l, k) i
+      flip (Data.Map.insert e) c <$> type_expr ("function " ++ e ++ location (j r)) h j ((\x -> (x, Fixed)) <$> b, d, l, k) i
   type_defs ::
     (Location_0 -> Location_1) ->
     Map' (Kind, Status) ->
@@ -432,7 +440,7 @@ Right_Char_Int : Int -> Either_Char_Int => !Right_Char_Int : !Int -> !Either_Cha
     type_expression c d a 0 0 b [] e f h >>= \(g, i, j, _, _) -> g <$ solvesys ("Type error in " ++ k ++ ".") i j
   type_expr' :: (Location_0 -> Location_1) -> (Map' Kind_1, Algebraics, Constrs, Types) -> Expression_1 -> Err Expression_2
   type_expr' a (b, c, d, e) =
-    type_expr "input" (Name_type_1 "!") a (insert "!" (star_kind, Flexible) (flip (,) Fixed <$> b), c, d, e)
+    type_expr "input" (Name_type_1 "!") a (Data.Map.insert "!" (star_kind, Flexible) (flip (,) Fixed <$> b), c, d, e)
   type_expression ::
     Algebraics ->
     Constrs ->
@@ -457,7 +465,7 @@ Right_Char_Int : Int -> Either_Char_Int => !Right_Char_Int : !Int -> !Either_Cha
             r
             (o + 1)
             s
-            (insert (show o) (star_kind, Flexible) f)
+            (Data.Map.insert (show o) (star_kind, Flexible) f)
             h
             d
             c
@@ -476,7 +484,7 @@ Right_Char_Int : Int -> Either_Char_Int => !Right_Char_Int : !Int -> !Either_Cha
             r
             (o + 2)
             s
-            (insert (show (o + 1)) (star_kind, Flexible) (insert (show o) (star_kind, Flexible) f))
+            (Data.Map.insert (show (o + 1)) (star_kind, Flexible) (Data.Map.insert (show o) (star_kind, Flexible) f))
             ((e, function_type (Name_type_1 (show o)) (Name_type_1 (show (o + 1)))) : h)
             (case c of
               Blank_pattern -> d
@@ -561,7 +569,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     [] -> Right []
     c : d -> type_form f c b >>= \e -> (:) e <$> type_forms f d b
   type_kind :: (String, Kind_1) -> Map' Kind_1 -> Map' Kind_1
-  type_kind = uncurry insert
+  type_kind = uncurry Data.Map.insert
   type_kind_4 ::
     (Location_0 -> Location_1) ->
     Map' (Kind, Status) ->
@@ -570,7 +578,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     Err (Map' Kind_1, Map' Kind_1)
   type_kind_4 d e (g, a) b = (\h ->
     let
-      f = insert g h
+      f = Data.Map.insert g h
     in bimap f f b) <$> type_kind_7 d e Star_kind a
   type_kind_6 :: (Location_0 -> Location_1) -> Map' (Kind, Status) -> Kind_0 -> Err (Kind_1, Kind)
   type_kind_6 a b (Kind_0 c d) = case d of
@@ -603,7 +611,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     Err ([(String, Kind_1)], Map' Kind_1)
   type_kinds_0 a b c d = case c of
     [] -> Right ([], d)
-    (e, f) : g -> type_kind_7 a b Star_kind f >>= \h -> first ((:) (e, h)) <$> type_kinds_0 a b g (insert e h d)
+    (e, f) : g -> type_kind_7 a b Star_kind f >>= \h -> first ((:) (e, h)) <$> type_kinds_0 a b g (Data.Map.insert e h d)
   type_kinds_3 ::
     [(String, Kind_1)] -> String -> Map' (Kind_1, Status') -> Map' String -> (Map' (Kind_1, Status'), Map' String)
   type_kinds_3 a b f c = case a of
@@ -612,7 +620,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
       let
         h = d ++ b
       in
-        type_kinds_3 g b (insert h (e, Flexible) f) (insert d h c)
+        type_kinds_3 g b (Data.Map.insert h (e, Flexible) f) (Data.Map.insert d h c)
   type_kinds_4 ::
     (Location_0 -> Location_1) ->
     Map' (Kind, Status) ->
@@ -647,7 +655,9 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
       (
         type_case c (Name j k) r l p h >>=
         \s ->
-          (\(t, u, v, w, x) -> (insert k (Match_Algebraic_2 l t) i, u, v, w, x, y)) <$> type_expression a b c d e f g s m n)
+          (
+            (\(t, u, v, w, x) -> (Data.Map.insert k (Match_Algebraic_2 l t) i, u, v, w, x, y)) <$>
+            type_expression a b c d e f g s m n))
     Nothing -> Left q
   type_match_char ::
     Algebraics ->
@@ -779,7 +789,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     let
       d = e a
     in
-      bimap (insert a d) (insert d (b, Flexible))
+      bimap (Data.Map.insert a d) (Data.Map.insert d (b, Flexible))
   typevars ::
     (String -> String) ->
     [(String, Kind_1)] ->

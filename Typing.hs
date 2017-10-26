@@ -17,6 +17,8 @@ internal: with new matching error system, do we need to keep locations for each 
 change semantics of missing pattern-match variables from blank to lambda? (Left -> e is not Left _ -> e but Left x -> e x)
 internal: make the system of specifying built-in algebraic data types and things better and safer
 Allow hiding things to functions outside module - so that helper functions are not exported from the module
+normalising constructors for some data types (polynomial, fraction) which assume a certain normal form of fields?
+allow to hide (prevent exporting) constructors and field accessors which can potentially have bad behavior
 internal: remove locations from expressions except from lowest-level things where some checks are necessary (name)?
 switch expression that is less strict and more flexible than match?
 some limited pattern matching in function arguments (and maybe also variables introduced through algebraic matching?)
@@ -35,7 +37,6 @@ different ways of folding lists, vectors, sets, maps etc
 real numbers (float, fix, fraction), basic arithmetic + real functions (sine, exp etc). Trig also for complex numbers?
 gather naming and type errors and give a list instead of returning only the first one?
 enrich kind system via promotion?
-normalising constructors for some data types (polynomial, fraction) which assume a certain normal form of fields?
 promote primitive data types
 make match work with chars
 make promotion for built-in ADT-s automatic

@@ -188,10 +188,15 @@ module Typing where
   location_err' :: String -> Location_1 -> Location_1 -> String
   location_err' a b = location_err a (Library b)
   locations :: Locations
-  locations = fromList (flip (,) (Language) <$> (keys hkinds ++ keys kinds ++ keys defs_and_types))
+  locations =
+    fromList (flip (,) (Language) <$> (Data.List.filter not_promoted (keys hkinds ++ keys kinds) ++ keys defs_and_types))
   naming_typing :: String -> Tree_2 -> (Locations, File, Defs, Map' Kind_1) -> Err (Locations, File, Defs, Map' Kind_1)
   naming_typing f a (b, c, g, j) =
     naming f a b >>= \(d, e) -> (\(h, i, k) -> (d, h, i, k)) <$> typing (Location_1 f) e (c, g, j)
+  not_promoted :: String -> Bool
+  not_promoted a = case a of
+    '!' : _ -> False
+    _ -> True
   promotable :: Data_2 -> Bool
   promotable (Data_2 _ a _) = Prelude.foldr (&&) True (promotable' <$> snd <$> a)
   promotable' :: Kind_0 -> Bool
@@ -382,12 +387,9 @@ Right_Char_Int : Int -> Either_Char_Int => !Right_Char_Int : !Int -> !Either_Cha
     [Data_2] ->
     (Map' (Kind_1, Status), Algebraics, Constrs, Types, Map' (Kind, Status), Defs, Map' Kind_1) ->
     Err (Map' (Kind_1, Status), Algebraics, Constrs, Types, Map' (Kind, Status), Defs, Map' Kind_1)
-  type_datas h a (b, i, j, d, o, c, m) =
-    let
-      (x, y) = Data.List.partition promotable a
-    in (
-      type_datas_1 h o a (b, j, c, m) >>=
-      \((e, k, f, n), p) -> (\(l, g) -> (e, l, k, g, o, f, n)) <$> type_datas_2 h p (fst <$> e) (i, d))
+  type_datas h a (b, i, j, d, o, c, m) = (
+    type_datas_1 h o a (b, j, c, m) >>=
+    \((e, k, f, n), p) -> (\(l, g) -> (e, l, k, g, o, f, n)) <$> type_datas_2 h p (fst <$> e) (i, d))
   type_datas_1 ::
     (Location_0 -> Location_1) ->
     Map' (Kind, Status) ->

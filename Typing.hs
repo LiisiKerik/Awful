@@ -99,7 +99,10 @@ module Typing where
   algebraics = fromList (second (\(a, b, c) -> (a, fromList b, c)) <$> algebraics')
   algebraics' :: [(String, ([(String, Kind_1)], [(String, [Type_1])], Type_1))]
   algebraics' =
-    (\(a, (b, c)) -> (a, (b, c, Prelude.foldl (\d -> \(e, _) -> Application_type_1 d (Name_type_1 e)) (Name_type_1 a) b))) <$> algebraics''
+    (
+      (\(a, (b, c)) ->
+        (a, (b, c, Prelude.foldl (\d -> \(e, _) -> Application_type_1 d (Name_type_1 e)) (Name_type_1 a) b))) <$>
+      algebraics'')
   algebraics'' :: [(String, ([(String, Kind_1)], [(String, [Type_1])]))]
   algebraics'' = [("Comparison", ([], [("EQ", []), ("GT", []), ("LT", [])]))]
   arrow_kind :: Kind_1 -> Kind_1 -> Kind_1

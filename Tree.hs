@@ -298,11 +298,11 @@ module Tree where
   parse_name_expression :: Parser Expression_branch_0
   parse_name_expression = Name_expression_0 <$> parse_name
   parse_name_kind :: Parser Kind_branch_0
-  parse_name_kind = Name_kind_0 <$> parse_name
+  parse_name_kind = Name_kind_0 <$> parse_prom
   parse_name_pattern :: Parser Pattern_0
   parse_name_pattern = Name_pattern <$> parse_name
   parse_name_type :: Parser Type_branch_0
-  parse_name_type = Name_type_0 <$> parse_name
+  parse_name_type = Name_type_0 <$> parse_prom
   parse_nothing :: Parser ()
   parse_nothing = Parser (\a -> Right ((), a))
   parse_operator :: String -> Parser ()
@@ -315,6 +315,8 @@ module Tree where
   parse_pattern_0 = parse_blank <|> parse_name_pattern
   parse_pattern_1 :: Parser Pattern_1
   parse_pattern_1 = Pattern_1 <&> parse_pattern_0
+  parse_prom :: Parser String
+  parse_prom = (parse_lift <|> parse_nothing) *> parse_name
   parse_round :: Parser t -> Parser t
   parse_round a = parse_brackets Left_round_token a Right_round_token
   parse_struct :: Parser Data_0

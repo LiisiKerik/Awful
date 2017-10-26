@@ -41,6 +41,7 @@ promote primitive data types
 make match work with chars
 make promotion for built-in ADT-s automatic
 modify parser: make promotion of ints and chars to type level explicit (with !)
+simplify hyperkind system because there's no need to keep anything but the number of arguments
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")
@@ -262,6 +263,58 @@ module Typing where
       g : h -> type_case j m a f h (case e of
         Blank_pattern -> d
         Name_pattern i -> ins_new i (Local_type_1 (repl a g)) d)
+{-
+Kuidas otsustada, kas andmetüüp edutatakse?
+Tal on ainult Star liiki tüübiparameetrid
+Structi jaoks:
+Kõigi väljade tüübid koosnevad ainult tüüpidest mis on ise edutatavad
+Algebralise andmetüübi jaoks:
+Iga andmekonstruktori väljade tüübid koosnevad ainult tüüpidest mis on ise edutatavad
+Mis ei ole edutatav?
+1) Andmetüüp millel on tüübiparameetreid mis ei ole liiki Star
+2) GADT
+3) Andmetüüp mille mõnel konstruktoril on tüüp mis ei ole edutatav
+Kuidas edutamine käib?
+1) Tüübikonstruktorist saab liigikonstruktor
+   Comparison : Star                 =>   !Comparison : *
+   Either : Star -> Star -> Star     =>   !Either : * -> * -> *
+   List : Star -> Star               =>   !List : * -> *
+   Logical : Star                    =>   !Logical : * -> *
+   Maybe : Star -> Star              =>   !Maybe : * -> *
+   Nat : Star                        =>   !Nat : *
+   Pair : Star -> Star -> Star       =>   !Pair : * -> * -> *
+   Trivial : Star                    =>   !Trivial : *
+Nimele tuleb ette hüüumärk.
+Liik Star muutub hüperliigiks *.
+Liik Arrow muutub hüperliigiks ->.
+2) Andmekonstruktoritest saavad tüübikonstruktorid
+   Cons[T : Star] : T -> List T -> List T          =>   !Cons[K : *] : K -> !List K -> !List K
+   EQ : Comparison                                 =>   !EQ : !Comparison
+   Empty[T : Star] : List T                        =>   !Empty[K : *] : !List K
+   False : Logical                                 =>   !False : !Logical
+   GT : Comparison                                 =>   !GT : !Comparison
+   LT : Comparison                                 =>   !LT : !Comparison
+   Left[T : Star, U : Star] : T -> Either T U      =>   !Left[K : *, L : *] : K -> !Either K L
+   Next : Nat -> Nat                               =>   !Next : !Nat -> !Nat
+   Nothing[T : Star] : Maybe T                     =>   !Nothing[K : *] : !Maybe K
+   Pair[T : Star, U : Star] : T -> U -> Pair T U   =>   !Pair[K : *, L : *] : K -> L -> !Pair K L
+   Right[T : Star, U : Star] : U -> Either T U     =>   !Right[K : *, L : *] : L -> !Either K L
+   Trivial : Trivial                               =>   !Trivial : !Trivial
+   True : Logical                                  =>   !True : !Logical
+   Wrap[T : Star] : T -> Maybe T                   =>   !Wrap[K : *] : K -> !Maybe K
+   Zero : Nat                                      =>   !Zero : !Nat
+Nimele tuleb ette hüüumärk.
+Tüübimuutujad (mis on alati liiki Star) muutuvad liigimuutujateks (mis on alati hüperliiki * mida eksplitsiitselt ei hoita)
+Tüübimuutuja T muutub liigimuutujaks T
+Tüüp Function muutub liigiks Arrow
+Tüübikonstruktor muutub vastavaks edutatud liigikonstruktoriks
+
+Either_Char_Int : Star => !Either_Char_Int : *
+Left_Char_Int : Char -> Either_Char_Int => !Left_Char_Int : !Char -> !Either_Char_Int
+Pair_Char_Int : Star => !Pair_Char_Int : *
+Pair_Char_Int : Char -> Int -> Pair_Char_Int => !Pair_Char_Int : !Char -> !Int -> !Pair_Char_Int
+Right_Char_Int : Int -> Either_Char_Int => !Right_Char_Int : !Int -> !Either_Char_Int
+-}
   type_data_1 ::
     (Location_0 -> Location_1) ->
     Map' (Kind, Status) ->
@@ -368,10 +421,6 @@ module Typing where
   type_defs_2 f a b c = case a of
     [] -> Right c
     d : e -> type_def_2 f d b c >>= type_defs_2 f e b
-{-
-  type_error :: Location_1 -> Err t
-  type_error a = Left ("Type error" ++ location' a)
--}
   type_expr ::
     String ->
     Type_1 ->

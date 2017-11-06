@@ -40,5 +40,5 @@ module Standard where
   standard_type a b =
     let
       c = get_location a
-    in Type_0 c (Application_type_0 (Type_0 c (Application_type_0 (Type_0 c (Name_type_0 "Function")) a)) b)
+    in Type_0 c (Application_type_0 (Type_0 c (Application_type_0 (Type_0 c (Name_type_0 "Function" [])) a)) b)
 -----------------------------------------------------------------------------------------------------------------------------

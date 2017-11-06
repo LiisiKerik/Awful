@@ -55,7 +55,7 @@ module Tree where
   data Tree_1 = Tree_1 [Name] Tree_0 deriving Show
   data Type_0 = Type_0 Location_0 Type_branch_0 deriving Show
   data Type_branch_0 =
-    Application_type_0 Type_0 Type_0 | Char_type_0 Char | Int_type_0 Integer | Name_type_0 String deriving Show
+    Application_type_0 Type_0 Type_0 | Char_type_0 Char | Int_type_0 Integer | Name_type_0 String [Kind_0] deriving Show
   class Get_location t where
     get_location :: t -> Location_0
   infixl 4 <&
@@ -302,7 +302,11 @@ module Tree where
   parse_name_pattern :: Parser Pattern_0
   parse_name_pattern = Name_pattern <$> parse_name
   parse_name_type :: Parser Type_branch_0
-  parse_name_type = Name_type_0 <$> parse_prom
+  parse_name_type =
+    (
+      Name_type_0 <$>
+      parse_prom <*>
+      parse_optional' (parse_brackets Left_square_token (parse_list 1 parse_kind) Right_square_token))
   parse_nothing :: Parser ()
   parse_nothing = Parser (\a -> Right ((), a))
   parse_operator :: String -> Parser ()

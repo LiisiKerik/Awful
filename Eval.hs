@@ -116,7 +116,7 @@ module Eval where
         Blank_pattern -> f
         Name_pattern e -> e == b || f
   tokenise_parse_naming_typing_eval ::
-    Locations -> Map' Kind_1 -> (Algebraics, Constrs, Types) -> Defs -> String -> Err String
+    Locations -> Map' Polykind -> (Algebraics, Constrs, Types) -> Defs -> String -> Err String
   tokenise_parse_naming_typing_eval c f (g, h, i) l b =
     (
       parse_expression b >>=

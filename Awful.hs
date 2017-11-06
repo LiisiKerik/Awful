@@ -15,10 +15,10 @@ import Typing
 type Files = Map' File
 check ::
   [String] ->
-  (Files, Locations, Defs, Map' Kind_1) ->
+  (Files, Locations, Defs, Map' Polykind) ->
   Location' ->
   String ->
-  IO (Err (Files, Locations, Defs, Map' Kind_1, File))
+  IO (Err (Files, Locations, Defs, Map' Polykind, File))
 check b (f, x, y, e) j name_qc = case Data.Map.lookup name_qc f of
   Just a -> return (Right (f, x, y, e, a))
   Nothing -> case check' name_qc b of
@@ -58,9 +58,9 @@ check_extensions a c = case c of
   d : e -> check_extension a >> first ((:) a) <$> check_extensions d e
 check_imports ::
   [String] ->
-  (Files, Locations, Defs, Map' Kind_1, File) ->
+  (Files, Locations, Defs, Map' Polykind, File) ->
   [(Location', String)] ->
-  IO (Err (Files, Locations, Defs, Map' Kind_1, File))
+  IO (Err (Files, Locations, Defs, Map' Polykind, File))
 check_imports a b @ (f, h, l, p, k) c = case c of
   [] -> return (Right b)
   (d, g) : e -> do
@@ -73,7 +73,7 @@ err = return <$> Left
 eval'' :: [String] -> String -> IO (Err String)
 eval'' a b = do
   c <- check_imports [] (empty, locations, defs, kinds, init_type_context) ((,) Language <$> a)
-  return (c >>= \(_, e, f, j, (File _ g h i _)) -> tokenise_parse_naming_typing_eval e j (g, h, i) f b)
+  return (c >>= \(_, e, f, j, (File _ g h i _ _)) -> tokenise_parse_naming_typing_eval e j (g, h, i) f b)
 main :: IO ()
 main = do
   args <- getArgs

@@ -11,16 +11,14 @@ module Standard where
       deriving Show
 -}
   data Def_1 = Basic_def_1 Name [(Name, Kind_0)] Type_0 Expression_0 deriving Show
-  -- data Tree' = Tree' [Data_tree] [Abstract_tree_0] [Def_branch'] deriving Show
-  data Tree_2 = Tree_2 [Data_0] [Def_1] deriving Show
+  data Tree_2 = Tree_2 [Data_0] [Class_0] [Def_1] deriving Show
   data Tree_3 = Tree_3 [Name] Tree_2 deriving Show
   standard :: (Location_0 -> Location_1) -> String -> Err Tree_3
   standard a b = standard_0 <$> parse_tree a b
-  -- standard (Tree a b c) = Tree' a b (standard_defs c)
   standard_0 :: Tree_1 -> Tree_3
   standard_0 (Tree_1 a b) = Tree_3 a (standard_1 b)
   standard_1 :: Tree_0 -> Tree_2
-  standard_1 (Tree_0 a b) = Tree_2 a (standard_defs b)
+  standard_1 (Tree_0 a b c) = Tree_2 a b (standard_defs c)
   standard_argument :: (Pattern_1, Type_0) -> (Type_0, Expression_0) -> (Type_0, Expression_0)
   standard_argument (a, b) = bimap (standard_type b) (standard_pattern a)
   standard_arguments :: (Type_0, Expression_0) -> [(Pattern_1, Type_0)] -> (Type_0, Expression_0)

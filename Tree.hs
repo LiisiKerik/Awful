@@ -8,7 +8,7 @@ module Tree where
   import Control.Monad
   import Data.Bifunctor
   import Tokenise
-  -- data Abstract_tree_0 = Abstract_tree_0 Name_tree Name_tree Kind [Argument_tree Name_tree Kind] Type_0 deriving Show
+  data Class_0 = Class_0 Name (Name, Kind_0) [(Name, Type_0)] deriving Show
   -- data Constraint_0 = Constraint_0 Name_tree Name_tree deriving Show
   data Data_0 = Data_0 Name [(Name, Kind_0)] Data_branch_0 deriving Show
   data Data_branch_0 = Algebraic_data_0 [Form_0] | Struct_data_0 [(Name, Type_0)] deriving Show
@@ -50,8 +50,7 @@ module Tree where
   data Pattern_0 = Blank_pattern | Name_pattern String deriving Show
   newtype Parser t = Parser {parser :: State -> Either Location_0 (t, State)}
   data State = State Tokens Location_0 deriving Show
-  -- data Tree = Tree [Data_tree] [Abstract_tree_0] [Def_branch] deriving Show
-  data Tree_0 = Tree_0 [Data_0] [Def_0] deriving Show
+  data Tree_0 = Tree_0 [Data_0] [Class_0] [Def_0] deriving Show
   data Tree_1 = Tree_1 [Name] Tree_0 deriving Show
   data Type_0 = Type_0 Location_0 Type_branch_0 deriving Show
   data Type_branch_0 =
@@ -174,6 +173,10 @@ module Tree where
   parse_char_expression = Char_expression_0 <$> parse_char
   parse_char_type :: Parser Type_branch_0
   parse_char_type = Char_type_0 <$ parse_lift <*> parse_char
+  parse_class :: Parser Class_0
+  -- Class Finite(T : Star)(All : List T)
+  parse_class =
+    Class_0 <$> parse_name'' Class_token <*> parse_round ((,) <$> parse_name' <* parse_colon <*> parse_kind) <*> parse_arguments' parse_name'
   parse_colon :: Parser ()
   parse_colon = parse_operator ":"
   parse_comma :: Parser ()
@@ -330,8 +333,7 @@ module Tree where
   parse_tree :: (Location_0 -> Location_1) -> String -> Err Tree_1
   parse_tree = parse parse_tree'
   parse_tree' :: Parser Tree_1
-  -- tree' = end_tree (Tree <$> many data_tree <*> many abstract_tree <*> many def_branch)
-  parse_tree' = Tree_1 <$> many parse_load <*> (Tree_0 <$> many parse_data <*> many parse_def)
+  parse_tree' = Tree_1 <$> many parse_load <*> (Tree_0 <$> many parse_data <*> many parse_class <*> many parse_def)
   parse_type :: Parser Type_0
   parse_type = Type_0 <&> parse_type_branch
   parse_type_branch :: Parser Type_branch_0

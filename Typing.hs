@@ -42,6 +42,7 @@ make promotion for built-in ADT-s automatic
 modify parser: make promotion of ints and chars to type level explicit (with !)
 simplify hyperkind system because there's no need to keep anything but the number of arguments
 modify flexible type variable name generation. use just numbers for everything? ("T0" - maybe name conflict with userdefined)
+module system related functions into a separate file?
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")
@@ -59,6 +60,7 @@ module Typing where
   import Tokenise
   import Tree
   type Algebraics = Map' (([(String, Kind_1)], Map' [Type_1], Type_1), Status) -- TODO: REM STRINGS FROM FST MAP
+  data Class_3 = Class_3 (String, Kind_1) [(String, Type_1)] deriving Show
   type Constrs = Map' (String, Status)
   data Data_3 = Data_3 String [(String, Kind_1)] Data_branch_1 deriving Show
   data Def_4 = Basic_def_4 Location_0 String (Map' Polykind) Type_1 Expression_1 deriving Show
@@ -84,8 +86,16 @@ module Typing where
     Negate_Int_expression_2 |
     Struct_expression_2 (Map' Expression_2)
       deriving Show
-  data File = File (Map' (Polykind, Status)) Algebraics Constrs Types (Map' (Kind, Status)) (Map' (Bool, Status))
-    deriving Show
+  data File =
+    File
+      (Map' (Polykind, Status))
+      Algebraics
+      Constrs
+      Types
+      (Map' (Kind, Status))
+      (Map' (Bool, Status))
+      (Map' (Class_3, Status))
+        deriving Show
   data Form_2 = Form_2 String [Type_1] deriving Show
   data Kind = Arrow_kind Kind Kind | Star_kind deriving (Eq, Show)
   data Kind_1 = Application_kind_1 Kind_1 Kind_1 | Name_kind_1 String deriving (Eq, Show)
@@ -96,6 +106,7 @@ module Typing where
     Matches_Int_2 (Map Integer Expression_2) Expression_2
       deriving Show
   data Polykind = Polykind [String] Kind_1 deriving Show
+  data Status = New | Old deriving (Eq, Show)
   data Type_1 = Application_type_1 Type_1 Type_1 | Char_type_1 Char | Int_type_1 Integer | Name_type_1 String [Kind_1]
     deriving (Eq, Show)
   data Type_1' = Basic_type_1 [(String, Kind_1)] Type_1 deriving Show
@@ -135,6 +146,20 @@ module Typing where
   check_kind' a = case a of
     Left (Polykind c d) -> (c, d)
     Right b -> ([], b)
+  classes :: Map' Class_3
+  classes =
+    Data.Map.fromList
+      [
+        (
+          "Ring",
+          Class_3
+            ("T", star_kind)
+            [
+              ("Add", function_type (Name_type_1 "T" []) (function_type (Name_type_1 "T" []) (Name_type_1 "T" []))),
+              ("Convert", function_type int_type (Name_type_1 "T" [])),
+              ("Inverse", function_type (Name_type_1 "T" []) (maybe_type (Name_type_1 "T" []))),
+              ("Multiply", function_type (Name_type_1 "T" []) (function_type (Name_type_1 "T" []) (Name_type_1 "T" []))),
+              ("Negate", function_type (Name_type_1 "T" []) (Name_type_1 "T" []))])]
   comparison_kind :: Kind_1
   comparison_kind = Name_kind_1 "!Comparison"
   comparison_type :: Type_1
@@ -142,7 +167,7 @@ module Typing where
   constrs :: Map' String
   constrs = Data.Map.fromList (join ((\(a, (_, b, _)) -> (\c -> (c, a)) <$> keys b) <$> assocs algebraics))
   context_union :: File -> File -> File
-  context_union (File b i j d a x) (File f k l h c y) =
+  context_union (File b i j d a x e) (File f k l h c y m) =
     File
       (Data.Map.union b f)
       (Data.Map.union i k)
@@ -150,6 +175,7 @@ module Typing where
       (Data.Map.union d h)
       (Data.Map.union a c)
       (Data.Map.union x y)
+      (Data.Map.union e m)
   defs :: Map' Expression_2
   defs = fst <$> defs_and_types
   defs_and_types :: Map' (Expression_2, Type_1')
@@ -207,7 +233,14 @@ module Typing where
         ("Star", Star_kind)]
   init_type_context :: File
   init_type_context =
-    File (old kinds) (old algebraics) (old constrs) (old (snd <$> defs_and_types)) (old hkinds) (old promotables)
+    File
+      (old kinds)
+      (old algebraics)
+      (old constrs)
+      (old (snd <$> defs_and_types))
+      (old hkinds)
+      (old promotables)
+      (old classes)
   ins_new :: Ord t => t -> u -> Map t (u, Status) -> Map t (u, Status)
   ins_new a b = Data.Map.insert a (b, New)
   int_kind :: Kind_1
@@ -217,7 +250,7 @@ module Typing where
   kinds :: Map' Polykind
   kinds =
     (
-      Polykind [] <$>
+      pkind <$>
       Data.Map.fromList (kinds' ++ (second (\(a, _, _) -> Prelude.foldr arrow_kind star_kind (snd <$> a)) <$> algebraics')))
   kinds' :: [(String, Kind_1)]
   kinds' =
@@ -245,7 +278,9 @@ module Typing where
   make_eqs :: [Data_2] -> Map' (Either Bool (Map' Location_0), Status) -> Map' (Either Bool (Map' Location_0), Status)
   make_eqs a b = case a of
     [] -> b
-    c : d -> make_eqs d (make_eq c b) 
+    c : d -> make_eqs d (make_eq c b)
+  maybe_type :: Type_1 -> Type_1
+  maybe_type = Application_type_1 (Name_type_1 "Maybe" [])
   naming_typing :: String -> Tree_2 -> (Locations, File, Defs, Map' Polykind) -> Err (Locations, File, Defs, Map' Polykind)
   naming_typing f a (b, c, g, j) =
     naming f a b >>= \(d, e) -> (\(h, i, k) -> (d, h, i, k)) <$> typing (Location_1 f) e (c, g, j)
@@ -255,6 +290,10 @@ module Typing where
     _ -> True
   ntype :: String -> Type_1
   ntype a = Name_type_1 a []
+  old :: Map' t -> Map' (t, Status)
+  old = (<$>) (flip (,) Old)
+  pkind :: Kind_1 -> Polykind
+  pkind = Polykind []
   prom_type :: Set String -> Type_1 -> Kind_1
   prom_type d a =
     let
@@ -273,6 +312,8 @@ module Typing where
   promotable' (Kind_0 _ a) = a == Name_kind_0 "Star"
   promotables :: Map' Bool
   promotables = Data.Map.fromList ((\a -> (a, True)) <$> ["Char", "Comparison", "Int"])
+  rem_old :: Map' (t, Status) -> Map' (t, Status)
+  rem_old = (<$>) (second (return Old)) <$> Data.Map.filter ((==) New <$> snd)
   repkinds :: Map' Kind_1 -> Kind_1 -> Kind_1
   repkinds a b = case b of
     Application_kind_1 c d -> Application_kind_1 (repkinds a c) (repkinds a d)
@@ -387,6 +428,27 @@ module Typing where
       g : h -> type_case j m a f h (case e of
         Blank_pattern -> d
         Name_pattern i -> ins_new i (Basic_type_1 [] (repl a g)) d)
+  type_class ::
+    (Location_0 -> Location_1) ->
+    Map' Kind ->
+    Map' Polykind ->
+    Class_2 ->
+    Map' (Class_3, Status) ->
+    Err (Map' (Class_3, Status))
+  type_class a i j (Class_2 b (c, d) e) f =
+    (
+      type_kind_7 a i Star_kind d >>=
+      \h -> (\g -> ins_new b (Class_3 (c, h) g) f) <$> type_types_0 a e (Data.Map.insert c (pkind h) j) i)
+  type_classes ::
+    (Location_0 -> Location_1) ->
+    Map' Kind ->
+    Map' Polykind ->
+    [Class_2] ->
+    Map' (Class_3, Status) ->
+    Err (Map' (Class_3, Status))
+  type_classes a f g b c = case b of
+    [] -> Right c
+    d : e -> type_class a f g d c >>= type_classes a f g e
   type_data_1 ::
     (Location_0 -> Location_1) ->
     Map' Kind ->
@@ -419,7 +481,7 @@ module Typing where
     in (\p ->
       let
         y = Prelude.foldr arrow_kind star_kind (snd <$> p)
-      in ((ins_new a (Polykind [] y) i, l, m, Data.Map.insert a (Polykind [] y) x), Data_3 a p c)) <$> type_kinds_5 q o b
+      in ((ins_new a (pkind y) i, l, m, Data.Map.insert a (pkind y) x), Data_3 a p c)) <$> type_kinds_5 q o b
   type_data_2 ::
     (Location_0 -> Location_1) -> Data_3 -> Map' Polykind -> Map' Kind -> (Algebraics, Types) -> Err (Algebraics, Types)
   type_data_2 f (Data_3 a b c) d y (p, e) =
@@ -642,7 +704,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     [] -> Right []
     c : d -> type_form f c b g >>= \e -> (:) e <$> type_forms f d b g
   type_kind :: (String, Kind_1) -> Map' Polykind -> Map' Polykind
-  type_kind (a, b) = Data.Map.insert a (Polykind [] b)
+  type_kind (a, b) = Data.Map.insert a (pkind b)
   type_kind_4 ::
     (Location_0 -> Location_1) ->
     Map' Kind ->
@@ -686,7 +748,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
   type_kinds_0 a b c d = case c of
     [] -> Right ([], d)
     (e, f) : g ->
-      type_kind_7 a b Star_kind f >>= \h -> first ((:) (e, h)) <$> type_kinds_0 a b g (Data.Map.insert e (Polykind [] h) d)
+      type_kind_7 a b Star_kind f >>= \h -> first ((:) (e, h)) <$> type_kinds_0 a b g (Data.Map.insert e (pkind h) d)
   type_kinds_3 ::
     [(String, Kind_1)] ->
     String ->
@@ -871,10 +933,10 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
           (
             (
               ins_new ('!' : a) (Prelude.foldr Arrow_kind Star_kind (return Star_kind <$> b)) o,
-              ins_new a (Polykind [] y) i,
+              ins_new a (pkind y) i,
               l,
               m,
-              Data.Map.insert a (Polykind [] y) x),
+              Data.Map.insert a (pkind y) x),
             Data_3 a p c) else Nothing) <$> solve_eq q a j'
   type_prom_2 ::
     (Location_0 -> Location_1) ->
@@ -978,6 +1040,10 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
   type_types f a b g = case a of
     [] -> Right []
     c : d -> type_type f c b g star_kind >>= \e -> (:) e <$> type_types f d b g
+  type_types_0 :: (Location_0 -> Location_1) -> [(String, Type_0)] -> Map' Polykind -> Map' Kind -> Err [(String, Type_1)]
+  type_types_0 a b c d = case b of
+    [] -> Right []
+    (e, f) : g -> type_type a f c d star_kind >>= \h -> (:) (e, h) <$> type_types_0 a g c d
   typevar ::
     (String -> String) ->
     (String, Kind_1) ->
@@ -997,13 +1063,17 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     [] -> b
     c : d -> typevars e d (typevar e c b)
   typing :: (Location_0 -> Location_1) -> Tree_5 -> (File, Defs, Map' Polykind) -> Err (File, Defs, Map' Polykind)
-  typing k (Tree_5 a c) (File d t u v w w0, l, m) =
+  typing k (Tree_5 a a' c) (File d t u v w w0 b', l, m) =
     (
       type_datas k a (d, t, u, v, w, l, m, w0) >>=
       \(e, b, h, g, o, f, n, w1) ->
         (
-          (\(i, j) -> (File (rem_old e) (rem_old b) (rem_old h) (rem_old j) (rem_old o) (rem_old w1), i, n)) <$>
-          type_defs k (fst <$> o) c (e, b, h) (f, g)))
+          type_classes k (fst <$> o) (fst <$> e) a' b' >>=
+          \c' ->
+            (
+              (\(i, j) ->
+                (File (rem_old e) (rem_old b) (rem_old h) (rem_old j) (rem_old o) (rem_old w1) (rem_old c'), i, n)) <$>
+              type_defs k (fst <$> o) c (e, b, h) (f, g))))
   undefined_error :: String -> String -> Location_1 -> Err t
   undefined_error a b c = Left ("Undefined " ++ a ++ " " ++ b ++ location' c)
   unsafe_left :: Either t u -> t

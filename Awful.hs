@@ -73,7 +73,7 @@ err = return <$> Left
 eval'' :: [String] -> String -> IO (Err String)
 eval'' a b = do
   c <- check_imports [] (empty, locations, defs, kinds, init_type_context) ((,) Language <$> a)
-  return (c >>= \(_, e, f, j, (File _ g h i _ _)) -> tokenise_parse_naming_typing_eval e j (g, h, i) f b)
+  return (c >>= \(_, e, f, j, (File _ g h i _ _ _)) -> tokenise_parse_naming_typing_eval e j (g, h, i) f b)
 main :: IO ()
 main = do
   args <- getArgs

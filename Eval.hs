@@ -2,6 +2,7 @@
 {-# OPTIONS_GHC -Wall #-}
 module Eval where
   import Data.Map
+  import Data.Set
   import Naming
   import Tokenise
   import Tree
@@ -14,11 +15,11 @@ module Eval where
       0 -> Nothing
       _ -> (\d -> div (a * d + b) c) <$> div_finite c (mod (- b) c) (mod a c)
 -}
-  eval :: Defs -> Expression_2 -> Expression_2
+  eval :: Map' Expression_2 -> Expression_2 -> Expression_2
   eval a b = case eval' a b of
     Just c -> c
     Nothing -> Name_expression_2 "Crash."
-  eval' :: Defs -> Expression_2 -> Maybe Expression_2
+  eval' :: Map' Expression_2 -> Expression_2 -> Maybe Expression_2
   eval' a c = case c of
     Application_expression_2 d e -> eval' a d >>= \h -> eval' a e >>= \j -> case h of
       Add_Int_expression_2 -> case j of
@@ -116,9 +117,15 @@ module Eval where
         Blank_pattern -> f
         Name_pattern e -> e == b || f
   tokenise_parse_naming_typing_eval ::
-    Locations -> Map' Polykind -> (Algebraics, Constrs, Types) -> Defs -> String -> Err String
-  tokenise_parse_naming_typing_eval c f (g, h, i) l b =
+    Locations ->
+    Map' Polykind ->
+    (Map' Alg, Map' String, Map' Type_2) ->
+    Map' Expression_2 ->
+    String ->
+    Map' (Set String) ->
+    Err String
+  tokenise_parse_naming_typing_eval c f (g, h, i) l b u =
     (
       parse_expression b >>=
-      \e -> naming_expression "input" e c >>= \j -> show <$> eval l <$> type_expr' (Location_1 "input") (f, g, h, i) j)
+      \e -> naming_expression "input" e c >>= \j -> show <$> eval l <$> type_expr' (Location_1 "input") (f, g, h, i) j u)
 -----------------------------------------------------------------------------------------------------------------------------

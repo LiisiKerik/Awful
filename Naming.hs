@@ -21,7 +21,14 @@ module Naming where
     Instance_def_3 Name_tree Name_tree [Pattern_branch] [Constraint_0] Expression_tree_1
       deriving Show
 -}
-  data Def_2 = Basic_def_2 Location_0 String [(String, Kind_0)] Type_0 Expression_1 deriving Show
+  data Def_2 =
+    Basic_def_2 Location_0 String [(Name, Kind_0)] Type_0 Expression_0 |
+    Instance_2 Location_0 Name Name [(Name, Expression_0)]
+      deriving Show
+  data Def_3 =
+    Basic_def_3 Location_0 String [(String, Kind_0)] Type_0 Expression_1 |
+    Instance_3 Location_0 Name Name [(Name, Expression_1)]
+      deriving Show
   data Expression_branch_1 =
     Application_expression_1 Expression_1 Expression_1 |
     Char_expression_1 Char |
@@ -47,8 +54,8 @@ module Naming where
   data Tree_3 = Tree_3 [Data_tree_1] [Abstract_tree_1] [Def_branch_2] deriving Show
   data Tree_4 = Tree_4 [Data_tree_2] [Abstract_tree_2] [Def_branch_3] deriving Show
 -}
-  data Tree_4 = Tree_4 [Data_1] [Class_1] [Def_1] deriving Show
-  data Tree_5 = Tree_5 [Data_2] [Class_2] [Def_2] deriving Show
+  data Tree_4 = Tree_4 [Data_1] [Class_1] [Def_2] deriving Show
+  data Tree_5 = Tree_5 [Data_2] [Class_2] [Def_3] deriving Show
   add :: Ord t => Map t u -> t -> u -> Either u (Map t u)
   add x y z = (case w of
     Just z' -> Left z'
@@ -87,7 +94,7 @@ module Naming where
   naming_1 f (Tree_2 a g b) c =
     (
       naming_datas_1 f a c >>=
-      \(d, e) -> naming_classes_0 f g d >>= \(d', e') -> flip (,) (Tree_4 e e' b) <$> naming_defs_1 f b d')
+      \(d, e) -> naming_classes_0 f g d >>= \(d', e') -> (\(h, i) -> (i, Tree_4 e e' h)) <$> naming_defs_1 f b d')
   naming_2 :: String -> Tree_4 -> Locations -> Err Tree_5
   naming_2 e (Tree_4 a f b) c =
     naming_datas_2 e a c >>= \d -> naming_classes_1 e f c >>= \g -> Tree_5 d g <$> naming_defs_2 e b c
@@ -118,26 +125,23 @@ module Naming where
   naming_datas_2 f a b = case a of
     [] -> Right []
     c : d -> naming_data_2 f c b >>= \e -> (:) e <$> naming_datas_2 f d b
-  naming_def_1 :: String -> Def_1 -> Locations -> Err Locations
-  naming_def_1 i a = case a of
-{-
-    Basic_def' c d e f g -> second (\h -> Basic_def_2 h d e f g) <$> naming_name c b
-    Instance_def' c d e f g -> Right (b, Instance_def_2 c d e f g)
--}
-    Basic_def_1 c _ _ _ -> (<$>) fst <$> naming_name i c
-  naming_def_2 :: String -> Def_1 -> Locations -> Err Def_2
+  naming_def_1 :: String -> Def_1 -> Locations -> Err (Def_2, Locations)
+  naming_def_1 i a g = case a of
+    Basic_def_1 c @ (Name h j) b d e -> (\(f, _) -> (Basic_def_2 h j b d e, f)) <$> naming_name i c g
+    Instance_1 b c d e -> Right (Instance_2 b c d e, g)
+  naming_def_2 :: String -> Def_2 -> Locations -> Err Def_3
   naming_def_2 j a b = case a of
 {-
-    Basic_def_2 c d e f g -> naming_arguments naming_name d b >>= \(h, i) -> Basic_def_3 c i e f <$> naming_expression g h
     Instance_def_2 c d e f g -> naming_patterns e b >>= \(h, i) -> Instance_def_3 c d i f <$> naming_expression g h
 -}
-    Basic_def_1 (Name k c) d f g ->
-      naming_arguments naming_name j d b >>= \(h, i) -> Basic_def_2 k c i f <$> naming_expression j g h
-  naming_defs_1 :: String -> [Def_1] -> Locations -> Err Locations
+    Basic_def_2 k c d f g ->
+      naming_arguments naming_name j d b >>= \(h, i) -> Basic_def_3 k c i f <$> naming_expression j g h
+    Instance_2 f c d e -> Instance_3 f c d <$> naming_nameexprs j b e
+  naming_defs_1 :: String -> [Def_1] -> Locations -> Err ([Def_2], Locations)
   naming_defs_1 a b c = case b of
-    [] -> Right c
-    d : e -> naming_def_1 a d c >>= naming_defs_1 a e
-  naming_defs_2 :: String -> [Def_1] -> Locations -> Err [Def_2]
+    [] -> Right ([], c)
+    d : e -> naming_def_1 a d c >>= \(f, g) -> first ((:) f) <$> naming_defs_1 a e g
+  naming_defs_2 :: String -> [Def_2] -> Locations -> Err [Def_3]
   naming_defs_2 = naming_list' naming_def_2
   naming_expression :: String -> Expression_0 -> Locations -> Err Expression_1
   naming_expression e (Expression_0 a c) d = Expression_1 a <$> naming_expression_branch e c d
@@ -198,6 +202,10 @@ module Naming where
   naming_name :: String -> Name -> Locations -> Err (Locations, String)
   naming_name f (Name a c) d =
     bimap (flip (location_err ("definitions of " ++ c)) (Location_1 f a)) (flip (,) c) (add d c (Library (Location_1 f a)))
+  naming_nameexprs :: String -> Locations -> [(Name, Expression_0)] -> Err [(Name, Expression_1)]
+  naming_nameexprs a b c = case c of
+    [] -> Right []
+    (d, e) : f -> naming_expression a e b >>= \g -> (:) (d, g) <$> naming_nameexprs a b f
   naming_names :: String -> [(Name, t)] -> Locations -> Err (Locations, [(String, t)])
   naming_names a b c = case b of
     [] -> Right (c, [])

@@ -1,6 +1,11 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 Load Algebra.awf
 Load Testing.awf
+Def Add_Complex_Test : List (Pair (Pair (Pair (Complex Trivial) (Complex Trivial)) (Complex Trivial)) (Complex Trivial)) =
+  Test
+    (Equal (Compare_Complex Compare_Trivial))
+    (x -> Add_Complex Add_Trivial (First x) (Second x))
+    (Cons (Pair (Pair (Complex Trivial Trivial) (Complex Trivial Trivial)) (Complex Trivial Trivial)) Empty)
 Def Add_Logical_Test : List (Pair (Pair (Pair Logical Logical) Logical) Logical) =
   Test
     (Equal Compare_Logical)

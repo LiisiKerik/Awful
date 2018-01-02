@@ -1,7 +1,9 @@
 -----------------------------------------------------------------------------------------------------------------------------
--- expr op op expr - esimene op on binaarne operaator, teine op on unaarne miinus
--- expr op expr - op on binaarne operaator
--- op expr - op on unaarne miinus
+{-
+expr op op expr - esimene op on binaarne operaator, teine op on unaarne miinus
+expr op expr - op on binaarne operaator
+op expr - op on unaarne miinus
+-}
 {-# OPTIONS_GHC -Wall #-}
 module Tree where
   import Control.Applicative
@@ -24,7 +26,10 @@ module Tree where
     Instance_def Name_tree Name_tree [Pattern_tree] [Constraint_0] [Name_tree] Expression_tree
       deriving Show
 -}
-  data Def_0 = Basic_def_0 Name [(Name, Kind_0)] [(Pattern_1, Type_0)] Type_0 Expression_0 deriving Show
+  data Def_0 =
+    Basic_def_0 Name [(Name, Kind_0)] [(Pattern_1, Type_0)] Type_0 Expression_0 |
+    Instance_def_0 Location_0 Name Name [(Name, Expression_0)]
+      deriving Show
   data Expression_0 = Expression_0 Location_0 Expression_branch_0 deriving Show
   data Expression_branch_0 =
     Application_expression_0 Expression_0 Expression_0 |
@@ -152,7 +157,7 @@ module Tree where
       parse_arguments' parse_pattern_1 <*
       parse_colon <*>
       parse_type <*
-      parse_operator "=" <*>
+      parse_eq <*>
       parse_expression')
   parse_blank :: Parser Pattern_0
   parse_blank = Blank_pattern <$ parse_name_4 "_"
@@ -174,7 +179,6 @@ module Tree where
   parse_char_type :: Parser Type_branch_0
   parse_char_type = Char_type_0 <$ parse_lift <*> parse_char
   parse_class :: Parser Class_0
-  -- Class Finite(T : Star)(All : List T)
   parse_class =
     Class_0 <$> parse_name'' Class_token <*> parse_round ((,) <$> parse_name' <* parse_colon <*> parse_kind) <*> parse_arguments' parse_name'
   parse_colon :: Parser ()
@@ -194,7 +198,7 @@ module Tree where
   parse_data' :: Token_0 -> Parser Data_branch_0 -> Parser Data_0
   parse_data' a b = Data_0 <$> parse_name'' a <*> parse_kinds <*> b
   parse_def :: Parser Def_0
-  parse_def = parse_basic -- <|> parse_instance_def
+  parse_def = parse_basic <|> parse_instance
   parse_default :: Parser Expression_0
   parse_default = parse_comma *> parse_token Default_token *> parse_arrow *> parse_expression'
   parse_elementary :: (Token_0 -> Maybe t) -> Parser t
@@ -208,6 +212,8 @@ module Tree where
         Nothing -> Left h)
   parse_elementary_expression :: Parser Expression_branch_0
   parse_elementary_expression = parse_char_expression <|> parse_int_expression <|> parse_name_expression
+  parse_eq :: Parser ()
+  parse_eq = parse_operator "="
   parse_error :: (Location_0 -> Location_1) -> Location_0 -> Err t
   parse_error a b = Left ("Parse error" ++ location' (a b))
   parse_expression :: String -> Err Expression_0
@@ -220,8 +226,8 @@ module Tree where
   parse_form = Form_0 <$> parse_name' <*> many parse_bracketed_type
   parse_function :: Parser Expression_branch_0
   parse_function = parse_arrow' (Function_expression_0 <$> parse_pattern_1)
+  parse_instance :: Parser Def_0
 {-
-  parse_instance_def :: Parser Def_branch
   parse_instance_def =
     Instance_def <$
     token_tree Instance_token <*>
@@ -234,6 +240,13 @@ module Tree where
     many name_tree' <*>
     expression_tree'
 -}
+  parse_instance =
+    (
+      Instance_def_0 <&
+      parse_token Instance_token <*>
+      parse_name' <*>
+      parse_round (parse_name') <*>
+      parse_optional parse_round ((,) <$> parse_name' <* parse_eq <*> parse_expression'))
   parse_int :: Parser Integer
   parse_int = (negate <$ parse_operator "-" <|> return id) <*> parse_elementary (\a -> case a of
     Int_token b -> Just b
@@ -252,7 +265,7 @@ module Tree where
   parse_lift = parse_operator "!"
   parse_list :: Integer -> Parser t -> Parser [t]
   parse_list a b = case a of
-    0 -> parse_optional' (parse_list 1 b)
+    0 -> parse_optional' (parse_list' 1 b)
     _ -> parse_list' a b
   parse_list' :: Integer -> Parser t -> Parser [t]
   parse_list' a b = (:) <$> b <*> case a of

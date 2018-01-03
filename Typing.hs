@@ -456,22 +456,26 @@ module Typing where
     Map' Kind ->
     Map' Polykind ->
     Class_2 ->
-    (Map' (Class_3, Status), Map' (Map' Location')) ->
-    Err (Map' (Class_3, Status), Map' (Map' Location'))
-  type_class a i j (Class_2 b (c, d) e) (f, m) =
+    (Map' (Class_3, Status), Map' (Map' Location'), Map' (Type_2, Status)) ->
+    Err (Map' (Class_3, Status), Map' (Map' Location'), Map' (Type_2, Status))
+  type_class a i j (Class_2 b (c, d) e) (f, m, y) =
     (
       type_kind_7 a i Star_kind d >>=
       \h ->
         (
-          (\g -> (ins_new b (Class_3 (c, h) g) f, Data.Map.insert b Data.Map.empty m)) <$>
+          (\g ->
+            (
+              ins_new b (Class_3 (c, h) g) f,
+              Data.Map.insert b Data.Map.empty m,
+              Prelude.foldl (\x -> \(t, u) -> ins_new t (Basic_type_1 [(c, h)] [(b, c)] u) x) y g)) <$>
           type_types_0 a e (Data.Map.insert c (pkind h) j) i))
   type_classes ::
     (Location_0 -> Location_1) ->
     Map' Kind ->
     Map' Polykind ->
     [Class_2] ->
-    (Map' (Class_3, Status), Map' (Map' Location')) ->
-    Err (Map' (Class_3, Status), Map' (Map' Location'))
+    (Map' (Class_3, Status), Map' (Map' Location'), Map' (Type_2, Status)) ->
+    Err (Map' (Class_3, Status), Map' (Map' Location'), Map' (Type_2, Status))
   type_classes a f g b c = case b of
     [] -> Right c
     d : e -> type_class a f g d c >>= type_classes a f g e
@@ -894,7 +898,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     c : d -> type_kinds d (type_kind c b)
   type_kinds'' ::
     [(String, Kind_1)] -> Integer -> Map' (Either Polykind Kind_1) -> (Map' (Either Polykind Kind_1), Map' String)
-  type_kinds'' a b c = type_kinds_3 a (show b) c Data.Map.empty
+  type_kinds'' a b c = type_kinds_3 a (" " ++ show b) c Data.Map.empty
   type_kinds_0 ::
     (Location_0 -> Location_1) ->
     Map' Kind ->
@@ -1256,8 +1260,8 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
       type_datas k a (old d, old t, old u, old v, old w, l, m, old w0) >>=
       \(e, b, h, g, o, f, n, w1) ->
         (
-          type_classes k (fst <$> o) (fst <$> e) a' (old b', m') >>=
-          \(c', m2) ->
+          type_classes k (fst <$> o) (fst <$> e) a' (old b', m', g) >>=
+          \(c', m2, g0) ->
             (
               (\(i, j, n', y) ->
                 (
@@ -1265,7 +1269,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
                   i,
                   n,
                   n')) <$>
-              type_defs k (fst <$> o) c (fst <$> e, fst <$> b, fst <$> h) (f, g) (fst <$> c') m2 (old' x))))
+              type_defs k (fst <$> o) c (fst <$> e, fst <$> b, fst <$> h) (f, g0) (fst <$> c') m2 (old' x))))
   und_err :: String -> Map' t -> String -> Location_1 -> (t -> Err u) -> Err u
   und_err a b c d f = case Data.Map.lookup a b of
     Just e -> f e

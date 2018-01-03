@@ -1,24 +1,26 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 Load Algebra.awf
 Load Testing.awf
-Def Add_Complex_Test : List (Pair (Pair (Pair (Complex Trivial) (Complex Trivial)) (Complex Trivial)) (Complex Trivial)) =
+Def Add_Complex_test : List (Pair (Pair (Pair (Complex Trivial) (Complex Trivial)) (Complex Trivial)) (Complex Trivial)) =
   Test
     (Equal (Compare_Complex Compare_Trivial))
     (x -> Add_Complex Add_Trivial (First x) (Second x))
     (Cons (Pair (Pair (Complex Trivial Trivial) (Complex Trivial Trivial)) (Complex Trivial Trivial)) Empty)
-Def Add_Logical_Test : List (Pair (Pair (Pair Logical Logical) Logical) Logical) =
+Def Add_Logical_test : List (Pair (Pair (Pair Logical Logical) Logical) Logical) =
   Test
     (Equal Compare_Logical)
     (x -> Add_Logical (First x) (Second x))
     (Cons
       (Pair (Pair False False) False)
       (Cons (Pair (Pair False True) True) (Cons (Pair (Pair True False) True) (Cons (Pair (Pair True True) False) Empty))))
-Def Equal_Trivial_Test : List (Pair (Pair (Pair Trivial Trivial) Logical) Logical) =
+Def Add_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
+  Test (Equal Compare_Int) (x -> Add (First x) (Second x)) (Cons (Pair (Pair 0 0) 0) Empty)
+Def Equal_Trivial_test : List (Pair (Pair (Pair Trivial Trivial) Logical) Logical) =
   Test
     (Equal Compare_Logical)
     (x -> Equal Compare_Trivial (First x) (Second x))
     (Cons (Pair (Pair Trivial Trivial) True) Empty)
-Def Inverse_Trivial_Test : List (Pair (Pair Trivial (Maybe Trivial)) (Maybe Trivial)) =
+Def Inverse_Trivial_test : List (Pair (Pair Trivial (Maybe Trivial)) (Maybe Trivial)) =
   Test
     (Equal (Compare_Maybe Compare_Trivial))
     Inverse_Trivial

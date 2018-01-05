@@ -28,7 +28,6 @@ basic IO operations (output to console, read file, write file, append to file)
 finite n
 compilation
 nice human-readable output for interpreter through show
-midi and music library
 boolean function library
 parsing library
 implement map and set (AVL trees?)
@@ -46,6 +45,8 @@ more detailed type errors (write which two types clashed)
 type clash location?
 write in error why exactly you need a class constraint (which name of a function caused it)?
 write in error where the need for class constraint occurred?
+make command line arguments nicer
+check for free type variables after typechecking an expression. throw an error (they are a problem with type classes!)
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")
@@ -94,7 +95,7 @@ module Typing where
       deriving Show
   data File =
     File (Map' Polykind) (Map' Alg) (Map' String) (Map' Type_2) (Map' Kind) (Map' Bool) (Map' Class_3) (Map' (Set String))
-        deriving Show
+      deriving Show
   data Form_2 = Form_2 String [Type_1] deriving Show
   data Kind = Arrow_kind Kind Kind | Star_kind deriving (Eq, Show)
   data Kind_1 = Application_kind_1 Kind_1 Kind_1 | Name_kind_1 String deriving (Eq, Show)
@@ -108,8 +109,35 @@ module Typing where
   data Status = New | Old deriving (Eq, Show)
   data Type_1 = Application_type_1 Type_1 Type_1 | Char_type_1 Char | Int_type_1 Integer | Name_type_1 String [Kind_1]
     deriving (Eq, Show)
-  data Type_2 = Basic_type_1 [(String, Kind_1)] [(String, String)] Type_1 deriving Show
+  data Type_2 = Basic_type_1 [(String, Kind_1)] (Maybe String) [(String, String)] Type_1 deriving Show
+  data Tmatch' = Tmatch' [Pattern_0] Typedexpr deriving Show
+  data Typedexpr =
+    Abstract_texpr String Type_1 |
+    Application_texpr Typedexpr Typedexpr |
+    Char_texpr Char |
+    Function_texpr Pattern_0 Typedexpr |
+    Int_texpr Integer |
+    Match_texpr Typedexpr Typedmatches |
+    Name_texpr String
+      deriving Show
+  data Typedmatches =
+    Tmatch_algebraic (Map' Tmatch') (Maybe Typedexpr) |
+    Tmatch_char (Map Char Typedexpr) Typedexpr |
+    Tmatch_int (Map Integer Typedexpr) Typedexpr
+      deriving Show
   type Types = Map' (Type_2, Status)
+  addargs :: Typedexpr -> Expression_2
+  addargs b = case b of
+    Abstract_texpr a c -> Name_expression_2 (a ++ " " ++ typestring c)
+    Application_texpr d e -> Application_expression_2 (addargs d) (addargs e)
+    Char_texpr d -> Char_expression_2 d
+    Function_texpr d e -> Function_expression_2 d (addargs e)
+    Int_texpr d -> Int_expression_2 d
+    Match_texpr d e -> Match_expression_2 (addargs d) (case e of
+      Tmatch_algebraic g h -> Matches_Algebraic_2 ((\(Tmatch' i j) -> Match_Algebraic_2 i (addargs j)) <$> g) (addargs <$> h)
+      Tmatch_char g h -> Matches_char_2 (addargs <$> g) (addargs h)
+      Tmatch_int g h -> Matches_Int_2 (addargs <$> g) (addargs h))
+    Name_texpr d -> Name_expression_2 d
   algebraics :: Map' Alg
   algebraics = Data.Map.fromList (second (\(a, b, c) -> (Alg a (Data.Map.fromList b) c)) <$> algebraics')
   algebraics' :: [(String, ([(String, Kind_1)], [(String, [Type_1])], Type_1))]
@@ -172,21 +200,27 @@ module Typing where
         join
           (
             (\(_, (b, c, d)) ->
-              (\(e, f) -> (e, (type_alg f e, Basic_type_1 b [] (Prelude.foldr function_type d f)))) <$> c) <$>
+              (\(e, f) -> (e, (type_alg f e, Basic_type_1 b Nothing [] (Prelude.foldr function_type d f)))) <$> c) <$>
             algebraics'))
   defs_and_types' :: [(String, (Expression_2, Type_2))]
   defs_and_types' =
     [
-      ("Add_Int", (Add_Int_expression_2, Basic_type_1 [] [] (function_type int_type (function_type int_type int_type)))),
+      (
+        "Add_Int",
+        (Add_Int_expression_2, Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type int_type)))),
       (
         "Compare_Int",
-        (Compare_Int_expression_2, Basic_type_1 [] [] (function_type int_type (function_type int_type comparison_type)))),
-      ("Crash", (Crash_expression_2, Basic_type_1 [("T", star_kind)] [] (ntype "T"))),
-      ("Mod_Int", (Mod_Int_expression_2, Basic_type_1 [] [] (function_type int_type (function_type int_type int_type)))),
+        (
+          Compare_Int_expression_2,
+          Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type comparison_type)))),
+      ("Crash", (Crash_expression_2, Basic_type_1 [("T", star_kind)] Nothing [] (ntype "T"))),
+      (
+        "Mod_Int",
+        (Mod_Int_expression_2, Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type int_type)))),
       (
         "Multiply_Int",
-        (Multiply_Int_expression_2, Basic_type_1 [] [] (function_type int_type (function_type int_type int_type)))),
-      ("Negate_Int", (Negate_Int_expression_2, Basic_type_1 [] [] (function_type int_type int_type)))]
+        (Multiply_Int_expression_2, Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type int_type)))),
+      ("Negate_Int", (Negate_Int_expression_2, Basic_type_1 [] Nothing [] (function_type int_type int_type)))]
   find_and_delete :: Ord t => Map t u -> t -> Maybe (u, Map t u)
   find_and_delete a b = (\c -> (c, Data.Map.delete b a)) <$> Data.Map.lookup b a
   function_type :: Type_1 -> Type_1 -> Type_1
@@ -355,7 +389,12 @@ module Typing where
       Left i -> Right i
       Right i -> solve_eq_help h (d : a) b (Data.Map.union f (solve_diff i a)))
     Nothing -> Right True
-  solvesys :: String -> Map' (Either Polykind Kind_1) -> [(Type_1, Type_1)] -> [(String, Type_1)] -> Err [(String, Type_1)]
+  solvesys ::
+    String ->
+    Map' (Either Polykind Kind_1) ->
+    [(Type_1, Type_1)] ->
+    ([(String, Type_1)], Typedexpr) ->
+    Err ([(String, Type_1)], Typedexpr)
   solvesys m a b a' =
     let
       x = Left m
@@ -392,8 +431,8 @@ module Typing where
     String ->
     Type_1 ->
     [(Type_1, Type_1)] ->
-    [(String, Type_1)] ->
-    Err [(String, Type_1)]
+    ([(String, Type_1)], Typedexpr) ->
+    Err ([(String, Type_1)], Typedexpr)
   solvesys' h a b c d x = case unsafe_lookup b a of
     Left _ -> Left h
     Right e -> check_kind h b a c >>= \g -> if g == e then solvesys_rep h a b c d x else Left h
@@ -407,8 +446,8 @@ module Typing where
     [Kind_1] ->
     Polykind ->
     [(Type_1, Type_1)] ->
-    [(String, Type_1)] ->
-    Err [(String, Type_1)]
+    ([(String, Type_1)], Typedexpr) ->
+    Err ([(String, Type_1)], Typedexpr)
   solvesys_names a b c d e f (Polykind h i) j k =
     if d == repkinds (Data.Map.fromList (zip h f)) i then solvesys_rep a b c (Name_type_1 e f) j k else Left a
   solvesys_rep ::
@@ -417,9 +456,9 @@ module Typing where
     String ->
     Type_1 ->
     [(Type_1, Type_1)] ->
-    [(String, Type_1)] ->
-    Err [(String, Type_1)]
-  solvesys_rep a b c d e x = solvesys a b (sysrep c d e) (second (sysrep' c d) <$> x)
+    ([(String, Type_1)], Typedexpr) ->
+    Err ([(String, Type_1)], Typedexpr)
+  solvesys_rep a b c d e (x, f) = solvesys a b (sysrep c d e) (second (sysrep' c d) <$> x, sysrep2 c d f)
   star_kind :: Kind_1
   star_kind = Name_kind_1 "Star"
   sysrep :: String -> Type_1 -> [(Type_1, Type_1)] -> [(Type_1, Type_1)]
@@ -432,11 +471,23 @@ module Typing where
   sysrep' a b c =
     let
       f = sysrep' a b
-    in
-      case c of
-        Application_type_1 d e -> Application_type_1 (f d) (f e)
-        Name_type_1 d _ -> if d == a then b else c
-        _ -> c
+    in case c of
+      Application_type_1 d e -> Application_type_1 (f d) (f e)
+      Name_type_1 d _ -> if d == a then b else c
+      _ -> c
+  sysrep2 :: String -> Type_1 -> Typedexpr -> Typedexpr
+  sysrep2 a b c =
+    let
+      f = sysrep2 a b
+    in case c of
+      Abstract_texpr d e -> Abstract_texpr d (sysrep' a b e)
+      Application_texpr d e -> Application_texpr (f d) (f e)
+      Function_texpr d e -> Function_texpr d (f e)
+      Match_texpr d e -> Match_texpr (f d) (case e of
+        Tmatch_algebraic g h -> Tmatch_algebraic ((\(Tmatch' i j) -> Tmatch' i (f j)) <$> g) (f <$> h)
+        Tmatch_char g h -> Tmatch_char (f <$> g) (f h)
+        Tmatch_int g h -> Tmatch_int (f <$> g) (f h))
+      _ -> c
   type_alg :: [t] -> String -> Expression_2
   type_alg a b =
     let
@@ -450,7 +501,7 @@ module Typing where
       [] -> Left ("Constructor " ++ l ++ location (j k) ++ " has been given too many fields.")
       g : h -> type_case j m a f h (case e of
         Blank_pattern -> d
-        Name_pattern i -> Data.Map.insert i (Basic_type_1 [] [] (repl a g)) d)
+        Name_pattern i -> Data.Map.insert i (Basic_type_1 [] Nothing [] (repl a g)) d)
   type_class ::
     (Location_0 -> Location_1) ->
     Map' Kind ->
@@ -467,7 +518,7 @@ module Typing where
             (
               ins_new b (Class_3 (c, h) g) f,
               Data.Map.insert b Data.Map.empty m,
-              Prelude.foldl (\x -> \(t, u) -> ins_new t (Basic_type_1 [(c, h)] [(b, c)] u) x) y g)) <$>
+              Prelude.foldl (\x -> \(t, u) -> ins_new t (Basic_type_1 [(c, h)] (Just c) [(b, c)] u) x) y g)) <$>
           type_types_0 a e (Data.Map.insert c (pkind h) j) i))
   type_classes ::
     (Location_0 -> Location_1) ->
@@ -538,7 +589,7 @@ module Typing where
     let
       g = type_kinds b d
       x = Prelude.foldl (\n -> Application_type_1 n <$> ntype) (ntype a) (fst <$> b)
-      t' = Basic_type_1 b []
+      t' = Basic_type_1 b Nothing []
     in case c of
       Algebraic_data_1 h ->
         (
@@ -620,7 +671,8 @@ module Typing where
     Basic_def_3 f d e g i ->
       (
         type_kinds_0 l x e b >>=
-        \(y, j) -> (\h -> (Basic_def_4 f d j h i, ins_new d (Basic_type_1 y [] h) c, t, t')) <$> type_type l g j x star_kind)
+        \(y, j) ->
+          (\h -> (Basic_def_4 f d j h i, ins_new d (Basic_type_1 y Nothing [] h) c, t, t')) <$> type_type l g j x star_kind)
     Instance_3 d (Name e m) (Name f n) g ->
       let
         f' g' = g' ++ m ++ "(" ++ n ++ ")"
@@ -713,16 +765,15 @@ module Typing where
       type_expression c d a 0 0 b [] e f h [] >>=
       \(g, i, j, _, _, x) ->
         (
-          solvesys ("Type error" ++ n) i j x >>=
-          \y -> g <$ slv m y (\t -> Left ("Failure to resolve constraints for class " ++ t ++ n))))
+          solvesys ("Type error" ++ n) i j (x, g) >>=
+          \(y, p) -> addargs p <$ slv m y (\t -> Left ("Failure to resolve constraints for class " ++ t ++ n))))
   type_expr' ::
     (Location_0 -> Location_1) ->
     (Map' Polykind, Map' Alg, Map' String, Map' Type_2) ->
     Expression_1 ->
     Map' (Set String) ->
     Err Expression_2
-  type_expr' a (b, c, d, e) f g =
-    type_expr "input." (ntype "!") a (Data.Map.insert "!" (Right star_kind) (Left <$> b), c, d, e) f g
+  type_expr' a (b, c, d, e) = type_expr "input." (ntype "!") a (Data.Map.insert "!" (Right star_kind) (Left <$> b), c, d, e)
   type_expression ::
     Map' Alg ->
     Map' String ->
@@ -735,7 +786,7 @@ module Typing where
     Expression_1 ->
     Type_1 ->
     [(String, Type_1)] ->
-    Err (Expression_2, Map' (Either Polykind Kind_1), [(Type_1, Type_1)], Integer, Integer, [(String, Type_1)])
+    Err (Typedexpr, Map' (Either Polykind Kind_1), [(Type_1, Type_1)], Integer, Integer, [(String, Type_1)])
   type_expression v w r o s f h d (Expression_1 a b) e c' =
     let
       x' = location' (r a)
@@ -756,12 +807,12 @@ module Typing where
             c' >>=
           \(i, j, k, p, t, d') ->
             (
-              (\(l, m, n, q, u, e') -> (Application_expression_2 i l, m, n, q, u, e')) <$>
+              (\(l, m, n, q, u, e') -> (Application_texpr i l, m, n, q, u, e')) <$>
               type_expression v w r p t j k d g (ntype (show o)) d'))
-      Char_expression_1 c -> Right (Char_expression_2 c, f, (e, char_type) : h, o, s, c')
+      Char_expression_1 c -> Right (Char_texpr c, f, (e, char_type) : h, o, s, c')
       Function_expression_1 c g ->
         (
-          (\(a', b', c3, d', e', f') -> (Function_expression_2 c a', b', c3, d', e', f')) <$>
+          (\(a', b', c3, d', e', f') -> (Function_texpr c a', b', c3, d', e', f')) <$>
           type_expression
             v
             w
@@ -772,11 +823,11 @@ module Typing where
             ((e, function_type (ntype (show o)) (ntype (show (o + 1)))) : h)
             (case c of
               Blank_pattern -> d
-              Name_pattern i -> Data.Map.insert i (Basic_type_1 [] [] (ntype (show o))) d)
+              Name_pattern i -> Data.Map.insert i (Basic_type_1 [] Nothing [] (ntype (show o))) d)
             g
             (ntype (show (o + 1)))
             c')
-      Int_expression_1 c -> Right (Int_expression_2 c, f, (e, int_type) : h, o, s, c')
+      Int_expression_1 c -> Right (Int_texpr c, f, (e, int_type) : h, o, s, c')
       Match_expression_1 c g -> case g of
         Matches_Algebraic_1 i j -> case i of
           [] -> undefined
@@ -796,7 +847,7 @@ module Typing where
                     type_matches_algebraic v w r b0 c0 y a0 d Data.Map.empty i e p y0 t a2 >>=
                       \(d0, e0, f0, g0, h0, i0, a3) ->
                         let
-                          k0 = Match_expression_2 x <$> Matches_Algebraic_2 d0
+                          k0 k1 = Match_texpr x (Tmatch_algebraic d0 k1)
                         in if Data.Map.null i0 then case j of
                           Just _ -> Left ("Unnecessary default case " ++ x')
                           Nothing -> Right (k0 Nothing, e0, f0, g0, h0, a3) else case j of
@@ -814,7 +865,7 @@ module Typing where
                 type_matches_char v w r n p l m d Data.Map.empty i e d' >>=
                 \(q, t, u, x, y, e') ->
                   (
-                    (\(a0, b0, c0, d0, e0, a2) -> (Match_expression_2 k (Matches_char_2 q a0), b0, c0, d0, e0, a2)) <$>
+                    (\(a0, b0, c0, d0, e0, a2) -> (Match_texpr k (Tmatch_char q a0), b0, c0, d0, e0, a2)) <$>
                     type_expression v w r x y t u d j e e')))
         Matches_Int_1 i j ->
           (
@@ -824,24 +875,24 @@ module Typing where
                 type_matches_int v w r n p l m d Data.Map.empty i e d' >>=
                 \(q, t, u, x, y, e') ->
                   (
-                    (\(a0, b0, c0, d0, e0, a2) -> (Match_expression_2 k (Matches_Int_2 q a0), b0, c0, d0, e0, a2)) <$>
+                    (\(a0, b0, c0, d0, e0, a2) -> (Match_texpr k (Tmatch_int q a0), b0, c0, d0, e0, a2)) <$>
                     type_expression v w r x y t u d j e e')))
 {-
 INEFFICIENCY.
 ONE COULD CONSTRUCT AN IDENTITY MAP AND PUT IT INTO BASIC_TYPE AND THEN MAP (++ SUFFIX) OVER IT
 OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
 -}
-      Name_expression_1 c -> und_err c d "variable" (r a) (\(Basic_type_1 i a' j) ->
-        let
-          b' k l m =
-            Right
-              (Name_expression_2 c, k, (e, l) : h, o, m, (second (\t -> Name_type_1 (t ++ " " ++ show s) []) <$> a') ++ c')
-        in case i of
-          [] -> b' f j s
-          _ ->
+      Name_expression_1 c -> und_err c d "variable" (r a) (\(Basic_type_1 i x0 a' j) -> Right (case i of
+        [] -> (Name_texpr c, f, (e, j) : h, o, s, c')
+        _ ->
+          let
+            (n, p) = type_kinds'' i s f
+          in
             let
-              (n, p) = type_kinds'' i s f
-            in b' n (repl p j) (s + 1))
+              f4 g3 = (g3, n, (e, repl p j) : h, o, s + 1, (second (\t -> Name_type_1 (t ++ " " ++ show s) []) <$> a') ++ c')
+            in case x0 of
+            Just y2 -> f4 (Abstract_texpr c (Name_type_1 (y2 ++ " " ++ show s) []))
+            Nothing -> f4 (Name_texpr c)))
   type_exprs ::
     (Name -> String) ->
     (Location_0 -> Location_1) ->
@@ -944,7 +995,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     Map' (Either Polykind Kind_1) ->
     [(Type_1, Type_1)] ->
     Map' Type_2 ->
-    Map' Match_Algebraic_2 ->
+    Map' Tmatch' ->
     Match_Algebraic_1 ->
     Type_1 ->
     Map' [Type_1] ->
@@ -953,7 +1004,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     [(String, Type_1)] ->
     Err
       (
-        Map' Match_Algebraic_2,
+        Map' Tmatch',
         Map' (Either Polykind Kind_1),
         [(Type_1, Type_1)],
         Integer,
@@ -966,7 +1017,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
         type_case c (Name j k) r l p h >>=
         \s ->
           (
-            (\(t, u, v, w, x, b') -> (Data.Map.insert k (Match_Algebraic_2 l t) i, u, v, w, x, y, b')) <$>
+            (\(t, u, v, w, x, b') -> (Data.Map.insert k (Tmatch' l t) i, u, v, w, x, y, b')) <$>
             type_expression a b c d e f g s m n a'))
     Nothing -> Left q
   type_match_char ::
@@ -978,11 +1029,11 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     Map' (Either Polykind Kind_1) ->
     [(Type_1, Type_1)] ->
     Map' Type_2 ->
-    Map Char Expression_2 ->
+    Map Char Typedexpr ->
     Match_char_1 ->
     Type_1 ->
     [(String, Type_1)] ->
-    Err (Map Char Expression_2, Map' (Either Polykind Kind_1), [(Type_1, Type_1)], Integer, Integer, [(String, Type_1)])
+    Err (Map Char Typedexpr, Map' (Either Polykind Kind_1), [(Type_1, Type_1)], Integer, Integer, [(String, Type_1)])
   type_match_char a b c d e f g h i (Match_char_1 j k) l a' =
 -- TODO: PUT A GOOD ERROR MESSAGE HERE. LOCATIONS AND STUFF.
     (
@@ -998,11 +1049,11 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     Map' (Either Polykind Kind_1) ->
     [(Type_1, Type_1)] ->
     Map' Type_2 ->
-    Map Integer Expression_2 ->
+    Map Integer Typedexpr ->
     Match_Int_1 ->
     Type_1 ->
     [(String, Type_1)] ->
-    Err (Map Integer Expression_2, Map' (Either Polykind Kind_1), [(Type_1, Type_1)], Integer, Integer, [(String, Type_1)])
+    Err (Map Integer Typedexpr, Map' (Either Polykind Kind_1), [(Type_1, Type_1)], Integer, Integer, [(String, Type_1)])
   type_match_int a b c d e f g h i (Match_Int_1 j k) l a' =
 -- TODO: PUT A GOOD ERROR MESSAGE HERE. LOCATIONS AND STUFF.
     (
@@ -1018,7 +1069,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     Map' (Either Polykind Kind_1) ->
     [(Type_1, Type_1)] ->
     Map' Type_2 ->
-    Map' Match_Algebraic_2 ->
+    Map' Tmatch' ->
     [Match_Algebraic_1] ->
     Type_1 ->
     Map' [Type_1] ->
@@ -1027,7 +1078,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     [(String, Type_1)] ->
     Err
       (
-        Map' Match_Algebraic_2,
+        Map' Tmatch',
         Map' (Either Polykind Kind_1),
         [(Type_1, Type_1)],
         Integer,
@@ -1049,11 +1100,11 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     Map' (Either Polykind Kind_1) ->
     [(Type_1, Type_1)] ->
     Map' Type_2 ->
-    Map Char Expression_2 ->
+    Map Char Typedexpr ->
     [Match_char_1] ->
     Type_1 ->
     [(String, Type_1)] ->
-    Err (Map Char Expression_2, Map' (Either Polykind Kind_1), [(Type_1, Type_1)], Integer, Integer, [(String, Type_1)])
+    Err (Map Char Typedexpr, Map' (Either Polykind Kind_1), [(Type_1, Type_1)], Integer, Integer, [(String, Type_1)])
   type_matches_char a b c d e f g h i j k a' = case j of
     [] -> Right (i, f, g, d, e, a')
     l : m -> type_match_char a b c d e f g h i l k a' >>= \(n, o, p, q, r, b') -> type_matches_char a b c q r o p h n m k b'
@@ -1066,11 +1117,11 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     Map' (Either Polykind Kind_1) ->
     [(Type_1, Type_1)] ->
     Map' Type_2 ->
-    Map Integer Expression_2 ->
+    Map Integer Typedexpr ->
     [Match_Int_1] ->
     Type_1 ->
     [(String, Type_1)] ->
-    Err (Map Integer Expression_2, Map' (Either Polykind Kind_1), [(Type_1, Type_1)], Integer, Integer, [(String, Type_1)])
+    Err (Map Integer Typedexpr, Map' (Either Polykind Kind_1), [(Type_1, Type_1)], Integer, Integer, [(String, Type_1)])
   type_matches_int a b c d e f g h i j k a' = case j of
     [] -> Right (i, f, g, d, e, a')
     l : m -> type_match_int a b c d e f g h i l k a' >>= \(n, o, p, q, r, b') -> type_matches_int a b c q r o p h n m k b'
@@ -1140,7 +1191,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
               (\x' -> arrow_kind (prom_type (Data.Set.fromList (fst <$> b)) x'))
               (Prelude.foldl (\t' -> \u' -> Application_kind_1 t' (Name_kind_1 u')) star_kind (fst <$> b))
               q'))
-      b' = Basic_type_1 b []
+      b' = Basic_type_1 b Nothing []
     in case c of
       Algebraic_data_1 h ->
         (
@@ -1232,6 +1283,11 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
   type_types_0 a b c d = case b of
     [] -> Right []
     (e, f) : g -> type_type a f c d star_kind >>= \h -> (:) (e, h) <$> type_types_0 a g c d
+  typestring :: Type_1 -> String
+  typestring a = case a of
+    Application_type_1 b _ -> typestring b
+    Name_type_1 b _ -> b
+    _ -> undefined
   typevar ::
     (String -> String) ->
     (String, Kind_1) ->

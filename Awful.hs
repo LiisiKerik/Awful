@@ -101,6 +101,6 @@ main = do
             putStrLn (case e of
               Left f -> f
               Right f -> f)
-        _ -> putStrLn "Command compile expects at least 1 argument."
+        _ -> putStrLn "Command eval expects at least 1 argument."
       _ -> putStrLn ("Invalid command " ++ command ++ ".")
 -----------------------------------------------------------------------------------------------------------------------------

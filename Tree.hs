@@ -10,7 +10,7 @@ module Tree where
   import Control.Monad
   import Data.Bifunctor
   import Tokenise
-  data Class_0 = Class_0 Name (Name, Kind_0) [(Name, Type_0)] deriving Show
+  data Class_0 = Class_0 Name (Name, Kind_0) [Method] deriving Show
   -- data Constraint_0 = Constraint_0 Name_tree Name_tree deriving Show
   data Data_0 = Data_0 Name [(Name, Kind_0)] Data_branch_0 deriving Show
   data Data_branch_0 = Algebraic_data_0 [Form_0] | Struct_data_0 [(Name, Type_0)] deriving Show
@@ -50,6 +50,7 @@ module Tree where
     Matches_char_0 [Match_char_0] Expression_0 |
     Matches_Int_0 [Match_Int_0] Expression_0
       deriving Show
+  data Method = Method Name [(Name, Kind_0)] Type_0 deriving Show
   data Name = Name Location_0 String deriving Show
   data Pattern_1 = Pattern_1 Location_0 Pattern_0 deriving Show
   data Pattern_0 = Blank_pattern | Name_pattern String deriving Show
@@ -180,7 +181,11 @@ module Tree where
   parse_char_type = Char_type_0 <$ parse_lift <*> parse_char
   parse_class :: Parser Class_0
   parse_class =
-    Class_0 <$> parse_name'' Class_token <*> parse_round ((,) <$> parse_name' <* parse_colon <*> parse_kind) <*> parse_arguments' parse_name'
+    (
+      Class_0 <$>
+      parse_name'' Class_token <*>
+      parse_round ((,) <$> parse_name' <* parse_colon <*> parse_kind) <*>
+      parse_optional parse_round parse_method)
   parse_colon :: Parser ()
   parse_colon = parse_operator ":"
   parse_comma :: Parser ()
@@ -302,6 +307,8 @@ module Tree where
   parse_matches_char = Matches_char_0 <$> parse_list 1 parse_match_char <*> parse_default
   parse_matches_int :: Parser Matches_0
   parse_matches_int = Matches_Int_0 <$> parse_list 1 parse_match_int <*> parse_default
+  parse_method :: Parser Method
+  parse_method = Method <$> parse_name' <*> parse_kinds <* parse_colon <*> parse_type
   parse_name :: Parser String
   parse_name = parse_elementary (\a -> case a of
     Name_token b -> Just b

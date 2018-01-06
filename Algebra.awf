@@ -11,7 +11,7 @@ Struct Polynomial[T : Star](Coefficients : List T)
 Struct Quaternion[T : Star](Qa : T, Qx : T, Qy : T, Qz : T)
 Struct Trivial
 Class Finite(T : Star)(All : List T)
-`Class Functor(F : Arrow Star Star)(Map[T : Star, U : Star] : Function (Function T U) (Function (F T) (F U)))
+Class Functor(F : Arrow Star Star)(Map[T : Star, U : Star] : Function (Function T U) (Function (F T) (F U)))
 Class Ring(T : Star)(
   Add : Function T (Function T T),
   Convert : Function Int T,

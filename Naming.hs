@@ -6,8 +6,8 @@ module Naming where
   import Standard
   import Tokenise
   import Tree
-  data Class_1 = Class_1 String (Name, Kind_0) [(String, Type_0)] deriving Show
-  data Class_2 = Class_2 String (String, Kind_0) [(String, Type_0)] deriving Show
+  data Class_1 = Class_1 String (Name, Kind_0) [Method_1] deriving Show
+  data Class_2 = Class_2 String (String, Kind_0) [Method_2] deriving Show
   data Data_branch_1 = Algebraic_data_1 [Form_1] | Struct_data_1 [(String, Type_0)] deriving Show
   data Data_1 = Data_1 String [(Name, Kind_0)] Data_branch_1 deriving Show
   data Data_2 = Data_2 String [(String, Kind_0)] Data_branch_1 deriving Show
@@ -50,6 +50,8 @@ module Naming where
     Matches_char_1 [Match_char_1] Expression_1 |
     Matches_Int_1 [Match_Int_1] Expression_1
       deriving Show
+  data Method_1 = Method_1 String [(Name, Kind_0)] Type_0 deriving Show
+  data Method_2 = Method_2 String [(String, Kind_0)] Type_0 deriving Show
 {-
   data Tree_3 = Tree_3 [Data_tree_1] [Abstract_tree_1] [Def_branch_2] deriving Show
   data Tree_4 = Tree_4 [Data_tree_2] [Abstract_tree_2] [Def_branch_3] deriving Show
@@ -82,6 +84,10 @@ module Naming where
     [] -> Right []
     c : d -> naming_abstract_1 c b >>= \e -> ((:) e) <$> naming_abstracts_1 d b
 -}
+  naming_args :: String -> [(Name, t)] -> Locations -> Err [(String, t)]
+  naming_args a b c = case b of
+    [] -> Right []
+    (d, e) : f -> naming_name a d c >>= \(g, h) -> (:) (h, e) <$> naming_args a f g
   naming_argument ::
     (String -> t -> Locations -> Err (Locations, u)) -> String -> (t, v) -> Locations -> Err (Locations, (u, v))
   naming_argument a e (b, c) d = second (flip (,) c) <$> a e b d
@@ -99,9 +105,10 @@ module Naming where
   naming_2 e (Tree_4 a f b) c =
     naming_datas_2 e a c >>= \d -> naming_classes_1 e f c >>= \g -> Tree_5 d g <$> naming_defs_2 e b c
   naming_class_0 :: String -> Class_0 -> Locations -> Err (Locations, Class_1)
-  naming_class_0 a (Class_0 b c d) e = naming_name a b e >>= \(f, g) -> second (Class_1 g c) <$> naming_names a d f
+  naming_class_0 a (Class_0 b c d) e = naming_name a b e >>= \(f, g) -> second (Class_1 g c) <$> naming_methods_0 a d f
   naming_class_1 :: String -> Class_1 -> Locations -> Err Class_2
-  naming_class_1 a (Class_1 b (c, d) e) f = (\(_, g) -> Class_2 b (g, d) e) <$> naming_name a c f
+  naming_class_1 a (Class_1 b (c, d) e) f =
+    naming_name a c f >>= \(i, g) -> Class_2 b (g, d) <$> naming_methods_1 a e i
   naming_classes_0 :: String -> [Class_0] -> Locations -> Err (Locations, [Class_1])
   naming_classes_0 a b c = case b of
     [] -> Right (c, [])
@@ -199,6 +206,18 @@ module Naming where
   naming_matches_int a b c = case b of
     [] -> Right []
     d : e -> naming_match_int a d c >>= \f -> (:) f <$> naming_matches_int a e c
+  naming_method_0 :: String -> Method -> Locations -> Err (Locations, Method_1)
+  naming_method_0 a (Method b c d) e = second (\f -> Method_1 f c d) <$> naming_name a b e
+  naming_method_1 :: String -> Method_1 -> Locations -> Err Method_2
+  naming_method_1 a (Method_1 b c d) e = (\f -> Method_2 b f d) <$> naming_args a c e
+  naming_methods_0 :: String -> [Method] -> Locations -> Err (Locations, [Method_1])
+  naming_methods_0 a b c = case b of
+    [] -> Right (c, [])
+    d : e -> naming_method_0 a d c >>= \(f, g) -> second ((:) g) <$> naming_methods_0 a e f
+  naming_methods_1 :: String -> [Method_1] -> Locations -> Err [Method_2]
+  naming_methods_1 a b c = case b of
+    [] -> Right []
+    d : e -> naming_method_1 a d c >>= \g -> (:) g <$> naming_methods_1 a e c
   naming_name :: String -> Name -> Locations -> Err (Locations, String)
   naming_name f (Name a c) d =
     bimap (flip (location_err ("definitions of " ++ c)) (Location_1 f a)) (flip (,) c) (add d c (Library (Location_1 f a)))

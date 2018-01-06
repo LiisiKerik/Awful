@@ -46,7 +46,7 @@ module Tree where
   data Match_char_0 = Match_char_0 Char Expression_0 deriving Show
   data Match_Int_0 = Match_Int_0 Integer Expression_0 deriving Show
   data Matches_0 =
-    Matches_Algebraic_0 [Match_Algebraic_0] (Maybe Expression_0) |
+    Matches_Algebraic_0 [Match_Algebraic_0] (Maybe (Location_0, Expression_0)) |
     Matches_char_0 [Match_char_0] Expression_0 |
     Matches_Int_0 [Match_Int_0] Expression_0
       deriving Show
@@ -294,7 +294,10 @@ module Tree where
   parse_matches = parse_matches_algebraic <|> parse_matches_char <|> parse_matches_int
   parse_matches_algebraic :: Parser Matches_0
   parse_matches_algebraic =
-    Matches_Algebraic_0 <$> parse_list 1 parse_match_algebraic <*> (Just <$> parse_default <|> return Nothing)
+    (
+      Matches_Algebraic_0 <$>
+      parse_list 1 parse_match_algebraic <*>
+      (Just <$ parse_comma <*> ((,) <& parse_token Default_token <* parse_arrow <*> parse_expression') <|> return Nothing))
   parse_matches_char :: Parser Matches_0
   parse_matches_char = Matches_char_0 <$> parse_list 1 parse_match_char <*> parse_default
   parse_matches_int :: Parser Matches_0

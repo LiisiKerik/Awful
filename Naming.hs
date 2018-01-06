@@ -46,7 +46,7 @@ module Naming where
   data Match_char_1 = Match_char_1 Char Expression_1 deriving Show
   data Match_Int_1 = Match_Int_1 Integer Expression_1 deriving Show
   data Matches_1 =
-    Matches_Algebraic_1 [Match_Algebraic_1] (Maybe Expression_1) |
+    Matches_Algebraic_1 [Match_Algebraic_1] (Maybe (Location_0, Expression_1)) |
     Matches_char_1 [Match_char_1] Expression_1 |
     Matches_Int_1 [Match_Int_1] Expression_1
       deriving Show
@@ -183,7 +183,7 @@ module Naming where
         let
           g = Matches_Algebraic_1 f
         in case e of
-          Just h -> (\i -> g (Just i)) <$> j h
+          Just (x, h) -> (\i -> g (Just (x, i))) <$> j h
           Nothing -> Right (g Nothing)
       Matches_char_0 d e -> naming_matches_char a d c >>= \f -> Matches_char_1 f <$> j e
       Matches_Int_0 d e -> naming_matches_int a d c >>= \f -> Matches_Int_1 f <$> j e

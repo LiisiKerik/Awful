@@ -146,7 +146,10 @@ module Typing where
       (\(a, (b, c)) -> (a, (b, c, Prelude.foldl (\d -> \(e, _) -> Application_type_1 d (ntype e)) (ntype a) b))) <$>
       algebraics'')
   algebraics'' :: [(String, ([(String, Kind_1)], [(String, [Type_1])]))]
-  algebraics'' = [("Comparison", ([], [("EQ", []), ("GT", []), ("LT", [])]))]
+  algebraics'' =
+    [
+      ("Comparison", ([], [("EQ", []), ("GT", []), ("LT", [])])),
+      ("Nat", ([], [("Nxt", [Name_type_1 "Nat" []]), ("Zr", [])]))]
   arrow_kind :: Kind_1 -> Kind_1 -> Kind_1
   arrow_kind a = Application_kind_1 (Application_kind_1 (Name_kind_1 "Arrow") a)
   char_kind :: Kind_1
@@ -263,6 +266,10 @@ module Typing where
   int_kind = Name_kind_1 "!Int"
   int_type :: Type_1
   int_type = ntype "Int"
+  isLeft :: Either t u -> Bool
+  isLeft a = case a of
+    Left _ -> True
+    Right _ -> False
   kind_err :: Location_1 -> Err t
   kind_err a = Left ("Kind mismatch" ++ location' a)
   kinds :: Map' Polykind
@@ -831,32 +838,29 @@ module Typing where
       Match_expression_1 c g -> case g of
         Matches_Algebraic_1 i j -> case i of
           [] -> undefined
-          Match_Algebraic_1 (Name _ l) _ _ : _ ->
-            let
-              y0 =
-                "Match error" ++ x' ++ " Undefined algebraic constructors, incompatible constructors or conflicting cases."
-            in case Data.Map.lookup l w of
-              Just m ->
-                let
-                  Alg n p q = unsafe_lookup m v
-                  (t, u) = typevars (\v' -> v' ++ " " ++ show s) n (Data.Map.empty, f)
-                  l0 = repl t q
-                in (
-                  type_expression v w r o (s + 1) u h d c l0 c' >>=
-                  \(x, y, a0, b0, c0, a2) ->
-                    type_matches_algebraic v w r b0 c0 y a0 d Data.Map.empty i e p y0 t a2 >>=
-                      \(d0, e0, f0, g0, h0, i0, a3) ->
-                        let
-                          k0 k1 = Match_texpr x (Tmatch_algebraic d0 k1)
-                        in if Data.Map.null i0 then case j of
-                          Just _ -> Left ("Unnecessary default case " ++ x')
-                          Nothing -> Right (k0 Nothing, e0, f0, g0, h0, a3) else case j of
-                            Just j0 ->
-                              (
-                                (\(a', b', c2, d', e', a4) -> (k0 (Just a'), b', c2, d', e', a4)) <$>
-                                type_expression v w r g0 h0 e0 f0 d j0 e a3)
-                            Nothing -> Left ("Incomplete match" ++ x'))
-              Nothing -> Left y0
+          Match_Algebraic_1 (Name l2 l) _ _ : _ -> case Data.Map.lookup l w of
+            Just m ->
+              let
+                Alg n p q = unsafe_lookup m v
+                (t, u) = typevars (\v' -> v' ++ " " ++ show s) n (Data.Map.empty, f)
+                l0 = repl t q
+              in (
+                type_expression v w r o (s + 1) u h d c l0 c' >>=
+                \(x, y, a0, b0, c0, a2) ->
+-- todo: here 2 different errors should be made (one for undefined or incompatible constructors, another for conflicting cases)
+                  type_matches_algebraic v w r b0 c0 y a0 d Data.Map.empty i e (Right <$> p) (l ++ location (r l2)) t a2 >>=
+                    \(d0, e0, f0, g0, h0, i0, a3) ->
+                      let
+                        k0 k1 = Match_texpr x (Tmatch_algebraic d0 k1)
+                      in if all isLeft (Data.Map.elems i0) then case j of
+                        Just (l3, _) -> Left ("Unnecessary default case" ++ location' (r l3))
+                        Nothing -> Right (k0 Nothing, e0, f0, g0, h0, a3) else case j of
+                          Just (_, j0) ->
+                            (
+                              (\(a', b', c2, d', e', a4) -> (k0 (Just a'), b', c2, d', e', a4)) <$>
+                              type_expression v w r g0 h0 e0 f0 d j0 e a3)
+                          Nothing -> Left ("Incomplete match" ++ x'))
+            Nothing -> Left ("Undefined algebraic constructor " ++ l ++ location' (r l2))
         Matches_char_1 i j ->
           (
             type_expression v w r o s f h d c char_type c' >>=
@@ -998,7 +1002,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     Map' Tmatch' ->
     Match_Algebraic_1 ->
     Type_1 ->
-    Map' [Type_1] ->
+    Map' (Either Location_0 [Type_1]) ->
     String ->
     Map' String ->
     [(String, Type_1)] ->
@@ -1009,17 +1013,21 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
         [(Type_1, Type_1)],
         Integer,
         Integer,
-        Map' [Type_1],
+        Map' (Either Location_0 [Type_1]),
         [(String, Type_1)])
-  type_match_algebraic a b c d e f g h i (Match_Algebraic_1 (Name j k) l m) n o q r a' = case find_and_delete o k of
-    Just (p, y) ->
-      (
-        type_case c (Name j k) r l p h >>=
-        \s ->
-          (
-            (\(t, u, v, w, x, b') -> (Data.Map.insert k (Tmatch' l t) i, u, v, w, x, y, b')) <$>
-            type_expression a b c d e f g s m n a'))
-    Nothing -> Left q
+  type_match_algebraic a b c d e f g h i (Match_Algebraic_1 (Name j k) l m) n o q r a' = case Data.Map.lookup k o of
+    Just p' -> case p' of
+      Left e' -> Left ("Conflicting cases for " ++ k ++ location (c e') ++ " and" ++ location' (c j))
+      Right p ->
+        (
+          type_case c (Name j k) r l p h >>=
+          \s ->
+            (
+              (\(t, u, v, w, x, b') -> (Data.Map.insert k (Tmatch' l t) i, u, v, w, x, Data.Map.insert k (Left j) o, b')) <$>
+              type_expression a b c d e f g s m n a'))
+    Nothing -> Left ((case Data.Map.lookup k b of
+      Just _ -> "Incompatible algebraic constructors " ++ q ++ " and "
+      Nothing -> "Undefined algebraic constructor ") ++ k ++ location' (c j))
   type_match_char ::
     Map' Alg ->
     Map' String ->
@@ -1072,7 +1080,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     Map' Tmatch' ->
     [Match_Algebraic_1] ->
     Type_1 ->
-    Map' [Type_1] ->
+    Map' (Either Location_0 [Type_1]) ->
     String ->
     Map' String ->
     [(String, Type_1)] ->
@@ -1083,7 +1091,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
         [(Type_1, Type_1)],
         Integer,
         Integer,
-        Map' [Type_1],
+        Map' (Either Location_0 [Type_1]),
         [(String, Type_1)])
   type_matches_algebraic a b c d e f g h i j k s u v a' = case j of
     [] -> Right (i, f, g, d, e, s, a')

@@ -27,11 +27,13 @@ module Standard where
   standard_def :: Def_0 -> Def_1
   standard_def a = case a of
     Basic_def_0 b c d e f -> uncurry (Basic_def_1 b c) (standard_arguments (e, f) d)
-    Instance_def_0 b c d e -> Instance_1 b c d e
+    Instance_def_0 b c d e -> Instance_1 b c d (second (uncurry standard_patterns) <$> e)
   standard_defs :: [Def_0] -> [Def_1]
   standard_defs = (<$>) standard_def
   standard_pattern :: Pattern_1 -> Expression_0 -> Expression_0
-  standard_pattern a = Expression_0 (get_location a) <$> Function_expression_0 a
+  standard_pattern a b = Expression_0 (get_location a) (Function_expression_0 a b)
+  standard_patterns :: [Pattern_1] -> Expression_0 -> Expression_0
+  standard_patterns a b = foldr standard_pattern b a
   standard_type :: Type_0 -> Type_0 -> Type_0
   standard_type a b =
     let

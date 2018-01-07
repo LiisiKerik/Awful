@@ -12,6 +12,7 @@ Struct Quaternion[T : Star](Qa : T, Qx : T, Qy : T, Qz : T)
 Struct Trivial
 Class Finite(T : Star)(All : List T)
 Class Functor(F : Arrow Star Star)(Map[T : Star, U : Star] : Function (Function T U) (Function (F T) (F U)))
+Class Ordered(T : Star)(Compare : Function T (Function T Comparison))
 Class Ring(T : Star)(
   Add : Function T (Function T T),
   Convert : Function Int T,
@@ -23,30 +24,14 @@ Class Ring(T : Star)(
 `Abstract Fold{F : Arrow Star Star}[T : Star, U : Star] : (T -> U -> U) -> U -> F T -> U
 `Abstract Top_row{F : # -> * -> *}[N : #, T : Star] : F N T -> Array (N - 1) T
 `Instance Add{Array _ T}<Add T> = Map Apply (Map Add)
-Def Add_Complex[T : Star](Add_T : Function T (Function T T)) : Function (Complex T) (Function (Complex T) (Complex T)) =
-  Add_Functor Add_T Apply_Complex Apply_Complex Lift_Complex
-Def Add_Logical : Function Logical (Function Logical Logical) = Not_Equal Compare_Logical
+Def Add_Complex[T : Star](Add_T : Function T (Function T T), x : Complex T, y : Complex T) : Complex T =
+  Complex (Add_T (Real x) (Real y)) (Add_T (Imaginary x) (Imaginary y))
 `Instance Add{Pair T U}<Add T, Add U> = Zip_Pair Add Add
-Def Add_Pair[A : Star, B : Star] :
+Def Add_Pair[T : Star, U : Star] :
   Function
-    (Function A (Function A A))
-    (Function (Function B (Function B B)) (Function (Pair A B) (Function (Pair A B) (Pair A B)))) =
+    (Function T (Function T T))
+    (Function (Function U (Function U U)) (Function (Pair T U) (Function (Pair T U) (Pair T U)))) =
       Zip_Pair
-`Instance Add{Maybe T}<Add T> = Add_Functor
-Def Add_Maybe[T : Star](Add_T : Function T (Function T T)) : Function (Maybe T) (Function (Maybe T) (Maybe T)) =
-  Add_Functor Add_T Apply_Maybe Apply_Maybe Lift_Maybe
-`Instance Add{Trivial} = Trivial_binary
-Def Add_Trivial : Function Trivial (Function Trivial Trivial) = Trivial_binary
-`Instance Add{F T}<Add T, Apply F, Lift F> = Zip Add
-Def Add_Functor[T : Star, F : Arrow Star Star]
-  (
-    Add_T : Function T (Function T T),
-    Apply_F' : Function (F (Function T (Function T T))) (Function (F T) (F (Function T T))),
-    Apply_F'' : Function (F (Function T T)) (Function (F T) (F T)),
-    Lift_F : Function (Function T (Function T T)) (F (Function T (Function T T)))) :
-      Function (F T) (Function (F T) (F T)) =
-        Zip Apply_F' Apply_F'' Lift_F Add_T
-`Instance Add{Logical} = Not_Equal
 ~/
 Instance Apply{Array _} x y = Array (Apply (Array_function x) (Array_function y))
 Def Apply_Array[N : #, T : Star, U : Star](x : Array N (T -> U), y : Array N T) : Array N U =
@@ -79,17 +64,6 @@ Def Clean[T : Star](Equal_T : Function T (Function T Logical), x : List T) : Lis
       Construct -> a,
       Empty_List -> Empty_List}}) (Construct y w)) (Clean Equal_T z),
   Empty_List -> Empty_List}
-Def Compare_Comparison(x : Comparison, y : Comparison) : Comparison = Match x {
-  LT -> Match y {
-    LT -> EQ,
-    Default -> LT},
-  EQ -> Match y {
-    LT -> GT,
-    EQ -> EQ,
-    GT -> LT},
-  GT -> Match y {
-    GT -> EQ,
-    Default -> GT}}
 Def Compare_Complex[T : Star](Compare_T : Function T (Function T Comparison), x : Complex T, y : Complex T) : Comparison =
   Match Compare_T (Real x) (Real y) {
     LT -> LT,
@@ -121,13 +95,6 @@ Def Compare_List[T : Star](Compare_T : Function T (Function T Comparison), x : L
   Empty_List -> Match y {
     Construct -> LT,
     Empty_List -> EQ}}
-Def Compare_Logical(x : Logical, y : Logical) : Comparison = Match x {
-  False -> Match y {
-    False -> EQ,
-    True -> LT},
-  True -> Match y {
-    False -> GT,
-    True -> EQ}}
 Def Compare_Maybe[T : Star](Compare_T : Function T (Function T Comparison), x : Maybe T, y : Maybe T) : Comparison =
   Match x {
     Nothing -> Match y {
@@ -149,15 +116,10 @@ Def Compare_Pair[T : Star, U : Star]
           LT -> LT}
 Def Compare_Trivial(_ : Trivial, _ : Trivial) : Comparison = EQ
 Def Convert_Complex[T : Star](Convert_T : Function Int T, x : Int) : Complex T = Complex (Convert_T x) (Zero Convert_T)
-`Instance Convert{Int} = Id
 Def Convert_Int : Function Int Int = Id
-`Instance Convert{Logical} x = Equal (Mod x 2) 1
-Def Convert_Logical(x : Int) : Logical = Equal Compare_Int (Mod_Int x 2) 1
 Def Convert_Polynomial[T : Star]
   (Convert_T : Function Int T, Equal_T : Function T (Function T Logical), x : Int) : Polynomial T =
     Polynomial (Clean Equal_T (Lift_List (Convert_T x)))
-`Instance Convert{Trivial} _ = Trivial
-Def Convert_Trivial(_ : Int) : Trivial = Trivial
 Def Det_Complex[T : Star](Add_T : Function T (Function T T), Multiply_T : Function T (Function T T), x : Complex T) : T =
   Add_T (Crash (Real x)) (Crash (Imaginary x))
 Def Equal[T : Star](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Match Compare_T x y {
@@ -215,8 +177,6 @@ Def Greater_or_equal[T : Star](Compare_T : Function T (Function T Comparison), x
 Def Id[A : Star](x : A) : A = x
 `Def Identity[T : Star]<Convert T> : T = Convert 0
 Def Identity[A : Star](Convert_A : Function Int A) : A = Convert_A 1
-`Instance Inverse{Trivial} = Wrap
-Def Inverse_Trivial : Function Trivial (Maybe Trivial) = Wrap
 Def Inverse_Int(x : Int) : Maybe Int = Match x {
   -1 -> Wrap -1,
   1 -> Wrap 1,
@@ -302,10 +262,6 @@ Def Multiply_Complex[T : Star]
               (Real y))
             (Imaginary x))
           (Real x)
-Def Multiply_Logical(x : Logical, y : Logical) : Logical = Match x {
-  False -> False,
-  True -> y}
-Def Multiply_Trivial : Function Trivial (Function Trivial Trivial) = Trivial_binary
 Def Not(x : Logical) : Logical = Match x {
   False -> True,
   True -> False}
@@ -317,12 +273,37 @@ Def Not_Equal[T : Star]<Compare T>(x : T, y : T) : Logical = Match Compare x y {
 Def Not_Equal[T : Star](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Match Compare_T x y {
   EQ -> False,
   Default -> True}
+Instance Ordered(Comparison)(
+  Compare x y =
+    Match x {
+      LT -> Match y {LT -> EQ, Default -> LT},
+      EQ -> Match y {LT -> GT, EQ -> EQ, GT -> LT},
+      GT -> Match y {GT -> EQ, Default -> GT}})
+Instance Ordered(Int)(Compare = Compare_Int)
+Instance Ordered(Logical)(
+  Compare x y = Match x {False -> Match y {False -> EQ, True -> LT}, True -> Match y {False -> GT, True -> EQ}})
 Instance Ring(Int)(
   Add = Add_Int,
   Convert = Id,
   Inverse = Crash,
   Multiply = Multiply_Int,
   Negate = Negate_Int)
+Instance Ring(Logical)(
+  Add = Not_Equal Compare,
+  Convert x = Equal Compare (Mod_Int x 2) 1,
+  Inverse x = Match x {
+    False -> Nothing,
+    True -> Wrap x},
+  Multiply x y = Match x {
+    False -> False,
+    True -> y},
+  Negate = Id)
+Instance Ring(Trivial)(
+  Add _ _ = Trivial,
+  Convert _ = Trivial,
+  Inverse _ = Wrap Trivial,
+  Multiply _ _ = Trivial,
+  Negate _ = Trivial)
 Def Sum[T : Star, F : Arrow Star Star]
   (
     Add_T : Function T (Function T T),
@@ -330,7 +311,6 @@ Def Sum[T : Star, F : Arrow Star Star]
     f : Function (Function T (Function T T)) (Function T (Function (F T) T))) :
       Function (F T) T =
         f Add_T (Zero Convert_T)
-Def Trivial_binary(_ : Trivial, _ : Trivial) : Trivial = Trivial
 `Def Zero[T : Star]<Convert T> : T = Convert 0
 Def Zero[A : Star](Convert_A : Function Int A) : A = Convert_A 0
 Def Zip[F : Arrow Star Star, T : Star, U : Star, V : Star](

@@ -48,6 +48,7 @@ make command line arguments nicer
 check for free type variables after typechecking an expression. throw an error (they are a problem with type classes!)
 do something with class parameter syntax Class Ring(T : Star)(...). Not very nice.
 remove promotion of primitives? it seems that without GADT-s they are pointless?
+prettyprint evaluation results
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")

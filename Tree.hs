@@ -28,7 +28,7 @@ module Tree where
 -}
   data Def_0 =
     Basic_def_0 Name [(Name, Kind_0)] [(Pattern_1, Type_0)] Type_0 Expression_0 |
-    Instance_def_0 Location_0 Name Name [(Name, Expression_0)]
+    Instance_def_0 Location_0 Name Name [(Name, ([Pattern_1], Expression_0))]
       deriving Show
   data Expression_0 = Expression_0 Location_0 Expression_branch_0 deriving Show
   data Expression_branch_0 =
@@ -251,7 +251,9 @@ module Tree where
       parse_token Instance_token <*>
       parse_name' <*>
       parse_round (parse_name') <*>
-      parse_optional parse_round ((,) <$> parse_name' <* parse_eq <*> parse_expression'))
+      parse_optional
+        parse_round
+        ((\x -> \y -> \z -> (x, (y, z))) <$> parse_name' <*> many parse_pattern_1 <* parse_eq <*> parse_expression'))
   parse_int :: Parser Integer
   parse_int = (negate <$ parse_operator "-" <|> return id) <*> parse_elementary (\a -> case a of
     Int_token b -> Just b

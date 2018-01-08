@@ -114,9 +114,7 @@ Def Compare_Pair[T : Star, U : Star]
           EQ -> Compare_U (Second x) (Second y),
           GT -> GT,
           LT -> LT}
-Def Compare_Trivial(_ : Trivial, _ : Trivial) : Comparison = EQ
 Def Convert_Complex[T : Star](Convert_T : Function Int T, x : Int) : Complex T = Complex (Convert_T x) (Zero Convert_T)
-Def Convert_Int : Function Int Int = Id
 Def Convert_Polynomial[T : Star]
   (Convert_T : Function Int T, Equal_T : Function T (Function T Logical), x : Int) : Polynomial T =
     Polynomial (Clean Equal_T (Lift_List (Convert_T x)))
@@ -177,10 +175,6 @@ Def Greater_or_equal[T : Star](Compare_T : Function T (Function T Comparison), x
 Def Id[A : Star](x : A) : A = x
 `Def Identity[T : Star]<Convert T> : T = Convert 0
 Def Identity[A : Star](Convert_A : Function Int A) : A = Convert_A 1
-Def Inverse_Int(x : Int) : Maybe Int = Match x {
-  -1 -> Wrap -1,
-  1 -> Wrap 1,
-  Default -> Nothing}
 ~/
 Def Join_Array[A : Star](x : Array A, y : Array A) : Array A =
   Unsafe_Array (Add_Int (Length x) (Length y)) (z -> Match Less_Int z (Length x) {
@@ -282,10 +276,11 @@ Instance Ordered(Comparison)(
 Instance Ordered(Int)(Compare = Compare_Int)
 Instance Ordered(Logical)(
   Compare x y = Match x {False -> Match y {False -> EQ, True -> LT}, True -> Match y {False -> GT, True -> EQ}})
+Instance Ordered(Trivial)(Compare _ _ = EQ)
 Instance Ring(Int)(
   Add = Add_Int,
   Convert = Id,
-  Inverse = Crash,
+  Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing},
   Multiply = Multiply_Int,
   Negate = Negate_Int)
 Instance Ring(Logical)(

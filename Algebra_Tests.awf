@@ -3,9 +3,16 @@ Load Algebra.awf
 Load Testing.awf
 Def Add_Complex_test : List (Pair (Pair (Pair (Complex Trivial) (Complex Trivial)) (Complex Trivial)) (Complex Trivial)) =
   Test_2
-    (Equal (Compare_Complex Compare_Trivial))
+    (Equal (Compare_Complex Compare))
     (Add_Complex Add)
     (Construct (Pair (Pair (Complex Trivial Trivial) (Complex Trivial Trivial)) (Complex Trivial Trivial)) Empty_List)
+Def Add_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
+  Test_2
+    (Equal Compare)
+    Add
+    (Construct
+      (Pair (Pair 0 0) 0)
+      (Construct (Pair (Pair 0 1) 1) (Construct (Pair (Pair 1 0) 1) (Construct (Pair (Pair 1 1) 2) Empty_List))))
 Def Add_Logical_test : List (Pair (Pair (Pair Logical Logical) Logical) Logical) =
   Test_2
     (Equal Compare)
@@ -15,13 +22,64 @@ Def Add_Logical_test : List (Pair (Pair (Pair Logical Logical) Logical) Logical)
       (Construct
         (Pair (Pair False True) True)
         (Construct (Pair (Pair True False) True) (Construct (Pair (Pair True True) False) Empty_List))))
-Def Add_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
-  Test_2 (Equal Compare) Add (Construct (Pair (Pair 0 0) 0) Empty_List)
+Def Add_Trivial_test : List (Pair (Pair (Pair Trivial Trivial) Trivial) Trivial) =
+  Test_2 (Equal Compare) Add (Construct (Pair (Pair Trivial Trivial) Trivial) Empty_List)
+Def Convert_Int_test : List (Pair (Pair Int Int) Int) =
+  Test_1
+    (Equal Compare)
+    Convert
+    (Construct (Pair -1 -1) (Construct (Pair 0 0) (Construct (Pair 1 1) (Construct (Pair 2 2) Empty_List))))
+Def Convert_Logical_test : List (Pair (Pair Int Logical) Logical) =
+  Test_1
+    (Equal Compare)
+    Convert
+    (Construct (Pair -1 True) (Construct (Pair 0 False) (Construct (Pair 1 True) (Construct (Pair 2 False) Empty_List))))
+Def Convert_Trivial_test : List (Pair (Pair Int Trivial) Trivial) =
+  Test_1 (Equal Compare) Convert (Construct (Pair 0 Trivial) Empty_List)
 Def Equal_Trivial_test : List (Pair (Pair (Pair Trivial Trivial) Logical) Logical) =
   Test_2
     (Equal Compare)
-    (Equal Compare_Trivial)
+    (Equal Compare)
     (Construct (Pair (Pair Trivial Trivial) True) Empty_List)
+Def Inverse_Int_test : List (Pair (Pair Int (Maybe Int)) (Maybe Int)) =
+  Test_1
+    (Equal (Compare_Maybe Compare))
+    Inverse
+    (Construct
+      (Pair -1 (Wrap -1))
+      (Construct (Pair 0 Nothing) (Construct (Pair 1 (Wrap 1)) (Construct (Pair 2 Nothing) Empty_List))))
+Def Inverse_Logical_test : List (Pair (Pair Logical (Maybe Logical)) (Maybe Logical)) =
+  Test_1
+    (Equal (Compare_Maybe Compare))
+    Inverse
+    (Construct (Pair False Nothing) (Construct (Pair True (Wrap True)) Empty_List))
 Def Inverse_Trivial_test : List (Pair (Pair Trivial (Maybe Trivial)) (Maybe Trivial)) =
-  Test_1 (Equal (Compare_Maybe Compare_Trivial)) Inverse (Construct (Pair Trivial (Wrap Trivial)) Empty_List)
+  Test_1 (Equal (Compare_Maybe Compare)) Inverse (Construct (Pair Trivial (Wrap Trivial)) Empty_List)
+Def Multiply_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
+  Test_2
+    (Equal Compare)
+    Add
+    (Construct
+      (Pair (Pair 0 0) 0)
+      (Construct (Pair (Pair 0 1) 0) (Construct (Pair (Pair 1 0) 0) (Construct (Pair (Pair 1 1) 1) Empty_List))))
+Def Multiply_Logical_test : List (Pair (Pair (Pair Logical Logical) Logical) Logical) =
+  Test_2
+    (Equal Compare)
+    Multiply
+    (Construct
+      (Pair (Pair False False) False)
+      (Construct
+        (Pair (Pair False True) False)
+        (Construct (Pair (Pair True False) False) (Construct (Pair (Pair True True) True) Empty_List))))
+Def Multiply_Trivial_test : List (Pair (Pair (Pair Trivial Trivial) Trivial) Trivial) =
+  Test_2 (Equal Compare) Multiply (Construct (Pair (Pair Trivial Trivial) Trivial) Empty_List)
+Def Negate_Int_test : List (Pair (Pair Int Int) Int) =
+  Test_1
+    (Equal Compare)
+    Negate
+    (Construct (Pair -1 1) (Construct (Pair 0 0) (Construct (Pair 1 -1) (Construct (Pair 2 -2) Empty_List))))
+Def Negate_Logical_test : List (Pair (Pair Logical Logical) Logical) =
+  Test_1 (Equal Compare) Negate (Construct (Pair False False) (Construct (Pair True True) Empty_List))
+Def Negate_Trivial_test : List (Pair (Pair Trivial Trivial) Trivial) =
+  Test_1 (Equal Compare) Negate (Construct (Pair Trivial Trivial) Empty_List)
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

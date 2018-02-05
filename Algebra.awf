@@ -10,22 +10,25 @@ Struct Pair[T : Star, U : Star](First : T, Second : U)
 Struct Polynomial[T : Star](Coefficients : List T)
 Struct Quaternion[T : Star](Qa : T, Qx : T, Qy : T, Qz : T)
 Struct Trivial
-Class Finite(T : Star)(All : List T)
-Class Functor(F : Arrow Star Star)(Map[T : Star, U : Star] : Function (Function T U) (Function (F T) (F U)))
-Class Ordered(T : Star)(Compare : Function T (Function T Comparison))
-Class Ring(T : Star)(
+~/
+todo: make Ring prerequisite for this class
+/~
+Class Commutative{T : Star}
+Class Field{T : Star}(Inverse : Function T (Maybe T))
+Class Finite{T : Star}(All : List T)
+Class Functor{F : Arrow Star Star}(Map[T : Star, U : Star] : Function (Function T U) (Function (F T) (F U)))
+Class Ordered{T : Star}(Compare : Function T (Function T Comparison))
+Class Ring{T : Star}(
   Add : Function T (Function T T),
   Convert : Function Int T,
-  Inverse : Function T (Maybe T),
   Multiply : Function T (Function T T),
   Negate : Function T T)
+Class Writeable{T : Star}(Write : Function T (List Char))
 `Abstract Apply{F : Arrow Star Star}[T : Star, U : Star] : F (T -> U) -> F T -> F U
 `Abstract Det{F : Arrow Star Star}[T : Star] : F T -> T
 `Abstract Fold{F : Arrow Star Star}[T : Star, U : Star] : (T -> U -> U) -> U -> F T -> U
 `Abstract Top_row{F : # -> * -> *}[N : #, T : Star] : F N T -> Array (N - 1) T
 `Instance Add{Array _ T}<Add T> = Map Apply (Map Add)
-Def Add_Complex[T : Star](Add_T : Function T (Function T T), x : Complex T, y : Complex T) : Complex T =
-  Complex (Add_T (Real x) (Real y)) (Add_T (Imaginary x) (Imaginary y))
 `Instance Add{Pair T U}<Add T, Add U> = Zip_Pair Add Add
 Def Add_Pair[T : Star, U : Star] :
   Function
@@ -64,6 +67,10 @@ Def Clean[T : Star](Equal_T : Function T (Function T Logical), x : List T) : Lis
       Construct -> a,
       Empty_List -> Empty_List}}) (Construct y w)) (Clean Equal_T z),
   Empty_List -> Empty_List}
+Instance Commutative{Complex T}<Commutative T>
+Instance Commutative{Int}
+Instance Commutative{Logical}
+Instance Commutative{Trivial}
 Def Compare_Complex[T : Star](Compare_T : Function T (Function T Comparison), x : Complex T, y : Complex T) : Comparison =
   Match Compare_T (Real x) (Real y) {
     LT -> LT,
@@ -114,7 +121,6 @@ Def Compare_Pair[T : Star, U : Star]
           EQ -> Compare_U (Second x) (Second y),
           GT -> GT,
           LT -> LT}
-Def Convert_Complex[T : Star](Convert_T : Function Int T, x : Int) : Complex T = Complex (Convert_T x) (Zero Convert_T)
 Def Convert_Polynomial[T : Star]
   (Convert_T : Function Int T, Equal_T : Function T (Function T Logical), x : Int) : Polynomial T =
     Polynomial (Clean Equal_T (Lift_List (Convert_T x)))
@@ -123,6 +129,15 @@ Def Det_Complex[T : Star](Add_T : Function T (Function T T), Multiply_T : Functi
 Def Equal[T : Star](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Match Compare_T x y {
   EQ -> True,
   Default -> False}
+Instance Field{Complex T}(Inverse x = Crash)
+Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing})
+Instance Field{Logical}(Inverse x = Match x {False -> Nothing, True -> Wrap x})
+Instance Field{Pair T U}<Field T, Field U>(
+  Inverse x =
+    Match Inverse (First x) {
+      Nothing -> Nothing,
+      Wrap y -> Match Inverse (Second x) {Nothing -> Nothing, Wrap z -> Wrap (Pair y z)}})
+Instance Field{Trivial}(Inverse _ = Wrap Trivial)
 Def Filter_List[T : Star](f : Function T Logical, x : List T) : List T = Match x {
   Construct y z -> (w -> Match f y {
     False -> w,
@@ -133,20 +148,21 @@ Def Filter_Maybe[T : Star](f : Function T Logical, x : Maybe T) : Maybe T = Matc
   Wrap y -> Match f y {
     False -> Nothing,
     True -> x}}
-Instance Finite(Comparison)(All = Construct LT (Construct EQ (Construct GT Empty_List)))
+Instance Functor{Complex}(Map f x = Complex (f (Real x)) (f (Imaginary x))) 
+Instance Finite{Comparison}(All = Construct LT (Construct EQ (Construct GT Empty_List)))
 `Def All_Complex[T : Star](All_T : List T) : List (Complex T) = Zip Apply_List Apply_List Lift_List Complex All_T All_T
 ~/
 Def All_Either[T : Star, U : Star](All_T : List T, All_U : List U) : List (Either T U) =
   Join_List (Map_List Left All_T) (Map_List Right All_U)
 /~
 `Def All_Function[T : Star, U : Star](All_T : List T, All_U : List U) : List (Function T U) = Crash
-Instance Finite(Logical)(All = Construct False (Construct True Empty_List))
+Instance Finite{Logical}(All = Construct False (Construct True Empty_List))
 `Instance All{Pair T U}<All T, All U> = Zip Pair All All
 ~/
 Def All_Pair[T : Star, U : Star](All_T : List T, All_U : List U) : List (Pair T U) =
   Zip Apply_List Apply_List Lift_List Pair All_T All_U
 /~
-Instance Finite(Trivial)(All = Construct Trivial Empty_List)
+Instance Finite{Trivial}(All = Construct Trivial Empty_List)
 Def Flatten_Either[T : Star, U : Star](x : Either T (Either T U)) : Either T U = Match x {
   Left y -> Left y,
   Right y -> y}
@@ -239,23 +255,6 @@ Def Map_Polynomial[T : Star, U : Star](f : Function T U, x : Polynomial T) : Pol
   Polynomial (Map_List f (Coefficients x))
 `Def Minus[T : Star]<Add T, Negate T>(x : T) = Map (Add x) Negate
 Def Minus[A : Star](Add_A : Function A (Function A A), Negate_A : Function A A, x : A, y : A) : A = Add_A x (Negate_A y)
-Def Multiply_Complex[T : Star]
-  (
-    Add_T : Function T (Function T T),
-    Multiply_T : Function T (Function T T),
-    Negate_T : Function T T,
-    x : Complex T,
-    y : Complex T) :
-      Complex T =
-        (a ->
-          (b ->
-            (c ->
-              (d ->
-                Complex (Minus Add_T Negate_T (Multiply_T a c) (Multiply_T b d)) (Add_T (Multiply_T a d) (Multiply_T b c)))
-                (Imaginary y))
-              (Real y))
-            (Imaginary x))
-          (Real x)
 Def Not(x : Logical) : Logical = Match x {
   False -> True,
   True -> False}
@@ -267,38 +266,40 @@ Def Not_Equal[T : Star]<Compare T>(x : T, y : T) : Logical = Match Compare x y {
 Def Not_Equal[T : Star](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Match Compare_T x y {
   EQ -> False,
   Default -> True}
-Instance Ordered(Comparison)(
+Instance Ordered{Comparison}(
   Compare x y =
     Match x {
       LT -> Match y {LT -> EQ, Default -> LT},
       EQ -> Match y {LT -> GT, EQ -> EQ, GT -> LT},
       GT -> Match y {GT -> EQ, Default -> GT}})
-Instance Ordered(Int)(Compare = Compare_Int)
-Instance Ordered(Logical)(
+Instance Ordered{Int}(Compare = Compare_Int)
+Instance Ordered{Logical}(
   Compare x y = Match x {False -> Match y {False -> EQ, True -> LT}, True -> Match y {False -> GT, True -> EQ}})
-Instance Ordered(Trivial)(Compare _ _ = EQ)
-Instance Ring(Int)(
+Instance Ordered{Trivial}(Compare _ _ = EQ)
+Instance Ring{Complex T}<Ring T>(
+  Add x y = Complex (Add (Real x) (Real y)) (Add (Imaginary x) (Imaginary y)),
+  Convert x = Complex (Convert x) (Zero Convert),
+  Multiply x y =
+    Complex
+      (Minus Add Negate (Multiply (Real x) (Real y)) (Multiply (Imaginary x) (Imaginary y)))
+      (Add (Multiply (Real x) (Imaginary y)) (Multiply (Imaginary x) (Real y))),
+  Negate x = Complex (Negate (Real x)) (Negate (Imaginary x)))
+Instance Ring{Int}(
   Add = Add_Int,
   Convert = Id,
-  Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing},
   Multiply = Multiply_Int,
   Negate = Negate_Int)
-Instance Ring(Logical)(
+Instance Ring{Logical}(
   Add = Not_Equal Compare,
   Convert x = Equal Compare (Mod_Int x 2) 1,
-  Inverse x = Match x {
-    False -> Nothing,
-    True -> Wrap x},
-  Multiply x y = Match x {
-    False -> False,
-    True -> y},
+  Multiply x y = Match x { False -> False, True -> y},
   Negate = Id)
-Instance Ring(Trivial)(
-  Add _ _ = Trivial,
-  Convert _ = Trivial,
-  Inverse _ = Wrap Trivial,
-  Multiply _ _ = Trivial,
-  Negate _ = Trivial)
+Instance Ring{Pair T U}<Ring T, Ring U>(
+  Add x y = Pair (Add (First x) (First y)) (Add (Second x) (Second y)),
+  Convert x = Pair (Convert x) (Convert x),
+  Multiply x y = Pair (Multiply (First x) (First y)) (Multiply (Second x) (Second y)),
+  Negate x = Pair (Negate (First x)) (Negate (Second x)))
+Instance Ring{Trivial}(Add _ _ = Trivial, Convert _ = Trivial, Multiply _ _ = Trivial, Negate _ = Trivial)
 Def Sum[T : Star, F : Arrow Star Star]
   (
     Add_T : Function T (Function T T),
@@ -306,6 +307,15 @@ Def Sum[T : Star, F : Arrow Star Star]
     f : Function (Function T (Function T T)) (Function T (Function (F T) T))) :
       Function (F T) T =
         f Add_T (Zero Convert_T)
+Instance Writeable{Complex T}<Writeable T>(Write x = Crash)
+Instance Writeable{Logical}(
+  Write x =
+    Match x {
+      False -> Construct "F" (Construct "a" (Construct "l" (Construct "s" (Construct "e" Empty_List)))),
+      True -> Construct "T" (Construct "r" (Construct "u" (Construct "e" Empty_List)))})
+Instance Writeable{Trivial}(
+  Write _ =
+    Construct "T" (Construct "r" (Construct "i" (Construct "v" (Construct "i" (Construct "a" (Construct "l" Empty_List)))))))
 `Def Zero[T : Star]<Convert T> : T = Convert 0
 Def Zero[A : Star](Convert_A : Function Int A) : A = Convert_A 0
 Def Zip[F : Arrow Star Star, T : Star, U : Star, V : Star](

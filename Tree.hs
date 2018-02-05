@@ -11,24 +11,21 @@ module Tree where
   import Data.Bifunctor
   import Tokenise
   data Class_0 = Class_0 Name (Name, Kind_0) [Method] deriving Show
-  -- data Constraint_0 = Constraint_0 Name_tree Name_tree deriving Show
+  data Constraint_0 = Constraint_0 Name Name deriving Show
   data Data_0 = Data_0 Name [(Name, Kind_0)] Data_branch_0 deriving Show
   data Data_branch_0 = Algebraic_data_0 [Form_0] | Struct_data_0 [(Name, Type_0)] deriving Show
 {-
-  data Def_branch =
     Basic_def
       Name_tree
       [Argument_tree Name_tree Kind]
       [Constraint_0]
       [Argument_tree Pattern_tree Type_0]
       Type_0
-      Expression_tree |
-    Instance_def Name_tree Name_tree [Pattern_tree] [Constraint_0] [Name_tree] Expression_tree
-      deriving Show
+      Expression_tree
 -}
   data Def_0 =
     Basic_def_0 Name [(Name, Kind_0)] [(Pattern_1, Type_0)] Type_0 Expression_0 |
-    Instance_def_0 Location_0 Name Name [(Name, ([Pattern_1], Expression_0))]
+    Instance_def_0 Location_0 Name Name [Pattern_1] [Constraint_0] [(Name, ([Pattern_1], Expression_0))]
       deriving Show
   data Expression_0 = Expression_0 Location_0 Expression_branch_0 deriving Show
   data Expression_branch_0 =
@@ -183,8 +180,10 @@ module Tree where
   parse_class =
     (
       Class_0 <$>
-      parse_name'' Class_token <*>
-      parse_round ((,) <$> parse_name' <* parse_colon <*> parse_kind) <*>
+      parse_name'' Class_token <*
+      parse_token Left_curly_token <*>
+      ((,) <$> parse_name' <* parse_colon <*> parse_kind) <*
+      parse_token Right_curly_token <*>
       parse_optional parse_round parse_method)
   parse_colon :: Parser ()
   parse_colon = parse_operator ":"
@@ -192,12 +191,10 @@ module Tree where
   parse_comma = parse_token Comma_token
   parse_composite_expression :: Parser Expression_branch_0
   parse_composite_expression = parse_application_expression <|> parse_function <|> parse_match_expression
-{-
   parse_constraint :: Parser Constraint_0
-  parse_constraint = Constraint_0 <$> name_tree' <*> name_tree'
+  parse_constraint = Constraint_0 <$> parse_name' <*> parse_name'
   parse_constraints :: Parser [Constraint_0]
-  parse_constraints = optional_angular_list_tree parse_constraint
--}
+  parse_constraints = parse_optional' (parse_operator "<" *> parse_list 1 parse_constraint <* parse_operator ">")
   parse_data :: Parser Data_0
   parse_data = parse_algebraic <|> parse_struct
   parse_data' :: Token_0 -> Parser Data_branch_0 -> Parser Data_0
@@ -232,25 +229,16 @@ module Tree where
   parse_function :: Parser Expression_branch_0
   parse_function = parse_arrow' (Function_expression_0 <$> parse_pattern_1)
   parse_instance :: Parser Def_0
-{-
-  parse_instance_def =
-    Instance_def <$
-    token_tree Instance_token <*>
-    name_tree' <*
-    delimiter_tree Left_curly <*>
-    name_tree' <*>
-    many pattern_tree <*
-    delimiter_tree Right_curly <*>
-    parse_constraints <*>
-    many name_tree' <*>
-    expression_tree'
--}
   parse_instance =
     (
       Instance_def_0 <&
       parse_token Instance_token <*>
+      parse_name' <*
+      parse_token Left_curly_token <*>
       parse_name' <*>
-      parse_round (parse_name') <*>
+      many parse_pattern_1 <*
+      parse_token Right_curly_token <*>
+      parse_constraints <*>
       parse_optional
         parse_round
         ((\x -> \y -> \z -> (x, (y, z))) <$> parse_name' <*> many parse_pattern_1 <* parse_eq <*> parse_expression'))

@@ -102,9 +102,11 @@ module Tokenise where
     Int_char b -> Just b
     _ -> Nothing
   location :: Location_1 -> String
-  location (Location_1 a (Location_0 b c)) = " at " ++ a ++ ":" ++ show b ++ ":" ++ show c
+  location (Location_1 a b) = " at " ++ a ++ ":" ++ location0 b
   location' :: Location_1 -> String
   location' a = location a ++ "."
+  location0 :: Location_0 -> String
+  location0 (Location_0 a b) = show a ++ ":" ++ show b
   name_char :: Char' -> Maybe Char
   name_char a = case a of
     Int_char b -> Just b

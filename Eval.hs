@@ -2,7 +2,6 @@
 {-# OPTIONS_GHC -Wall #-}
 module Eval where
   import Data.Map
-  import Data.Set
   import Naming
   import Tokenise
   import Tree
@@ -122,10 +121,13 @@ module Eval where
     (Map' Alg, Map' String, Map' Type_2) ->
     Map' Expression_2 ->
     String ->
-    Map' (Set String) ->
+    Map' (Map' [[String]]) ->
+    Map' String ->
+    Map' ([String], Map' [(String, Nat)]) ->
     Err String
-  tokenise_parse_naming_typing_eval c f (g, h, i) l b u =
+  tokenise_parse_naming_typing_eval c f (g, h, i) l b u t v =
     (
       parse_expression b >>=
-      \e -> naming_expression "input" e c >>= \j -> show <$> eval l <$> type_expr' (Location_1 "input") (f, g, h, i) j u)
+      \e ->
+        naming_expression "input" e c >>= \j -> show <$> eval l <$> type_expr' (Location_1 "input") (f, g, h, i) j u (t, v))
 -----------------------------------------------------------------------------------------------------------------------------

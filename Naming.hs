@@ -23,11 +23,11 @@ module Naming where
 -}
   data Def_2 =
     Basic_def_2 Location_0 String [(Name, Kind_0)] Type_0 Expression_0 |
-    Instance_2 Location_0 Name Name [(Name, Expression_0)]
+    Instance_2 Location_0 Name Name [Pattern_1] [Constraint_0] [(Name, Expression_0)]
       deriving Show
   data Def_3 =
     Basic_def_3 Location_0 String [(String, Kind_0)] Type_0 Expression_1 |
-    Instance_3 Location_0 Name Name [(Name, Expression_1)]
+    Instance_3 Location_0 Name Name [Pattern_0] [Constraint_0] [(Name, Expression_1)]
       deriving Show
   data Expression_branch_1 =
     Application_expression_1 Expression_1 Expression_1 |
@@ -135,15 +135,12 @@ module Naming where
   naming_def_1 :: String -> Def_1 -> Locations -> Err (Def_2, Locations)
   naming_def_1 i a g = case a of
     Basic_def_1 c @ (Name h j) b d e -> (\(f, _) -> (Basic_def_2 h j b d e, f)) <$> naming_name i c g
-    Instance_1 b c d e -> Right (Instance_2 b c d e, g)
+    Instance_1 b c d f h e -> Right (Instance_2 b c d f h e, g)
   naming_def_2 :: String -> Def_2 -> Locations -> Err Def_3
   naming_def_2 j a b = case a of
-{-
-    Instance_def_2 c d e f g -> naming_patterns e b >>= \(h, i) -> Instance_def_3 c d i f <$> naming_expression g h
--}
     Basic_def_2 k c d f g ->
       naming_arguments naming_name j d b >>= \(h, i) -> Basic_def_3 k c i f <$> naming_expression j g h
-    Instance_2 f c d e -> Instance_3 f c d <$> naming_nameexprs j b e
+    Instance_2 f c d g k e -> naming_patterns j g b >>= \(h, i) -> Instance_3 f c d i k <$> naming_nameexprs j h e
   naming_defs_1 :: String -> [Def_1] -> Locations -> Err ([Def_2], Locations)
   naming_defs_1 a b c = case b of
     [] -> Right ([], c)

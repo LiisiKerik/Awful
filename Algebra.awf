@@ -10,11 +10,8 @@ Struct Pair[T : Star, U : Star](First : T, Second : U)
 Struct Polynomial[T : Star](Coefficients : List T)
 Struct Quaternion[T : Star](Qa : T, Qx : T, Qy : T, Qz : T)
 Struct Trivial
-~/
-todo: make Ring prerequisite for this class
-/~
-Class Commutative{T : Star}
-Class Field{T : Star}(Inverse : Function T (Maybe T))
+Class Commutative{T : Star}<Ring>
+Class Field{T : Star}<Ring>(Inverse : Function T (Maybe T))
 Class Finite{T : Star}(All : List T)
 Class Functor{F : Arrow Star Star}(Map[T : Star, U : Star] : Function (Function T U) (Function (F T) (F U)))
 Class Ordered{T : Star}(Compare : Function T (Function T Comparison))
@@ -49,15 +46,15 @@ Def Apply_Complex[T : Star, U : Star](x : Complex (Function T U), y : Complex T)
   Complex (Real x (Real y)) (Imaginary x (Imaginary y))
 Def Apply_Either[A : Star, B : Star, C : Star](x : Either A (Function B C), y : Either A B) : Either A C = Match x {
   Left z -> Left z,
-  Right f -> Map_Either f y}
+  Right f -> Map f y}
 `Instance Apply{Function _} f g x = f x (g x)
 Def Apply_Function[A : Star, B : Star, C : Star](f : Function A (Function B C), g : Function A B, x : A) : C = f x (g x)
 Def Apply_List[T : Star, U : Star](x : List (Function T U), y : List T) : List U = Match x {
-  Construct f z -> Join_List (Map_List f y) (Apply_List z y),
+  Construct f z -> Join_List (Map f y) (Apply_List z y),
   Empty_List -> Empty_List}
 Def Apply_Maybe[A : Star, B : Star](x : Maybe (Function A B), y : Maybe A) : Maybe B = Match x {
   Nothing -> Nothing,
-  Wrap f -> Map_Maybe f y}
+  Wrap f -> Map f y}
 Def Bimap[T : Star, U : Star, V : Star, W : Star](f : Function T U, g : Function V W, x : Pair T V) : Pair U W =
   Pair (f (First x)) (g (Second x))
 Def Clean[T : Star](Equal_T : Function T (Function T Logical), x : List T) : List T = Match x {
@@ -70,66 +67,16 @@ Def Clean[T : Star](Equal_T : Function T (Function T Logical), x : List T) : Lis
 Instance Commutative{Complex T}<Commutative T>
 Instance Commutative{Int}
 Instance Commutative{Logical}
+Instance Commutative{Pair T U}<Commutative T, Commutative U>
+Instance Commutative{Polynomial T}<Commutative T>
 Instance Commutative{Trivial}
-Def Compare_Complex[T : Star](Compare_T : Function T (Function T Comparison), x : Complex T, y : Complex T) : Comparison =
-  Match Compare_T (Real x) (Real y) {
-    LT -> LT,
-    EQ -> Compare_T (Imaginary x) (Imaginary y),
-    GT -> GT}
-Def Compare_Either[T : Star, U : Star]
-  (
-    Compare_T : Function T (Function T Comparison),
-    Compare_U : Function U (Function U Comparison),
-    x : Either T U,
-    y : Either T U) :
-      Comparison =
-        Match x {
-          Left z -> Match y {
-            Left w -> Compare_T z w,
-            Right -> LT},
-          Right z -> Match y {
-            Left -> GT,
-            Right w -> Compare_U z w}}
-Def Compare_Function[T : Star, U : Star]
-  (All_T : List T, Compare_U : Function U (Function U Comparison), f : Function T U, g : Function T U) : Comparison =
-    Compare_List Compare_U (Map_List f All_T) (Map_List g All_T)
-Def Compare_List[T : Star](Compare_T : Function T (Function T Comparison), x : List T, y : List T) : Comparison = Match x {
-  Construct z w -> Match y {
-    Construct a b -> (c -> Match c {
-      EQ -> Compare_List Compare_T w b,
-      Default -> c}) (Compare_T z a),
-    Empty_List -> GT},
-  Empty_List -> Match y {
-    Construct -> LT,
-    Empty_List -> EQ}}
-Def Compare_Maybe[T : Star](Compare_T : Function T (Function T Comparison), x : Maybe T, y : Maybe T) : Comparison =
-  Match x {
-    Nothing -> Match y {
-      Nothing -> EQ,
-      Wrap -> LT},
-    Wrap z -> Match y {
-      Nothing -> GT,
-      Wrap w -> Compare_T z w}}
-Def Compare_Pair[T : Star, U : Star]
-  (
-    Compare_T : Function T (Function T Comparison),
-    Compare_U : Function U (Function U Comparison),
-    x : Pair T U,
-    y : Pair T U) :
-      Comparison =
-        Match Compare_T (First x) (First y) {
-          EQ -> Compare_U (Second x) (Second y),
-          GT -> GT,
-          LT -> LT}
 Def Convert_Polynomial[T : Star]
   (Convert_T : Function Int T, Equal_T : Function T (Function T Logical), x : Int) : Polynomial T =
     Polynomial (Clean Equal_T (Lift_List (Convert_T x)))
 Def Det_Complex[T : Star](Add_T : Function T (Function T T), Multiply_T : Function T (Function T T), x : Complex T) : T =
   Add_T (Crash (Real x)) (Crash (Imaginary x))
-Def Equal[T : Star](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Match Compare_T x y {
-  EQ -> True,
-  Default -> False}
-Instance Field{Complex T}(Inverse x = Crash)
+Def Equal[T : Star]<Ordered T>(x : T, y : T) : Logical = Match Compare x y {EQ -> True, Default -> False}
+Instance Field{Complex T}<Commutative T>(Inverse x = Crash)
 Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing})
 Instance Field{Logical}(Inverse x = Match x {False -> Nothing, True -> Wrap x})
 Instance Field{Pair T U}<Field T, Field U>(
@@ -148,12 +95,18 @@ Def Filter_Maybe[T : Star](f : Function T Logical, x : Maybe T) : Maybe T = Matc
   Wrap y -> Match f y {
     False -> Nothing,
     True -> x}}
-Instance Functor{Complex}(Map f x = Complex (f (Real x)) (f (Imaginary x))) 
+Instance Functor{Complex}(Map f x = Complex (f (Real x)) (f (Imaginary x)))
+Instance Functor{Either _}(Map f x = Match x {Left y -> Left y, Right y -> Right (f y)})
+Instance Functor{Function _}(Map f g x = f (g x))
+Instance Functor{List}(Map f x = Match x {Empty_List -> Empty_List, Construct y z -> Construct (f y) (Map f z)})
+Instance Functor{Maybe}(Map f x = Match x {Nothing -> Nothing, Wrap y -> Wrap (f y)})
+Instance Functor{Pair _}(Map f x = Pair (First x) (f (Second x)))
+Instance Functor{Polynomial}(Map f p = Polynomial (Map f (Coefficients p)))
 Instance Finite{Comparison}(All = Construct LT (Construct EQ (Construct GT Empty_List)))
 `Def All_Complex[T : Star](All_T : List T) : List (Complex T) = Zip Apply_List Apply_List Lift_List Complex All_T All_T
 ~/
 Def All_Either[T : Star, U : Star](All_T : List T, All_U : List U) : List (Either T U) =
-  Join_List (Map_List Left All_T) (Map_List Right All_U)
+  Join_List (Map Left All_T) (Map Right All_U)
 /~
 `Def All_Function[T : Star, U : Star](All_T : List T, All_U : List U) : List (Function T U) = Crash
 Instance Finite{Logical}(All = Construct False (Construct True Empty_List))
@@ -181,16 +134,10 @@ Def Fold_Left[T : Star, U : Star](f : Function T (Function U T), x : T, y : List
 Def Fold_Right[T : Star, U : Star](f : Function T (Function U U), x : U, y : List T) : U = Match y {
   Construct z w -> f z (Fold_Right f x y),
   Empty_List -> x}
-Def Greater[T : Star](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Match Compare_T x y {
-  GT -> True,
-  Default -> False}
-Def Greater_or_equal[T : Star](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical =
-  Match Compare_T x y {
-    LT -> False,
-    Default -> True}
+Def Greater[T : Star]<Ordered T>(x : T, y : T) : Logical = Match Compare x y {GT -> True, Default -> False}
+Def Greater_or_equal[T : Star]<Ordered T>(x : T, y : T) : Logical = Match Compare x y {LT -> False, Default -> True}
 Def Id[A : Star](x : A) : A = x
-`Def Identity[T : Star]<Convert T> : T = Convert 0
-Def Identity[A : Star](Convert_A : Function Int A) : A = Convert_A 1
+Def Identity[T : Star]<Ring T> : T = Convert 0
 ~/
 Def Join_Array[A : Star](x : Array A, y : Array A) : Array A =
   Unsafe_Array (Add_Int (Length x) (Length y)) (z -> Match Less_Int z (Length x) {
@@ -203,14 +150,13 @@ Def Join_List[T : Star](x : List T, y : List T) : List T = Match x {
 ~/
 Def Lead_Complex[T : Star] : Function (Complex T) T = Real
 Def Lead_Quaternion[T : Star] : Function (Quaternion T) T = Qx
-Def Less[T : Star](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Match Compare_T x y {
-  LT -> True,
-  Default -> False}
-Def Less_or_equal[T : Star](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Match Compare_T x y {
-  GT -> False,
-  Default -> True}
+/~
+Def Left_division[T : Star]<Field T>(x : T, y : T) : Maybe T = Map (z -> Multiply z x) (Inverse y)
+Def Less[T : Star]<Ordered T>(x : T, y : T) : Logical = Match Compare x y {LT -> True, Default -> False}
+Def Less_or_equal[T : Star]<Ordered T>(x : T, y : T) : Logical = Match Compare x y {GT -> False, Default -> True}
+~/
 Instance Lift{Array _} = Map Array Lift
-Def Lift_Array[N : #, T : Star] : T -> Array N T = Map_Function Array Lift_Function
+Def Lift_Array[N : #, T : Star] : T -> Array N T = Map Array Lift_Function
 Def Lift_Array[A : Star](x : Int, y : A) : Maybe (Array A) = Array x (Lift_Function y)
 /~
 `Instance Lift{Complex} x = Complex x x
@@ -224,61 +170,49 @@ Def Lift_List[T : Star](x : T) : List T = Construct x Empty_List
 Def Lift_Maybe[T : Star] : Function T (Maybe T) = Wrap
 ~/
 Instance Map{Array _} x y = Array (Map x (Array_function y))
-Def Map_Array[T : Star, U : Star, N : #](x : T -> U, y : Array N T) : Array N U = Array (Map_Function x (Array_function y))
+Def Map_Array[T : Star, U : Star, N : #](x : T -> U, y : Array N T) : Array N U = Array (Map x (Array_function y))
 Def Map_Array[A : Star, B : Star](f : Function A B, x : Array A) : Array B =
   Unsafe_Array (Length x) (y -> f (Unsafe_Index x y))
 /~
-`Instance Map{Complex} = Map_Functor
-Def Map_Complex[T : Star, U : Star] : Function (Function T U) (Function (Complex T) (Complex U)) =
-  Map_Function Apply_Complex Lift_Complex
-Def Map_Either[A : Star, B : Star, C : Star](f : Function A B, x : Either C A) : Either C B = Match x {
-  Left y -> Left y,
-  Right y -> Right (f y)}
-`Instance Map{Function _} f g x = f (g x)
-Def Map_Function[A : Star, B : Star, C : Star](f : Function A B, g : Function C A, x : C) : B = f (g x)
-Def Map_Functor[F : Arrow Star Star, T : Star, U : Star]
-  (
-    Apply_T : Function (F (Function T U)) (Function (F T) (F U)),
-    Lift_T : Function (Function T U) (F (Function T U)),
-    f : Function T U) :
-      Function (F T) (F U) =
-        Apply_T (Lift_T f)
-Def Map_List[T : Star, U : Star](f : Function T U, x : List T) : List U = Match x {
-  Construct y z -> Construct (f y) (Map_List f z),
-  Empty_List -> Empty_List}
-Def Map_Maybe[A : Star, B : Star](f : Function A B, x : Maybe A) : Maybe B = Match x {
-  Nothing -> Nothing,
-  Wrap y -> Wrap (f y)}
-`Instance Map{Pair _} f x = Pair (First x) (f (Second x))
-Def Map_Pair[A : Star, B : Star, C : Star](f : Function A B, x : Pair C A) : Pair C B = Pair (First x) (f (Second x))
-Def Map_Polynomial[T : Star, U : Star](f : Function T U, x : Polynomial T) : Polynomial U =
-  Polynomial (Map_List f (Coefficients x))
 `Def Minus[T : Star]<Add T, Negate T>(x : T) = Map (Add x) Negate
 Def Minus[A : Star](Add_A : Function A (Function A A), Negate_A : Function A A, x : A, y : A) : A = Add_A x (Negate_A y)
 Def Not(x : Logical) : Logical = Match x {
   False -> True,
   True -> False}
-~/
-Def Not_Equal[T : Star]<Compare T>(x : T, y : T) : Logical = Match Compare x y {
-  EQ -> False,
-  Default -> True}
-/~
-Def Not_Equal[T : Star](Compare_T : Function T (Function T Comparison), x : T, y : T) : Logical = Match Compare_T x y {
-  EQ -> False,
-  Default -> True}
+Def Not_equal[T : Star]<Ordered T>(x : T, y : T) : Logical = Match Compare x y {EQ -> False, Default -> True}
 Instance Ordered{Comparison}(
   Compare x y =
     Match x {
       LT -> Match y {LT -> EQ, Default -> LT},
       EQ -> Match y {LT -> GT, EQ -> EQ, GT -> LT},
       GT -> Match y {GT -> EQ, Default -> GT}})
+Instance Ordered{Complex T}<Ordered T>(
+  Compare x y = Match Compare (Real x) (Real y) {LT -> LT, EQ -> Compare (Imaginary x) (Imaginary y), GT -> GT})
+Instance Ordered{Either T U}<Ordered T, Ordered U>(
+  Compare x y =
+    Match x {
+      Left z -> Match y {Left w -> Compare z w, Right -> LT},
+      Right z -> Match y {Left -> GT, Right w -> Compare z w}})
+Instance Ordered{Function T U}<Finite T, Ordered U>(Compare f g = Compare (Map f All) (Map g All))
 Instance Ordered{Int}(Compare = Compare_Int)
+Instance Ordered{List T}<Ordered T>(
+  Compare x y =
+    Match x {
+      Construct z w ->
+        Match y {Construct a b -> (c -> Match c {EQ -> Compare w b, Default -> c}) (Compare z a), Empty_List -> GT},
+      Empty_List -> Match y {Construct -> LT, Empty_List -> EQ}})
 Instance Ordered{Logical}(
   Compare x y = Match x {False -> Match y {False -> EQ, True -> LT}, True -> Match y {False -> GT, True -> EQ}})
+Instance Ordered{Maybe T}<Ordered T>(
+  Compare x y =
+    Match x {Nothing -> Match y {Nothing -> EQ, Wrap -> LT}, Wrap z -> Match y {Nothing -> GT, Wrap w -> Compare z w}})
+Instance Ordered{Pair T U}<Ordered T, Ordered U>(
+  Compare x y = Match Compare (First x) (First y) {LT -> LT, EQ -> Compare (Second x) (Second y), GT -> GT})
 Instance Ordered{Trivial}(Compare _ _ = EQ)
+Def Right_division[T : Star]<Field T>(x : T, y : T) : Maybe T = Map (Multiply x) (Inverse y)
 Instance Ring{Complex T}<Ring T>(
   Add x y = Complex (Add (Real x) (Real y)) (Add (Imaginary x) (Imaginary y)),
-  Convert x = Complex (Convert x) (Zero Convert),
+  Convert x = Complex (Convert x) Zero,
   Multiply x y =
     Complex
       (Minus Add Negate (Multiply (Real x) (Real y)) (Multiply (Imaginary x) (Imaginary y)))
@@ -290,9 +224,9 @@ Instance Ring{Int}(
   Multiply = Multiply_Int,
   Negate = Negate_Int)
 Instance Ring{Logical}(
-  Add = Not_Equal Compare,
-  Convert x = Equal Compare (Mod_Int x 2) 1,
-  Multiply x y = Match x { False -> False, True -> y},
+  Add = Not_equal,
+  Convert x = Equal (Mod_Int x 2) 1,
+  Multiply x y = Match x {False -> False, True -> y},
   Negate = Id)
 Instance Ring{Pair T U}<Ring T, Ring U>(
   Add x y = Pair (Add (First x) (First y)) (Add (Second x) (Second y)),
@@ -316,8 +250,8 @@ Instance Writeable{Logical}(
 Instance Writeable{Trivial}(
   Write _ =
     Construct "T" (Construct "r" (Construct "i" (Construct "v" (Construct "i" (Construct "a" (Construct "l" Empty_List)))))))
-`Def Zero[T : Star]<Convert T> : T = Convert 0
-Def Zero[A : Star](Convert_A : Function Int A) : A = Convert_A 0
+Def Zero[T : Star]<Ring T> : T = Convert 0
+~/
 Def Zip[F : Arrow Star Star, T : Star, U : Star, V : Star](
   Apply_F' : Function (F (Function T (Function U V))) (Function (F T) (F (Function U V))),
   Apply_F'' : Function (F (Function U V)) (Function (F U) (F V)),
@@ -325,6 +259,7 @@ Def Zip[F : Arrow Star Star, T : Star, U : Star, V : Star](
   f : Function T (Function U V),
   x : F T) : Function (F U) (F V) =
     Apply_F'' (Map_Functor Apply_F' Lift_F f x)
+/~
 Def Zip_Pair
   [A : Star, B : Star, C : Star, D : Star, E : Star, F : Star]
   (f : Function A (Function B C), g : Function D (Function E F), x : Pair A D, y : Pair B E) :

@@ -10,21 +10,12 @@ module Tree where
   import Control.Monad
   import Data.Bifunctor
   import Tokenise
-  data Class_0 = Class_0 Name (Name, Kind_0) [Method] deriving Show
+  data Class_0 = Class_0 Name (Name, Kind_0) (Maybe Name) [Method] deriving Show
   data Constraint_0 = Constraint_0 Name Name deriving Show
   data Data_0 = Data_0 Name [(Name, Kind_0)] Data_branch_0 deriving Show
   data Data_branch_0 = Algebraic_data_0 [Form_0] | Struct_data_0 [(Name, Type_0)] deriving Show
-{-
-    Basic_def
-      Name_tree
-      [Argument_tree Name_tree Kind]
-      [Constraint_0]
-      [Argument_tree Pattern_tree Type_0]
-      Type_0
-      Expression_tree
--}
   data Def_0 =
-    Basic_def_0 Name [(Name, Kind_0)] [(Pattern_1, Type_0)] Type_0 Expression_0 |
+    Basic_def_0 Name [(Name, Kind_0)] [Constraint_0] [(Pattern_1, Type_0)] Type_0 Expression_0 |
     Instance_def_0 Location_0 Name Name [Pattern_1] [Constraint_0] [(Name, ([Pattern_1], Expression_0))]
       deriving Show
   data Expression_0 = Expression_0 Location_0 Expression_branch_0 deriving Show
@@ -151,7 +142,7 @@ module Tree where
       Basic_def_0 <$>
       parse_name'' Def_token <*>
       parse_kinds <*>
-      -- parse_constraints <*>
+      parse_constraints <*>
       parse_arguments' parse_pattern_1 <*
       parse_colon <*>
       parse_type <*
@@ -184,6 +175,7 @@ module Tree where
       parse_token Left_curly_token <*>
       ((,) <$> parse_name' <* parse_colon <*> parse_kind) <*
       parse_token Right_curly_token <*>
+      (Just <$ parse_operator "<" <*> parse_name' <* parse_operator ">" <|> return Nothing) <*>
       parse_optional parse_round parse_method)
   parse_colon :: Parser ()
   parse_colon = parse_operator ":"

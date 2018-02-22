@@ -15,29 +15,15 @@ import Typing
 type Files = Map' File
 check ::
   [String] ->
-  (
-    Files,
-    Locations,
-    Map' Expression_2,
-    Map' Polykind,
-    Map' (Map' Location'),
-    Map' String,
-    Map' ([String], Map' [(String, Nat)])) ->
+  (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])) ->
   Location' ->
   String ->
   IO
     (Err
       (
-        (
-          Files,
-          Locations,
-          Map' Expression_2,
-          Map' Polykind,
-          Map' (Map' Location'),
-          Map' String,
-          Map' ([String], Map' [(String, Nat)])),
+        (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])),
         File))
-check b m' @ (f, _, _, _, _, _, _) j name_qc = case Data.Map.lookup name_qc f of
+check b m' @ (f, _, _, _, _, _) j name_qc = case Data.Map.lookup name_qc f of
   Just a -> return (Right (m', a))
   Nothing -> case check' name_qc b of
     Just a -> return (Left ("Circular dependency between files " ++ intercalate ", " a ++ "."))
@@ -57,10 +43,10 @@ check b m' @ (f, _, _, _, _, _, _) j name_qc = case Data.Map.lookup name_qc f of
               return
                 (
                   g >>=
-                  \((h, i, l, p, p', q', r'), m) ->
+                  \((h, i, l, p, p', r'), m) ->
                     (
-                      (\(k, n, o, q, s, s', t') -> ((Data.Map.insert name_qc n h, k, o, q, s, s', t'), n)) <$>
-                      naming_typing name_qc d (i, m, l, p, p', q', r')))
+                      (\(k, n, o, q, s, t') -> ((Data.Map.insert name_qc n h, k, o, q, s, t'), n)) <$>
+                      naming_typing name_qc d (i, m, l, p, p', r')))
         Nothing -> err ("Failed to find file " ++ name_qc ++ " requested" ++ case j of
           Language -> " in the command."
           Library k -> location' k)
@@ -79,27 +65,13 @@ check_extensions a c = case c of
 check_imports ::
   [String] ->
   (
-    (
-      Files,
-      Locations,
-      Map' Expression_2,
-      Map' Polykind,
-      Map' (Map' Location'),
-      Map' String,
-      Map' ([String], Map' [(String, Nat)])),
+    (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])),
     File) ->
   [(Location', String)] ->
   IO
     (Err
       (
-        (
-          Files,
-          Locations,
-          Map' Expression_2,
-          Map' Polykind,
-          Map' (Map' Location'),
-          Map' String,
-          Map' ([String], Map' [(String, Nat)])),
+        (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])),
         File))
 check_imports a b @ (f, k) c = case c of
   [] -> return (Right b)
@@ -113,18 +85,9 @@ err = return <$> Left
 eval'' :: [String] -> String -> IO (Err String)
 eval'' a b = do
   c <- check_imports [] (init', init_type_context) ((,) Language <$> a)
-  return
-    (c >>= \((_, e, f, j, _, x, y), (File _ g h i _ _ _ m)) -> tokenise_parse_naming_typing_eval e j (g, h, i) f b m x y)
-init' ::
-  (
-    Files,
-    Locations,
-    Map' Expression_2,
-    Map' Polykind,
-    Map' (Map' Location'),
-    Map' String,
-    Map' ([String], Map' [(String, Nat)]))
-init' = (empty, locations, defs, kinds, empty, empty, empty)
+  return (c >>= \((_, e, f, j, _, y), (File _ g h i _ _ n m _)) -> tokenise_parse_naming_typing_eval e j (g, h, i) f b m y n)
+init' :: (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)]))
+init' = (empty, locations, defs, kinds, empty, empty)
 main :: IO ()
 main = do
   args <- getArgs

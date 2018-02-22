@@ -6,27 +6,17 @@ module Naming where
   import Standard
   import Tokenise
   import Tree
-  data Class_1 = Class_1 String (Name, Kind_0) [Method_1] deriving Show
-  data Class_2 = Class_2 String (String, Kind_0) [Method_2] deriving Show
+  data Class_1 = Class_1 String (Name, Kind_0) (Maybe Name) [Method_1] deriving Show
+  data Class_2 = Class_2 String (String, Kind_0) (Maybe Name) [Method_2] deriving Show
   data Data_branch_1 = Algebraic_data_1 [Form_1] | Struct_data_1 [(String, Type_0)] deriving Show
   data Data_1 = Data_1 String [(Name, Kind_0)] Data_branch_1 deriving Show
   data Data_2 = Data_2 String [(String, Kind_0)] Data_branch_1 deriving Show
-{-
-  data Def_branch_2 =
-    Basic_def_2 String [Argument_tree Name_tree Kind] [Constraint_0] Type_0 Expression_tree |
-    Instance_def_2 Name_tree Name_tree [Pattern_tree] [Constraint_0] Expression_tree
-      deriving Show
-  data Def_branch_3 =
-    Basic_def_3 String [Argument_tree String Kind] [Constraint_0] Type_0 Expression_tree_1 |
-    Instance_def_3 Name_tree Name_tree [Pattern_branch] [Constraint_0] Expression_tree_1
-      deriving Show
--}
   data Def_2 =
-    Basic_def_2 Location_0 String [(Name, Kind_0)] Type_0 Expression_0 |
+    Basic_def_2 Location_0 String [(Name, Kind_0)] [Constraint_0] Type_0 Expression_0 |
     Instance_2 Location_0 Name Name [Pattern_1] [Constraint_0] [(Name, Expression_0)]
       deriving Show
   data Def_3 =
-    Basic_def_3 Location_0 String [(String, Kind_0)] Type_0 Expression_1 |
+    Basic_def_3 Location_0 String [(String, Kind_0)] [Constraint_0] Type_0 Expression_1 |
     Instance_3 Location_0 Name Name [Pattern_0] [Constraint_0] [(Name, Expression_1)]
       deriving Show
   data Expression_branch_1 =
@@ -105,10 +95,10 @@ module Naming where
   naming_2 e (Tree_4 a f b) c =
     naming_datas_2 e a c >>= \d -> naming_classes_1 e f c >>= \g -> Tree_5 d g <$> naming_defs_2 e b c
   naming_class_0 :: String -> Class_0 -> Locations -> Err (Locations, Class_1)
-  naming_class_0 a (Class_0 b c d) e = naming_name a b e >>= \(f, g) -> second (Class_1 g c) <$> naming_methods_0 a d f
+  naming_class_0 a (Class_0 b c h d) e = naming_name a b e >>= \(f, g) -> second (Class_1 g c h) <$> naming_methods_0 a d f
   naming_class_1 :: String -> Class_1 -> Locations -> Err Class_2
-  naming_class_1 a (Class_1 b (c, d) e) f =
-    naming_name a c f >>= \(i, g) -> Class_2 b (g, d) <$> naming_methods_1 a e i
+  naming_class_1 a (Class_1 b (c, d) h e) f =
+    naming_name a c f >>= \(i, g) -> Class_2 b (g, d) h <$> naming_methods_1 a e i
   naming_classes_0 :: String -> [Class_0] -> Locations -> Err (Locations, [Class_1])
   naming_classes_0 a b c = case b of
     [] -> Right (c, [])
@@ -134,12 +124,12 @@ module Naming where
     c : d -> naming_data_2 f c b >>= \e -> (:) e <$> naming_datas_2 f d b
   naming_def_1 :: String -> Def_1 -> Locations -> Err (Def_2, Locations)
   naming_def_1 i a g = case a of
-    Basic_def_1 c @ (Name h j) b d e -> (\(f, _) -> (Basic_def_2 h j b d e, f)) <$> naming_name i c g
+    Basic_def_1 c @ (Name h j) b x d e -> (\(f, _) -> (Basic_def_2 h j b x d e, f)) <$> naming_name i c g
     Instance_1 b c d f h e -> Right (Instance_2 b c d f h e, g)
   naming_def_2 :: String -> Def_2 -> Locations -> Err Def_3
   naming_def_2 j a b = case a of
-    Basic_def_2 k c d f g ->
-      naming_arguments naming_name j d b >>= \(h, i) -> Basic_def_3 k c i f <$> naming_expression j g h
+    Basic_def_2 k c d t f g ->
+      naming_arguments naming_name j d b >>= \(h, i) -> Basic_def_3 k c i t f <$> naming_expression j g h
     Instance_2 f c d g k e -> naming_patterns j g b >>= \(h, i) -> Instance_3 f c d i k <$> naming_nameexprs j h e
   naming_defs_1 :: String -> [Def_1] -> Locations -> Err ([Def_2], Locations)
   naming_defs_1 a b c = case b of

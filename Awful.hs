@@ -85,7 +85,8 @@ err = return <$> Left
 eval'' :: [String] -> String -> IO (Err String)
 eval'' a b = do
   c <- check_imports [] (init', init_type_context) ((,) Language <$> a)
-  return (c >>= \((_, e, f, j, _, y), (File _ g h i _ _ n m _)) -> tokenise_parse_naming_typing_eval e j (g, h, i) f b m y n)
+  return
+    (c >>= \((_, e, f, j, _, y), (File _ g h i _ _ n m _ _)) -> tokenise_parse_naming_typing_eval e j (g, h, i) f b m y n)
 init' :: (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)]))
 init' = (empty, locations, defs, kinds, empty, empty)
 main :: IO ()

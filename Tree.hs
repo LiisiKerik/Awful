@@ -10,10 +10,14 @@ module Tree where
   import Control.Monad
   import Data.Bifunctor
   import Tokenise
+  data Brnch_0 = Brnch_0 Name [Name] Name [(Name, Type_0)] deriving Show
   data Class_0 = Class_0 Name (Name, Kind_0) (Maybe Name) [Method] deriving Show
   data Constraint_0 = Constraint_0 Name Name deriving Show
-  data Data_0 = Data_0 Name [(Name, Kind_0)] Data_branch_0 deriving Show
-  data Data_branch_0 = Algebraic_data_0 [Form_0] | Struct_data_0 [(Name, Type_0)] deriving Show
+  data Data_0 = Data_0 Name Data_br_0 deriving Show
+  data Data_br_0 = Branching_data_0 Name [Kind_0] [(Name, Kind_0)] [Brnch_0] | Plain_data_0 [(Name, Kind_0)] Data_branch_0
+    deriving Show
+  data Data_branch_0 = Algebraic_data_0 [Form_0] | Struct_data_0 [(Name, Type_0)]
+    deriving Show
   data Def_0 =
     Basic_def_0 Name [(Name, Kind_0)] [Constraint_0] [(Pattern_1, Type_0)] Type_0 Expression_0 |
     Instance_def_0 Location_0 Name Name [Pattern_1] [Constraint_0] [(Name, ([Pattern_1], Expression_0))]
@@ -74,21 +78,6 @@ module Tree where
   instance Monad Parser where
     Parser a >>= b = Parser (a >=> \(c, d) -> parser (b c) d)
     return = lift_parser
-{-
-  abstract_tree :: Parser Abstract_tree_0
-  abstract_tree =
-    Abstract_tree_0 <$
-    token_tree Abstract_token <*>
-    name_tree' <*
-    delimiter_tree Left_curly <*>
-    name_tree' <*
-    colon_tree <*>
-    kind_branch <*
-    delimiter_tree Right_curly <*>
-    optional_square_list_tree (argument_tree name_tree' kind_branch) <*
-    colon_tree <*>
-    type_tree
--}
   init_location :: Location_0
   init_location = Location_0 0 0
   left_bind :: (t -> Either u v) -> Either t v -> Either u v
@@ -107,7 +96,7 @@ module Tree where
         [] -> Right f
         _ -> d g
   parse_algebraic :: Parser Data_0
-  parse_algebraic = parse_data' Algebraic_token (Algebraic_data_0 <$> parse_round (parse_list 2 parse_form))
+  parse_algebraic = parse_data' Algebraic_data_0 Algebraic_token (parse_round (parse_list 2 parse_form))
   parse_application_expression :: Parser Expression_branch_0
   parse_application_expression =
     (
@@ -126,8 +115,10 @@ module Tree where
       (\x -> foldl (Application_type_0 <$> Type_0 x)) <&>
       (Application_type_0 <$> parse_bracketed_type <*> parse_bracketed_type) <*>
       many parse_bracketed_type)
+  parse_argument :: Parser t -> Parser u -> Parser (t, u)
+  parse_argument p = (<*>) ((<*) ((,) <$> p) parse_colon)
   parse_arguments :: (Parser [(t, u)] -> Parser [(t, u)]) -> Parser t -> Parser u -> Parser [(t, u)]
-  parse_arguments a b c = parse_optional a ((,) <$> b <* parse_colon <*> c)
+  parse_arguments a b c = parse_optional a (parse_argument b c)
   parse_arguments' :: Parser t -> Parser [(t, Type_0)]
   parse_arguments' a = parse_arguments parse_round a parse_type
   parse_arguments'' :: Parser t -> Parser [(t, Kind_0)]
@@ -159,6 +150,30 @@ module Tree where
     Type_0 <&> (parse_round parse_application_type <|> parse_char_type <|> parse_int_type <|> parse_name_type)
   parse_brackets :: Token_0 -> Parser t -> Token_0 -> Parser t
   parse_brackets a b c = parse_token a *> b <* parse_token c
+  parse_brnch :: Parser Brnch_0
+  parse_brnch =
+    (
+      Brnch_0 <$>
+      ((\x -> \y -> Name x ('!' : y)) <& parse_lift <*> parse_name) <*>
+      many parse_name' <*
+      parse_arrow <*>
+      parse_name' <*>
+      parse_arguments' parse_name')
+  parse_brnchs :: Parser Data_0
+  parse_brnchs =
+    (
+      Data_0 <$>
+      parse_name'' Branching_token <*>
+      (
+        Branching_data_0 <$
+        parse_token Left_square_token <*>
+        ((\x -> \y -> Name x ('!' : y)) <& parse_lift <*> parse_name) <*>
+        many parse_kind <*
+        parse_token Right_square_token <*>
+        parse_kinds <*
+        parse_token Left_round_token <*>
+        parse_list 2 parse_brnch <*
+        parse_token Right_round_token))
   parse_char :: Parser Char
   parse_char = parse_elementary (\a -> case a of
     Char_token b -> Just b
@@ -188,9 +203,9 @@ module Tree where
   parse_constraints :: Parser [Constraint_0]
   parse_constraints = parse_optional' (parse_operator "<" *> parse_list 1 parse_constraint <* parse_operator ">")
   parse_data :: Parser Data_0
-  parse_data = parse_algebraic <|> parse_struct
-  parse_data' :: Token_0 -> Parser Data_branch_0 -> Parser Data_0
-  parse_data' a b = Data_0 <$> parse_name'' a <*> parse_kinds <*> b
+  parse_data = parse_algebraic <|> parse_brnchs <|> parse_struct
+  parse_data' :: (t -> Data_branch_0) -> Token_0 -> Parser t -> Parser Data_0
+  parse_data' f a b = (\x -> \y -> \z -> Data_0 x (Plain_data_0 y (f z))) <$> parse_name'' a <*> parse_kinds <*> b--Data_0 <$> parse_name'' a <*> parse_kinds <*> (f <$> b)
   parse_def :: Parser Def_0
   parse_def = parse_basic <|> parse_instance
   parse_default :: Parser Expression_0
@@ -251,13 +266,10 @@ module Tree where
   parse_lift :: Parser ()
   parse_lift = parse_operator "!"
   parse_list :: Integer -> Parser t -> Parser [t]
-  parse_list a b = case a of
-    0 -> parse_optional' (parse_list' 1 b)
-    _ -> parse_list' a b
-  parse_list' :: Integer -> Parser t -> Parser [t]
-  parse_list' a b = (:) <$> b <*> case a of
-    1 -> many (parse_comma *> b)
-    _ -> parse_comma *> parse_list (a - 1) b
+  parse_list i p =
+    case i of
+      1 -> (:) <$> p <*> many (parse_comma *> p)
+      _ -> (:) <$> p <* parse_comma <*> parse_list (i - 1) p
   parse_load :: Parser Name
   parse_load = parse_name_3 Load_token ((flip (++) ".awf" <$> parse_name) <* parse_operator "." <* parse_name_4 "awf")
   parse_location :: Parser Location_0
@@ -332,7 +344,7 @@ module Tree where
   parse_round :: Parser t -> Parser t
   parse_round a = parse_brackets Left_round_token a Right_round_token
   parse_struct :: Parser Data_0
-  parse_struct = parse_data' Struct_token (Struct_data_0 <$> parse_arguments' parse_name')
+  parse_struct = parse_data' Struct_data_0 Struct_token (parse_arguments' parse_name')
   parse_token :: Token_0 -> Parser ()
   parse_token a = parse_elementary (\b -> if b == a then Just () else Nothing)
   parse_tree :: (Location_0 -> Location_1) -> String -> Err Tree_1

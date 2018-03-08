@@ -94,7 +94,7 @@ Def Filter_Maybe[T : Star](f : Function T Logical, x : Maybe T) : Maybe T = Matc
   Wrap y -> Match f y {
     False -> Nothing,
     True -> x}}
-Instance Functor{Array N}(Map f x = !Match N {!Next -> Construct_Array (f (Head x)) (Map f (Tail x)), !Zr -> Empty_Array})
+`Instance Functor{Array N}(Map f x = !Match N {!Next -> Construct_Array (f (Head x)) (Map f (Tail x)), !Zr -> Empty_Array})
 Instance Functor{Complex}(Map f x = Complex (f (Real x)) (f (Imaginary x)))
 Instance Functor{Either _}(Map f x = Match x {Left y -> Left y, Right y -> Right (f y)})
 Instance Functor{Function _}(Map f g x = f (g x))

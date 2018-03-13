@@ -340,7 +340,7 @@ module Tree where
   parse_pattern_1 :: Parser Pattern_1
   parse_pattern_1 = Pattern_1 <&> parse_pattern_0
   parse_prom :: Parser String
-  parse_prom = (parse_lift <|> parse_nothing) *> parse_name
+  parse_prom = ((:) '!' <$ parse_lift <*> parse_name <|> parse_name)
   parse_round :: Parser t -> Parser t
   parse_round a = parse_brackets Left_round_token a Right_round_token
   parse_struct :: Parser Data_0

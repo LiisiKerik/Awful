@@ -23,33 +23,35 @@ check ::
       (
         (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])),
         File))
-check b m' @ (f, _, _, _, _, _) j name_qc = case Data.Map.lookup name_qc f of
-  Just a -> return (Right (m', a))
-  Nothing -> case check' name_qc b of
-    Just a -> return (Left ("Circular dependency between files " ++ intercalate ", " a ++ "."))
-    Nothing -> do
-      find_file <- findFile [""] name_qc
-      case find_file of
-        Just file -> do
-          a <- readFile file
-          case standard (Location_1 name_qc) a of
-            Left c -> return (Left c)
-            Right (Tree_3 c d) -> do
-              g <-
-                check_imports
-                  (name_qc : b)
-                  (m', init_type_context)
-                  ((\(Name h i) -> (Library (Location_1 name_qc h), i)) <$> c)
-              return
-                (
-                  g >>=
-                  \((h, i, l, p, p', r'), m) ->
+check b m' @ (f, _, _, _, _, _) j name_qc =
+  case Data.Map.lookup name_qc f of
+    Just a -> return (Right (m', a))
+    Nothing ->
+      case check' name_qc b of
+        Just a -> return (Left ("Circular dependency between files " ++ intercalate ", " a ++ "."))
+        Nothing -> do
+          find_file <- findFile [""] name_qc
+          case find_file of
+            Just file -> do
+              a <- readFile file
+              case standard (Location_1 name_qc) a of
+                Left c -> return (Left c)
+                Right (Tree_3 c d) -> do
+                  g <-
+                    check_imports
+                      (name_qc : b)
+                      (m', init_type_context)
+                      ((\(Name h i) -> (Library (Location_1 name_qc h), i)) <$> c)
+                  return
                     (
-                      (\(k, n, o, q, s, t') -> ((Data.Map.insert name_qc n h, k, o, q, s, t'), n)) <$>
-                      naming_typing name_qc d (i, m, l, p, p', r')))
-        Nothing -> err ("Failed to find file " ++ name_qc ++ " requested" ++ case j of
-          Language -> " in the command."
-          Library k -> location' k)
+                      g >>=
+                      \((h, i, l, p, p', r'), m) ->
+                        (
+                          (\(k, n, o, q, s, t') -> ((Data.Map.insert name_qc n h, k, o, q, s, t'), n)) <$>
+                          naming_typing name_qc d (i, m, l, p, p', r')))
+            Nothing -> err ("Failed to find file " ++ name_qc ++ " requested" ++ case j of
+              Language -> " in the command."
+              Library k -> location' k)
 check' :: String -> [String] -> Maybe [String]
 check' a b = case b of
   [] -> Nothing

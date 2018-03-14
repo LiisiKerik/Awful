@@ -8,6 +8,7 @@ Algebraic List[T : Star](Empty_List, Construct_List T (List T))
 Algebraic Logical(False, True)
 Struct Pair[T : Star, U : Star](First : T, Second : U)
 Struct Polynomial[T : Star](Coefficients : List T)
+`Constructor Polynomial[T : Star]<Ordered T, Ring T>(Coefficients : List T) = Polynomial (Clean (Coefficients))
 Struct Quaternion[T : Star](Qr : T, Qx : T, Qy : T, Qz : T)
 Branching Square[!Nat][T : Star](
   !Zr -> Empty_Square,
@@ -28,14 +29,12 @@ Class Commutative{T : Star}<Ring>
 Class Field{T : Star}<Ring>(Inverse : Function T (Maybe T))
 Class Finite{T : Star}(All : List T)
 Class Functor{F : Arrow Star Star}(Map[T : Star, U : Star] : Function (Function T U) (Function (F T) (F U)))
-~/
 Class Matrix{F : Arrow !Nat (Arrow Star Star)}(
   Det[N : !Nat, T : Star]<Ring T> : Function (F N T) T,
   Fst[N : !Nat, T : Star]<Ring T> : Function (F (!Next N) T) T,
   Left_Column[N : !Nat, T : Star]<Ring T> : Function (F (!Next N) T) (Array N T),
   Matrix'[N : !Nat, T : Star]<Ring T> : Function (F (!Next N) T) (F N T),
   Top_Row[N : !Nat, T : Star]<Ring T> : Function (F (!Next N) T) (Array N T))
-/~
 Class Monad{F : Arrow Star Star}<Applicative>(Bind[T : Star, U : Star] : Function (F T) (Function (Function T (F U)) (F U)))
 Class Ordered{T : Star}(Compare : Function T (Function T Comparison))
 Class Ring{T : Star}(
@@ -43,7 +42,7 @@ Class Ring{T : Star}(
   Convert : Function Int T,
   Multiply : Function T (Function T T),
   Negate : Function T T)
-Class Writeable{T : Star}(Write : Function T (List Char))
+Class Writeable{T : Star}(Brackets : Function T (List Char), Write : Function T (List Char))
 Def Add_Lists[T : Star]<Ring T>(l : List T, m : List T) : List T =
   Match l {
     Empty_List -> m,
@@ -56,6 +55,12 @@ Instance Applicative{List}(
   Apply l m = Match l {Construct_List f n -> Concatenate (Map f m) (Apply n m), Empty_List -> Empty_List},
   Lift x = Construct_List x Empty_List)
 Instance Applicative{Maybe}(Apply m n = Match m {Nothing -> Nothing, Wrap f -> Map f n}, Lift = Wrap)
+Def Brackets'[T : Star]<Writeable T>(x : T) : List Char = Construct_List "(" (Concatenate (Write x) (Lift ")"))
+Def Clean[T : Star]<Ordered T, Ring T>(c : List T) : List T =
+  Match c {
+    Empty_List -> Empty_List,
+    Construct_List x c' ->
+      Match Clean c' {Empty_List -> Match Equal x Zero {False -> Empty_List, True -> Lift x}, Construct_List _ _ -> c}}
 Instance Commutative{Complex T}<Commutative T>
 Instance Commutative{Int}
 Instance Commutative{Logical}
@@ -68,17 +73,29 @@ Def Concatenate[T : Star](l : List T, m : List T) : List T = Match l {
 Def Equal[T : Star]<Ordered T>(x : T, y : T) : Logical = Match Compare x y {EQ -> True, Default -> False}
 Instance Field{Complex T}<Commutative T>(Inverse x = Crash)
 Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing})
+Instance Field{Logical}(Inverse x = Match x {False -> Nothing, True -> Wrap x})
 Instance Field{Pair T U}<Field T, Field U>(
   Inverse x =
     Match Inverse (First x) {
       Nothing -> Nothing,
       Wrap y -> Match Inverse (Second x) {Nothing -> Nothing, Wrap z -> Wrap (Pair y z)}})
+Instance Field{Trivial}(Inverse = Wrap)
+Instance Finite{Array N T}<Finite T>(All = Crash)
 Instance Finite{Comparison}(All = Construct_List LT (Construct_List EQ (Construct_List GT Empty_List)))
 Instance Finite{Complex T}<Finite T>(All = Zip Complex All All)
+Instance Finite{Diagonal _ T}<Finite T>(All = Map Diagonal All)
 Instance Finite{Either T U}<Finite T, Finite U>(All = Concatenate (Map Left All) (Map Right All))
+Instance Finite{Fraction T}<Finite T>(All = Crash)
 Instance Finite{Logical}(All = Construct_List False (Construct_List True Empty_List))
 Instance Finite{Pair T U}<Finite T, Finite U>(All = Zip Pair All All)
+Instance Finite{Polynomial T}<Finite T>(All = Crash)
+Instance Finite{Quaternion T}<Finite T>(All = Apply (Apply (Apply (Map Quaternion All) All) All) All)
+Instance Finite{Square N T}<Finite T>(All = Crash)
+Instance Finite{Toeplitz N T}<Finite T>(All = Crash)
+Instance Finite{Toeplitz_Triangle _ T}<Finite T>(All = Map Toeplitz_Triangle All)
+Instance Finite{Triangle N T}<Finite T>(All = Crash)
 Instance Finite{Trivial}(All = Construct_List Trivial Empty_List)
+Def Flatten[F : Arrow Star Star, T : Star]<Monad F>(x : F (F T)) : F T = Bind x Id
 `Instance Functor{Array N}(Map f x = !Match N {!Next -> Construct_Array (f (Head x)) (Map f (Tail x)), !Zr -> Empty_Array})
 Instance Functor{Array N}(Map f a = Crash)
 Instance Functor{Complex}(Map f c = Complex (f (Real c)) (f (Imaginary c)))
@@ -87,19 +104,18 @@ Instance Functor{Function _}(Map f g x = f (g x))
 Instance Functor{List}(Map f l = Match l {Empty_List -> Empty_List, Construct_List x m -> Construct_List (f x) (Map f m)})
 Instance Functor{Maybe}(Map f m = Match m {Nothing -> Nothing, Wrap x -> Wrap (f x)})
 Instance Functor{Pair _}(Map f x = Pair (First x) (f (Second x)))
+Instance Functor{Polynomial}(Map f p = Polynomial (Map f (Coefficients p)))
 Def Id[T : Star](x : T) : T = x
 Def Identity[T : Star]<Ring T> : T = Convert 0
 Def Left_division[T : Star]<Field T>(x : T, y : T) : Maybe T = Map (z -> Multiply z x) (Inverse y)
 Def Less[T : Star]<Ordered T>(x : T, y : T) : Logical = Match Compare x y {LT -> True, Default -> False}
 Def Less_or_equal[T : Star]<Ordered T>(x : T, y : T) : Logical = Match Compare x y {GT -> False, Default -> True}
-~/
 Instance Matrix{Diagonal}(
   Det d = Crash,
   Fst d = Head (Diagonal' d),
   Left_Column _ = Zero,
-  Matrix' d = Tail (Diagonal' d),
+  Matrix' d = Diagonal (Tail (Diagonal' d)),
   Top_Row _ = Zero)
-/~
 Def Minus[T : Star]<Ring T>(x : T, y : T) : T = Add x (Negate y)
 Def Not(x : Logical) : Logical = Match x {
   False -> True,
@@ -128,7 +144,7 @@ Instance Ordered{List T}<Ordered T>(
 Instance Ordered{Logical}(
   Compare x y = Match x {False -> Match y {False -> EQ, True -> LT}, True -> Match y {False -> GT, True -> EQ}})
 Def Right_division[T : Star]<Field T>(x : T, y : T) : Maybe T = Map (Multiply x) (Inverse y)
-Instance Ring{Array _ T}<Ring T>(Add a b = Crash, Convert = Crash, Multiply a b = Crash, Negate = Crash)
+Instance Ring{Array _ T}<Ring T>(Add a b = Crash, Convert = Crash, Multiply a b = Crash, Negate = Map Negate)
 Instance Ring{Complex T}<Ring T>(
   Add x y = Complex (Add (Real x) (Real y)) (Add (Imaginary x) (Imaginary y)),
   Convert x = Complex (Convert x) Zero,
@@ -136,7 +152,7 @@ Instance Ring{Complex T}<Ring T>(
     Complex
       (Minus (Multiply (Real x) (Real y)) (Multiply (Imaginary x) (Imaginary y)))
       (Add (Multiply (Real x) (Imaginary y)) (Multiply (Imaginary x) (Real y))),
-  Negate x = Complex (Negate (Real x)) (Negate (Imaginary x)))
+  Negate = Map Negate)
 Instance Ring{Int}(Add = Add_Int, Convert = Id, Multiply = Multiply_Int, Negate = Negate_Int)
 Instance Ring{Logical}(
   Add = Not_equal,
@@ -149,13 +165,36 @@ Instance Ring{Pair T U}<Ring T, Ring U>(
   Multiply x y = Pair (Multiply (First x) (First y)) (Multiply (Second x) (Second y)),
   Negate x = Pair (Negate (First x)) (Negate (Second x)))
 Instance Ring{Polynomial T}<Ring T>(
-  Add p q = Crash,
+  Add p q = Polynomial (Add_Lists (Coefficients p) (Coefficients q)),
   Convert i = Polynomial (Lift (Convert i)),
   Multiply p q = Crash,
-  Negate p = Polynomial (Map Negate (Coefficients p)))
+  Negate = Map Negate)
 Instance Ring{Trivial}(Add _ _ = Trivial, Convert _ = Trivial, Multiply _ _ = Trivial, Negate _ = Trivial)
 Def Zero[T : Star]<Ring T> : T = Convert 0
 Def Zip[F : Arrow Star Star, T : Star, U : Star, V : Star]<Applicative F>(f : Function T (Function U V), x : F T) :
   Function (F U) (F V) =
     Apply (Map f x)
+~/
+TODO: this thing here makes the language crash... why?
+Def Write'(l : List (List Char)) : List Char =
+  Match l {Empty_List -> Empty_List, Construct_List m n -> Concatenate m (Flatten (Map (Construct_List " ") n))}
+/~
+Instance Writeable{Complex T}<Writeable T>(
+  Brackets = Brackets',
+  Write c = Construct_List " " (Concatenate (Brackets (Real c)) (Construct_List " " (Brackets (Imaginary c)))))
+Instance Writeable{Logical}(
+  Brackets = Write,
+  Write x =
+    Match x {
+      False ->
+        Construct_List "F" (Construct_List "a" (Construct_List "l" (Construct_List "s" (Construct_List "e" Empty_List)))),
+      True -> Construct_List "T" (Construct_List "r" (Construct_List "u" (Construct_List "e" Empty_List)))})
+Instance Writeable{Trivial}(
+  Brackets = Write,
+  Write _ =
+    Construct_List
+      "T"
+      (Construct_List
+        "r"
+        (Construct_List "i" (Construct_List "v" (Construct_List "i" (Construct_List "a" (Construct_List "l" Empty_List)))))))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

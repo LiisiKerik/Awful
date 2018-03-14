@@ -47,8 +47,8 @@ module Naming where
     Matches_char_1 [Match_char_1] Expression_1 |
     Matches_Int_1 [Match_Int_1] Expression_1
       deriving Show
-  data Method_1 = Method_1 String [(Name, Kind_0)] Type_0 deriving Show
-  data Method_2 = Method_2 String [(String, Kind_0)] Type_0 deriving Show
+  data Method_1 = Method_1 String [(Name, Kind_0)] [Constraint_0] Type_0 deriving Show
+  data Method_2 = Method_2 String [(String, Kind_0)] [Constraint_0] Type_0 deriving Show
   data Tree_4 = Tree_4 [Data_1] [Class_1] [Def_2] deriving Show
   data Tree_5 = Tree_5 [Data_2] [Class_2] [Def_3] deriving Show
   add :: Ord t => Map t u -> t -> u -> Either u (Map t u)
@@ -210,9 +210,9 @@ module Naming where
     [] -> Right []
     d : e -> naming_match_int a d c >>= \f -> (:) f <$> naming_matches_int a e c
   naming_method_0 :: String -> Method -> Locations -> Err (Locations, Method_1)
-  naming_method_0 a (Method b c d) e = second (\f -> Method_1 f c d) <$> naming_name a b e
+  naming_method_0 a (Method b c g d) e = second (\f -> Method_1 f c g d) <$> naming_name a b e
   naming_method_1 :: String -> Method_1 -> Locations -> Err Method_2
-  naming_method_1 a (Method_1 b c d) e = (\f -> Method_2 b f d) <$> naming_args a c e
+  naming_method_1 a (Method_1 b c g d) e = (\f -> Method_2 b f g d) <$> naming_args a c e
   naming_methods_0 :: String -> [Method] -> Locations -> Err (Locations, [Method_1])
   naming_methods_0 a b c = case b of
     [] -> Right (c, [])

@@ -42,7 +42,7 @@ module Tree where
     Matches_char_0 [Match_char_0] Expression_0 |
     Matches_Int_0 [Match_Int_0] Expression_0
       deriving Show
-  data Method = Method Name [(Name, Kind_0)] Type_0 deriving Show
+  data Method = Method Name [(Name, Kind_0)] [Constraint_0] Type_0 deriving Show
   data Name = Name Location_0 String deriving Show
   data Pattern_1 = Pattern_1 Location_0 Pattern_0 deriving Show
   data Pattern_0 = Blank_pattern | Name_pattern String deriving Show
@@ -302,7 +302,7 @@ module Tree where
   parse_matches_int :: Parser Matches_0
   parse_matches_int = Matches_Int_0 <$> parse_list 1 parse_match_int <*> parse_default
   parse_method :: Parser Method
-  parse_method = Method <$> parse_name' <*> parse_kinds <* parse_colon <*> parse_type
+  parse_method = Method <$> parse_name' <*> parse_kinds <*> parse_constraints <* parse_colon <*> parse_type
   parse_name :: Parser String
   parse_name = parse_elementary (\a -> case a of
     Name_token b -> Just b

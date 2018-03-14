@@ -123,7 +123,7 @@ module Eval where
     String ->
     Map' (Map' [[String]]) ->
     Map' ([String], Map' [(String, Nat)]) ->
-    Map' Class_3 ->
+    Map' Class_4 ->
     Err String
   tokenise_parse_naming_typing_eval c f (g, h, i) l b u v w =
     (

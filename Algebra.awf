@@ -17,7 +17,7 @@ Branching Square[!Nat][T : Star](
 Branching Toeplitz[!Nat][T : Star](
   !Zr -> Empty_Toeplitz,
   !Next N -> Construct_Toeplitz(Fst_Toeplitz : T, Top_Row_Toeplitz : Array N T, Left_Column_Toeplitz : Array N T))
-Struct Toeplitz_Triangle[N : !Nat, T : Star](Toeplitz_Triangle' : Array N T)
+Struct Toeplitz_triangle[N : !Nat, T : Star](Toeplitz_triangle' : Array N T)
 Branching Triangle[!Nat][T : Star](
   !Zr -> Empty_Triangle,
   !Next N -> Construct_Triangle(Fst_Triangle : T, Top_Row_Triangle : Array N T, Triangle' : Triangle N T))
@@ -29,6 +29,7 @@ Class Commutative{T : Star}<Ring>
 Class Field{T : Star}<Ring>(Inverse : Function T (Maybe T))
 Class Finite{T : Star}(All : List T)
 Class Functor{F : Arrow Star Star}(Map[T : Star, U : Star] : Function (Function T U) (Function (F T) (F U)))
+Class Functor_Array{N : !Nat}(Map_Array[T : Star, U : Star] : Function (Function T U) (Function (Array N T) (Array N U)))
 Class Matrix{F : Arrow !Nat (Arrow Star Star)}(
   Det[N : !Nat, T : Star]<Ring T> : Function (F N T) T,
   Fst[N : !Nat, T : Star]<Ring T> : Function (F (!Next N) T) T,
@@ -92,19 +93,28 @@ Instance Finite{Polynomial T}<Finite T>(All = Crash)
 Instance Finite{Quaternion T}<Finite T>(All = Apply (Apply (Apply (Map Quaternion All) All) All) All)
 Instance Finite{Square N T}<Finite T>(All = Crash)
 Instance Finite{Toeplitz N T}<Finite T>(All = Crash)
-Instance Finite{Toeplitz_Triangle _ T}<Finite T>(All = Map Toeplitz_Triangle All)
+Instance Finite{Toeplitz_triangle _ T}<Finite T>(All = Map Toeplitz_triangle All)
 Instance Finite{Triangle N T}<Finite T>(All = Crash)
 Instance Finite{Trivial}(All = Construct_List Trivial Empty_List)
 Def Flatten[F : Arrow Star Star, T : Star]<Monad F>(x : F (F T)) : F T = Bind x Id
 `Instance Functor{Array N}(Map f x = !Match N {!Next -> Construct_Array (f (Head x)) (Map f (Tail x)), !Zr -> Empty_Array})
 Instance Functor{Array N}(Map f a = Crash)
 Instance Functor{Complex}(Map f c = Complex (f (Real c)) (f (Imaginary c)))
+Instance Functor{Diagonal _}(Map f d = Diagonal (Map f (Diagonal' d)))
 Instance Functor{Either _}(Map f x = Match x {Left y -> Left y, Right y -> Right (f y)})
 Instance Functor{Function _}(Map f g x = f (g x))
 Instance Functor{List}(Map f l = Match l {Empty_List -> Empty_List, Construct_List x m -> Construct_List (f x) (Map f m)})
 Instance Functor{Maybe}(Map f m = Match m {Nothing -> Nothing, Wrap x -> Wrap (f x)})
 Instance Functor{Pair _}(Map f x = Pair (First x) (f (Second x)))
+Instance Functor{Quaternion}(Map f q = Quaternion (f (Qr q)) (f (Qx q)) (f (Qy q)) (f (Qz q)))
 Instance Functor{Polynomial}(Map f p = Polynomial (Map f (Coefficients p)))
+Instance Functor{Square N}(Map f s = Crash)
+Instance Functor{Toeplitz N}(Map f t = Crash)
+Instance Functor{Toeplitz_triangle _}(Map f t = Toeplitz_triangle (Map f (Toeplitz_triangle' t)))
+Instance Functor{Triangle N}(Map f t = Crash)
+Instance Functor_Array{!Zr}(Map_Array _ _ = Empty_Array)
+Def Greater[T : Star]<Ordered T>(x : T, y : T) : Logical = Match Compare x y {GT -> True, Default -> False}
+Def Greater_or_equal[T : Star]<Ordered T>(x : T, y : T) : Logical = Match Compare x y {LT -> False, Default -> True}
 Def Id[T : Star](x : T) : T = x
 Def Identity[T : Star]<Ring T> : T = Convert 0
 Def Left_division[T : Star]<Field T>(x : T, y : T) : Maybe T = Map (z -> Multiply z x) (Inverse y)
@@ -117,6 +127,7 @@ Instance Matrix{Diagonal}(
   Matrix' d = Diagonal (Tail (Diagonal' d)),
   Top_Row _ = Zero)
 Def Minus[T : Star]<Ring T>(x : T, y : T) : T = Add x (Negate y)
+Instance Monad{List}(Bind l f = Match l {Empty_List -> Empty_List, Construct_List x m -> Concatenate (f x) (Bind m f)})
 Def Not(x : Logical) : Logical = Match x {
   False -> True,
   True -> False}
@@ -134,6 +145,7 @@ Instance Ordered{Either T U}<Ordered T, Ordered U>(
     Match x {
       Left z -> Match y {Left w -> Compare z w, Right -> LT},
       Right z -> Match y {Left -> GT, Right w -> Compare z w}})
+Instance Ordered{Function T U}<Finite T, Ordered U>(Compare f g = Compare (Map f All) (Map g All))
 Instance Ordered{Int}(Compare = Compare_Int)
 Instance Ordered{List T}<Ordered T>(
   Compare x y =
@@ -143,6 +155,12 @@ Instance Ordered{List T}<Ordered T>(
       Empty_List -> Match y {Construct_List -> LT, Empty_List -> EQ}})
 Instance Ordered{Logical}(
   Compare x y = Match x {False -> Match y {False -> EQ, True -> LT}, True -> Match y {False -> GT, True -> EQ}})
+Instance Ordered{Maybe T}<Ordered T>(
+  Compare x y =
+    Match x {Nothing -> Match y {Nothing -> EQ, Wrap -> LT}, Wrap z -> Match y {Nothing -> GT, Wrap w -> Compare z w}})
+Instance Ordered{Pair T U}<Ordered T, Ordered U>(
+  Compare x y = Match Compare (First x) (First y) {LT -> LT, EQ -> Compare (Second x) (Second y), GT -> GT})
+Instance Ordered{Trivial}(Compare _ _ = EQ)
 Def Right_division[T : Star]<Field T>(x : T, y : T) : Maybe T = Map (Multiply x) (Inverse y)
 Instance Ring{Array _ T}<Ring T>(Add a b = Crash, Convert = Crash, Multiply a b = Crash, Negate = Map Negate)
 Instance Ring{Complex T}<Ring T>(
@@ -174,11 +192,8 @@ Def Zero[T : Star]<Ring T> : T = Convert 0
 Def Zip[F : Arrow Star Star, T : Star, U : Star, V : Star]<Applicative F>(f : Function T (Function U V), x : F T) :
   Function (F U) (F V) =
     Apply (Map f x)
-~/
-TODO: this thing here makes the language crash... why?
 Def Write'(l : List (List Char)) : List Char =
   Match l {Empty_List -> Empty_List, Construct_List m n -> Concatenate m (Flatten (Map (Construct_List " ") n))}
-/~
 Instance Writeable{Complex T}<Writeable T>(
   Brackets = Brackets',
   Write c = Construct_List " " (Concatenate (Brackets (Real c)) (Construct_List " " (Brackets (Imaginary c)))))

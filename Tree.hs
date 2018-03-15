@@ -242,7 +242,7 @@ module Tree where
       parse_token Instance_token <*>
       parse_name' <*
       parse_token Left_curly_token <*>
-      parse_name' <*>
+      ((\x -> \y -> Name x ('!' : y)) <& parse_lift <*> parse_name <|> parse_name') <*>
       many parse_pattern_1 <*
       parse_token Right_curly_token <*>
       parse_constraints <*>

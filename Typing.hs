@@ -600,9 +600,15 @@ module Typing where
         let
           i = h c
         in
-          get_args (Left i) d [] >>= \(f, g) -> case Data.Map.lookup f (unsafe_lookup c a) of
-            Just j -> slv_constrs a e h g j
-            Nothing -> Left i
+          (
+            get_args (Left i) d [] >>=
+            \(f, g) ->
+                case Data.Map.lookup c a of
+                  Just x ->
+                    case Data.Map.lookup f x of
+                      Just j -> slv_constrs a e h g j
+                      Nothing -> Left i
+                  Nothing -> Left i)
   slv_constrs :: Map' (Map' [[String]]) -> [(String, Type_1)] -> (String -> String) -> [Type_1] -> [[String]] -> Err ()
   slv_constrs a b c d e = case d of
     [] -> case e of

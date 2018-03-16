@@ -123,10 +123,9 @@ module Eval where
     String ->
     Map' (Map' [[String]]) ->
     Map' ([String], Map' [(String, Nat)]) ->
-    Map' Class_4 ->
     Err String
-  tokenise_parse_naming_typing_eval c f (g, h, i) l b u v w =
+  tokenise_parse_naming_typing_eval c f (g, h, i) l b u v =
     (
       parse_expression b >>=
-      \e -> naming_expression "input" e c >>= \j -> show <$> eval l <$> type_expr' (Location_1 "input") (f, g, h, i) j u v w)
+      \e -> naming_expression "input" e c >>= \j -> show <$> eval l <$> type_expr' (Location_1 "input") (f, g, h, i) j u v)
 -----------------------------------------------------------------------------------------------------------------------------

@@ -6,14 +6,12 @@ module Eval where
   import Tokenise
   import Tree
   import Typing
-{-
   div_finite :: Integer -> Integer -> Integer -> Maybe Integer
   div_finite a b c = case a of
     1 -> Just 0
     _ -> case c of
       0 -> Nothing
       _ -> (\d -> div (a * d + b) c) <$> div_finite c (mod (- b) c) (mod a c)
--}
   eval :: Map' Expression_2 -> Expression_2 -> Expression_2
   eval a b = case eval' a b of
     Just c -> c
@@ -27,11 +25,27 @@ module Eval where
       Add_Int'_expression_2 k -> case j of
         Int_expression_2 n -> Just (Int_expression_2 (k + n))
         _ -> undefined
+      Compare_Char_expression_2 -> case j of
+        Char_expression_2 k -> Just (Compare_Char'_expression_2 k)
+        _ -> undefined
+      Compare_Char'_expression_2 k -> case j of
+        Char_expression_2 l -> Just (Algebraic_expression_2 (show (compare k l)) [])
+        _ -> undefined
       Compare_Int_expression_2 -> case j of
         Int_expression_2 k -> Just (Compare_Int'_expression_2 k)
         _ -> undefined
       Compare_Int'_expression_2 k -> case j of
         Int_expression_2 l -> Just (Algebraic_expression_2 (show (compare k l)) [])
+        _ -> undefined
+      Div_Int_expression_2 -> case j of
+        Int_expression_2 k -> Just (Div_Int'_expression_2 k)
+        _ -> undefined
+      Div_Int'_expression_2 k -> case j of
+        Int_expression_2 l ->
+          Just
+            (case l of
+              0 -> nothing_algebraic
+              _ -> wrap_algebraic (Int_expression_2 (div k (abs l))))
         _ -> undefined
       Field_expression_2 k -> case j of
         Struct_expression_2 l -> Just (unsafe_lookup k l)
@@ -43,7 +57,11 @@ module Eval where
         Int_expression_2 k -> Just (Mod_Int'_expression_2 k)
         _ -> undefined
       Mod_Int'_expression_2 k -> case j of
-        Int_expression_2 l -> Just (Int_expression_2 (mod k (abs l)))
+        Int_expression_2 l ->
+          Just
+            (case l of
+              0 -> nothing_algebraic
+              _ -> wrap_algebraic (Int_expression_2 (mod k (abs l))))
         _ -> undefined
       Multiply_Int_expression_2 -> case j of
         Int_expression_2 k -> Just (Multiply_Int'_expression_2 k)
@@ -73,7 +91,7 @@ module Eval where
           Just o -> o
           Nothing -> j
         _ -> undefined)
-    Name_expression_2 d -> eval' a (unsafe_lookup d a)
+    Name_expression_2 d -> Data.Map.lookup d a >>= eval' a
     _ -> Just c
   eval_match :: [Pattern_0] -> [Expression_2] -> Expression_2 -> Expression_2
   eval_match a b c = case a of
@@ -128,4 +146,6 @@ module Eval where
     (
       parse_expression b >>=
       \e -> naming_expression "input" e c >>= \j -> show <$> eval l <$> type_expr' (Location_1 "input") (f, g, h, i) j u v)
+  wrap_algebraic :: Expression_2 -> Expression_2
+  wrap_algebraic x = Algebraic_expression_2 "Wrap" [x]
 -----------------------------------------------------------------------------------------------------------------------------

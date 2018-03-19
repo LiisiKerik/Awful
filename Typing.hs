@@ -104,9 +104,13 @@ module Typing where
     Algebraic_expression_2 String [Expression_2] |
     Application_expression_2 Expression_2 Expression_2 |
     Char_expression_2 Char |
+    Compare_Char_expression_2 |
+    Compare_Char'_expression_2 Char |
     Compare_Int_expression_2 |
     Compare_Int'_expression_2 Integer |
     Crash_expression_2 |
+    Div_Int_expression_2 |
+    Div_Int'_expression_2 Integer |
     Field_expression_2 String |
     Function_expression_2 Pattern_0 Expression_2 |
     Int_expression_2 Integer |
@@ -370,14 +374,25 @@ module Typing where
         "Add_Int",
         (Add_Int_expression_2, Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type int_type)))),
       (
+        "Compare_Char",
+        (
+          Compare_Char_expression_2,
+          Basic_type_1 [] Nothing [] (function_type char_type (function_type char_type comparison_type)))),
+      (
         "Compare_Int",
         (
           Compare_Int_expression_2,
           Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type comparison_type)))),
-      ("Crash", (Crash_expression_2, Basic_type_1 [("T", star_kind)] Nothing [] (ntype "T"))),
+      (
+        "Div_Int",
+        (
+          Div_Int_expression_2,
+          Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type (maybe_type int_type))))),
       (
         "Mod_Int",
-        (Mod_Int_expression_2, Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type int_type)))),
+        (
+          Mod_Int_expression_2,
+          Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type (maybe_type int_type))))),
       (
         "Multiply_Int",
         (Multiply_Int_expression_2, Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type int_type)))),
@@ -436,7 +451,7 @@ module Typing where
       kinds
       algebraics
       constrs
-      (snd <$> defs_and_types)
+      types
       hkinds
       promotables
       Data.Map.empty
@@ -478,7 +493,7 @@ module Typing where
   locations :: Locations
   locations = 
     Data.Map.fromList
-      (flip (,) (Language) <$> (Data.List.filter not_promoted (keys hkinds ++ keys kinds) ++ keys defs_and_types))
+      (flip (,) (Language) <$> ("Crash" : Data.List.filter not_promoted (keys hkinds ++ keys kinds) ++ keys defs_and_types))
   make_eq :: Data_2 -> Map' (Either Bool (Map' Location_0), Status) -> Map' (Either Bool (Map' Location_0), Status)
   make_eq (Data_2 (Name _ a) b') =
     case b' of
@@ -497,10 +512,8 @@ module Typing where
     c : d -> make_eqs d (make_eq c b)
   maybe_kind :: Kind_1 -> Kind_1
   maybe_kind = Application_kind_1 (Name_kind_1 "!Maybe")
-{-
   maybe_type :: Type_1 -> Type_1
   maybe_type = Application_type_1 (Name_type_1 "Maybe" [])
--}
   naming_typing ::
     String ->
     Tree_2 ->
@@ -916,7 +929,7 @@ module Typing where
   type_cls_0 a b c d l m n = case d of
     [] -> case b of
       [] -> Right []
-      (Method_4 e _ _ _) : _ -> Left ("Missing definition " ++ e ++ m ++ location' (l n))
+      (Method_4 e _ _ _) : _ -> Left ("Missing definition " ++ e ++ " in " ++ m ++ " " ++ a ++ location' (l n))
     (p' @ (Name h i), j) : k ->
 -- todo: distinguish between these two error messages
       let
@@ -1222,7 +1235,7 @@ module Typing where
                             (\(Constraint_1 y' _) -> y') <$> Data.List.filter (\(Constraint_1 _ y') -> y' == x') o1) <$>
                           q')
                     in
-                      type_cls_0 o q s' g (Location_1 l) m d >>= \w -> case Data.Map.lookup n (unsafe_lookup m t) of
+                      type_cls_0 n q s' g (Location_1 l) m d >>= \w -> case Data.Map.lookup n (unsafe_lookup m t) of
                         Just u -> Left (location_err ("instances of " ++ m ++ " " ++ n) u (Location_1 l d))
                         Nothing ->
                           Right
@@ -1961,6 +1974,8 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     case d of
       [] -> Right []
       (e, f) : g -> type_type a f c b star_kind >>= \h -> (:) (e, h) <$> type_types' a (b, c) g
+  types :: Map' Type_2
+  types = Data.Map.insert "Crash" (Basic_type_1 [("T", star_kind)] Nothing [] (ntype "T")) (snd <$> defs_and_types)
   typestring :: Type_1 -> [Type_1] -> (String, [Type_1])
   typestring a d = case a of
     Application_type_1 b c -> typestring b (c : d)

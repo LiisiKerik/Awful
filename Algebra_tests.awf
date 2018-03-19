@@ -1,6 +1,19 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 Load Algebra.awf
 Load Testing.awf
+Def Add_Array_test :
+  List (Pair (Pair (Pair (Array (!Next !Zr) Int) (Array (!Next !Zr) Int)) (Array (!Next !Zr) Int)) (Array (!Next !Zr) Int)) = 
+    Test_2
+      Add
+      (Construct_List
+        (Pair (Pair (Construct_Array 0 Empty_Array) (Construct_Array 0 Empty_Array)) (Construct_Array 0 Empty_Array))
+        (Construct_List
+          (Pair (Pair (Construct_Array 0 Empty_Array) (Construct_Array 1 Empty_Array)) (Construct_Array 1 Empty_Array))
+          (Construct_List
+            (Pair (Pair (Construct_Array 1 Empty_Array) (Construct_Array 0 Empty_Array)) (Construct_Array 1 Empty_Array))
+            (Construct_List
+              (Pair (Pair (Construct_Array 1 Empty_Array) (Construct_Array 1 Empty_Array)) (Construct_Array 2 Empty_Array))
+              Empty_List))))
 Def Add_Complex_test : List (Pair (Pair (Pair (Complex Int) (Complex Int)) (Complex Int)) (Complex Int)) =
   Test_2
     Add

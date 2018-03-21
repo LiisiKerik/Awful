@@ -1,0 +1,89 @@
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+Algebraic List[T : Star](Empty_List, Construct_List T (List T))
+Algebraic Logical(False, True)
+Struct Pair[T : Star, U : Star](First : T, Second : U)
+Algebraic Tree[T : Star](Empty_Tree, Construct_Tree T (Tree T) (Tree T))
+Branching Tuple[!List Star](
+  !Empty_List -> Empty_Tuple,
+  !Construct_List T L -> Construct_Tuple(Tuple_Head : T, Tuple_Tail : Tuple L))
+Class Alternative{F : Arrow Star Star}<Applicative>(
+  Cat[T : Star] : Function (F T) (Function (F T) (F T)),
+  Empty[T : Star] : F T)
+Class Applicative{F : Arrow Star Star}<Functor>(
+  Apply[T : Star, U : Star] : Function (F (Function T U)) (Function (F T) (F U)),
+  Lift[T : Star] : Function T (F T))
+Class Finite{T : Star}<Ordered>(All : List T)
+Class Finite_Tuple{L : !List Star}(All_Tuple : List (Tuple L))
+Class Functor{F : Arrow Star Star}(Fmap[T : Star, U : Star] : Function (Function T U) (Function (F T) (F U)))
+Class Monad{F : Arrow Star Star}<Applicative>(Bind[T : Star, U : Star] : Function (F T) (Function (Function T (F U)) (F U)))
+Class Ordered{T : Star}(Compare : Function T (Function T Comparison))
+Instance Alternative{List}(
+  Cat x y = Match x {Empty_List -> y, Construct_List z a -> Construct_List z (Cat y a)},
+  Empty = Empty_List)
+Instance Alternative{Maybe}(Cat x y = Match x {Nothing -> y, Wrap _ -> x}, Empty = Nothing)
+Instance Alternative{Tree}(
+  Cat x y = Match x {Empty_Tree -> y, Construct_Tree z a b -> Construct_Tree z (Cat a y) b},
+  Empty = Empty_Tree)
+Instance Applicative{Function _}(Apply f g x = f x (g x), Lift x _ = x)
+Instance Applicative{List}(
+  Apply x y = Match x {Empty_List -> Empty_List, Construct_List f z -> Cat (Fmap f y) (Apply z y)},
+  Lift x = Construct_List x Empty_List)
+Instance Applicative{Maybe}(Apply x y = Match x {Nothing -> Nothing, Wrap f -> Fmap f y}, Lift = Wrap)
+Instance Applicative{Tree}(
+  Apply x y =
+    Match x {
+      Empty_Tree -> Empty_Tree,
+      Construct_Tree f z a ->
+        Match y {
+          Empty_Tree -> Empty_Tree,
+          Construct_Tree b c d -> Construct_Tree (f b) (Cat (Fmap f c) (Apply z y)) (Cat (Fmap f d) (Apply a y))}},
+  Lift x = Construct_Tree x Empty_Tree Empty_Tree)
+Def Compare'[T : Star, U : Star]<Ordered T, Ordered U>(x : T, y : T, z : U, a : U) : Comparison =
+  Match Compare x y {LT -> LT, EQ -> Compare z a, GT -> GT}
+Instance Finite{Comparison}(All = Construct_List LT (Construct_List EQ (Construct_List GT Empty_List)))
+Instance Finite{Function T U}<Finite T, Finite U>(All = Finite_Function All All)
+Instance Finite{Logical}(All = Construct_List False (Construct_List True Empty_List))
+Instance Finite{Maybe T}<Finite T>(All = Construct_List Nothing (Fmap Wrap All))
+Instance Finite{Pair T U}<Finite T, Finite U>(All = Zip Pair All All)
+Def Finite_Function[T : Star, U : Star]<Ordered T>(x : List T, y : List U) : List (Function T U) =
+  Match x {Empty_List -> Empty_List, Construct_List z a -> Crash}
+Instance Finite_Tuple{!Empty_List}(All_Tuple = Empty)
+Instance Finite_Tuple{!Construct_List T L}<Finite T, Finite_Tuple L>(All_Tuple = Zip Construct_Tuple All All)
+Instance Functor{Function _}(Fmap f g x = f (g x))
+Instance Functor{List}(Fmap f x = Match x {Empty_List -> Empty_List, Construct_List y z -> Construct_List (f y) (Fmap f z)})
+Instance Functor{Maybe}(Fmap f x = Match x {Nothing -> Nothing, Wrap y -> Wrap (f y)})
+Instance Functor{Pair _}(Fmap f x = Pair (First x) (f (Second x)))
+Instance Functor{Tree}(
+  Fmap f x = Match x {Empty_Tree -> Empty_Tree, Construct_Tree y z a -> Construct_Tree (f y) (Fmap f z) (Fmap f a)})
+Instance Monad{Function _}(Bind f g x = g (f x) x)
+Instance Monad{List}(Bind x f = Match x {Empty_List -> Empty_List, Construct_List y z -> Cat (f y) (Bind z f)})
+Instance Monad{Maybe}(Bind x f = Match x {Nothing -> Nothing, Wrap y -> f y})
+Instance Ordered{Char}(Compare = Compare_Char)
+Instance Ordered{Comparison}(
+  Compare x y =
+    Match x {
+      LT -> Match y {LT -> EQ, Default -> LT},
+      EQ -> Match y {LT -> GT, EQ -> EQ, GT -> LT},
+      GT -> Match y {GT -> EQ, Default -> GT}})
+Instance Ordered{Function T U}<Finite T, Ordered U>(Compare f g = Compare (Fmap f All) (Fmap g All))
+Instance Ordered{Int}(Compare = Compare_Int)
+Instance Ordered{List T}<Ordered T>(
+  Compare x y =
+    Match x {
+      Empty_List -> Match y {Empty_List -> EQ, Construct_List _ _ -> LT},
+      Construct_List z a -> Match y {Empty_List -> GT, Construct_List b c -> Compare' z b a c}})
+Instance Ordered{Logical}(
+  Compare x y = Match x {False -> Match y {False -> EQ, True -> LT}, True -> Match y {False -> GT, True -> EQ}})
+Instance Ordered{Maybe T}<Ordered T>(
+  Compare x y =
+    Match x {Nothing -> Match y {Nothing -> EQ, Wrap -> LT}, Wrap z -> Match y {Nothing -> GT, Wrap w -> Compare z w}})
+Instance Ordered{Pair T U}<Ordered T, Ordered U>(Compare x y = Compare' (First x) (First y) (Second x) (Second y))
+Instance Ordered{Tree T}<Ordered T>(
+  Compare x y =
+    Match x {
+      Empty_Tree -> Match y {Empty_Tree -> EQ, Construct_Tree _ _ _ -> LT},
+      Construct_Tree z a b -> Match y {Empty_Tree -> GT, Construct_Tree c d e -> Crash}})
+Def Zip[F : Arrow Star Star, T : Star, U : Star, V : Star]<Applicative F>(f : Function T (Function U V), x : F T) :
+  Function (F U) (F V) =
+    Apply (Fmap f x)
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

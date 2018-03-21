@@ -65,6 +65,7 @@ module Typing where
   import Data.Bifunctor
   import Data.List
   import Data.Map
+  import Data.Maybe
   import Data.Set
   import Naming
   import Standard
@@ -856,20 +857,41 @@ module Typing where
     Type_1 ->
     Map' (Kind_1, Nat) ->
     Nat ->
+    [String] ->
     Err ([(String, Kind_1)], Integer, Type_1, Map' (Kind_1, Nat))
-  type_class_args a b e g c x c0 n = case b of
-    [] -> if a == g then Right ([], c, x, c0) else e
-    h : d -> case a of
-      Application_kind_1 (Application_kind_1 (Name_kind_1 "Arrow") l) f ->
-        let
-          i j k =
-            (
-              (\(t, u, v, t') -> ((j, l) : t, u, v, t')) <$>
-              type_class_args f d e g k (Application_type_1 x (ntype j)) (Data.Map.insert j (l, n) c0) (Nxt n))
-        in case h of
-          Blank_pattern -> i (show c) (c + 1)
-          Name_pattern j -> i j c
-      _ -> e
+  type_class_args a b e g c x c0 n r = case b of
+    [] ->
+      case type_class_args' a g (Data.Map.fromList ((\r' -> (r', Nothing)) <$> r)) of
+        Just _ -> Right ([], c, x, c0)
+        Nothing -> e
+    h : d ->
+      case a of
+        Application_kind_1 (Application_kind_1 (Name_kind_1 "Arrow") l) f ->
+          let
+            i j k =
+              (
+                (\(t, u, v, t') -> ((j, l) : t, u, v, t')) <$>
+                type_class_args f d e g k (Application_type_1 x (ntype j)) (Data.Map.insert j (l, n) c0) (Nxt n) r)
+          in
+            case h of
+              Blank_pattern -> i (show c) (c + 1)
+              Name_pattern j -> i j c
+        _ -> e
+  type_class_args' :: Kind_1 -> Kind_1 -> Map' (Maybe Kind_1) -> Maybe (Map' (Maybe Kind_1))
+  type_class_args' a b c =
+    case a of
+      Application_kind_1 d e ->
+        case b of
+          Application_kind_1 f g ->
+            type_class_args' d f c >>= \h -> type_class_args' (repkinds (fromJust <$> Data.Map.filter isJust h) e) g h
+          _ -> Nothing
+      Name_kind_1 d ->
+        case Data.Map.lookup d c of
+          Just e ->
+            case e of
+              Just _ -> Nothing
+              Nothing -> Just (Data.Map.insert d (Just b) c)
+          Nothing -> if a == b then Just c else Nothing
   type_classes ::
     String ->
     Map' Kind ->
@@ -1070,7 +1092,7 @@ module Typing where
                                 n,
                               Data.Map.insert a p x),
                             Data_3 a (Branching_data_3 c l m n))) <$>
-                        type_branchings q a a2 c (Right <$> h) f))))
+                        type_branchings q a a2 c ((\x5 -> Right (repkinds (Data.Map.fromList (zip g l)) <$> x5)) <$> h) f))))
       Plain_data_2 b c ->
         let
           (l, m) = case c of
@@ -1216,10 +1238,10 @@ module Typing where
         k
         "class"
         (Location_1 l e)
-        (\(Class_4 (o, p) w0 q) -> und_err n b "type" (Location_1 l f) (\(Polykind r s) -> case r of
-          [] ->
+        (\(Class_4 (o, p) w0 q) ->
+          und_err n b "type" (Location_1 l f) (\(Polykind r s) ->
             (
-              type_class_args s k' (kind_err (Location_1 l f)) p 0 (ntype n) Data.Map.empty Zr >>=
+              type_class_args s k' (kind_err (Location_1 l f)) p 0 (ntype n) Data.Map.empty Zr r >>=
               \(q', p', s', t0) ->
                 (
                   type_constraints_0
@@ -1246,8 +1268,7 @@ module Typing where
                               (case Data.Map.lookup m t' of
                                 Just _ -> adjust (ins_new n r') m
                                 Nothing -> Data.Map.insert m (Data.Map.singleton n (r', New))) t',
-                              adjust (second (Data.Map.insert n o3)) m u3)))
-          _ -> Left ("Kind-polymorphic type " ++ n ++ " an instance of a class" ++ location' (Location_1 l f))))
+                              adjust (second (Data.Map.insert n o3)) m u3)))))
   type_def_2 ::
     (Location_0 -> Location_1) ->
     Def_4 ->

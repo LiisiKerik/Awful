@@ -90,7 +90,24 @@ eval'' a b = do
   return
     (c >>= \((_, e, f, j, _, y), (File _ g h i _ _ _ _ m _ _)) -> tokenise_parse_naming_typing_eval e j (g, h, i) f b m y)
 init' :: (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)]))
-init' = (empty, locations, defs, kinds, empty, empty)
+init' =
+  (
+    empty,
+    locations,
+    defs,
+    kinds,
+    fromList
+      [
+        ("Field", fromList []),
+        ("Ord", fromList [("Char", Language), ("Int", Language)]),
+        ("Ring", fromList [("Int", Language)]),
+        ("Writeable", fromList [("Int", Language)])],
+    fromList
+      [
+        ("Field", (["Inverse"], fromList [])),
+        ("Ord", (["Compare"], fromList [("Char", []), ("Int", [])])),
+        ("Ring", (["Add", "Convert", "Multiply", "Negate"], fromList [("Int", [])])),
+        ("Writeable", (["Brackets", "Write"], fromList [("Int", [])]))])
 main :: IO ()
 main = do
   args <- getArgs

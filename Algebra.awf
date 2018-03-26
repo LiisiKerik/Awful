@@ -1,4 +1,85 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 Load Standard.awf
 Branching Array[!Nat][T : Star](!Zr -> Empty_Array, !Next N -> Construct_Array(Head : T, Tail : Array N T))
+Branching Array'[!List !Nat][T : Star](
+  !Empty_List -> Empty_Array',
+  !Construct_List N L -> Construct_Array' (Arrays : Array N (Array' L T)))
+Struct Complex[T : Star](Real : T, Imaginary : T)
+Struct Diagonal[N : !Nat, T : Star](Diagonal' : Array N T)
+`Struct Fraction(Num : Int, Den : Int)
+`Struct Polynomial[T : Star](Coefficients : List T)
+Struct Quaternion[T : Star](Qr : T, Qx : T, Qy : T, Qz : T)
+Class Commutative{T : Star}<Ring>
+Class Commutative_Tuple{L : !List Star}<Ring_Tuple>
+Class Finite_Array{N : !Nat}<Ord_Array>(All_Array[T : Star]<Finite T> : List (Array N T))
+Class Functor_Array{N : !Nat}(Fmap_Array[T : Star, U : Star] : Function (Function T U) (Function (Array N T) (Array N U)))
+Class Mat{F : Arrow !Nat (Arrow Star Star)}(
+  Adj[N : !Nat, T : Star]<Commutative T> : Function (F N T) (F N T),
+  Adj_Det[N : !Nat, T : Star]<Commutative T> : Function (F N T) (Pair (F N T) T),
+  Characteristic[N : !Nat, T : Star]<Commutative T> : Function (F N T) (Array (!Next N) T),
+  Det[N : !Nat, T : Star]<Commutative T> : Function (F N T) T,
+  Matrix_by_vector[N : !Nat, T : Star]<Ring T> : Function (F N T) (Function (Array N T) (Array N T)),
+  Vector_by_matrix[N : !Nat, T : Star]<Ring T> : Function (Array N T) (Function (F N T) (Array N T)))
+Class Ord_Array{N : !Nat}(Compare_Array[T : Star]<Ord T> : Function (Array N T) (Function (Array N T) Comparison))
+Instance Applicative{Complex}(Apply x y = Complex (Real x (Real y)) (Imaginary x (Imaginary y)), Lift x = Complex x x)
+Instance Applicative{Quaternion}(
+  Apply x y = Quaternion (Qr x (Qr y)) (Qx x (Qx y)) (Qy x (Qy y)) (Qz x (Qz y)),
+  Lift x = Quaternion x x x x)
+Instance Commutative{Complex T}<Commutative T>
+Instance Commutative{Int}
+Instance Commutative{Logical}
+Instance Commutative{Pair T U}<Commutative T, Commutative U>
+Instance Commutative{Trivial}
+Instance Commutative{Tuple L}<Commutative_Tuple L>
+Instance Commutative_Tuple{!Empty_List[Star]}
+Instance Commutative_Tuple{!Construct_List[Star] T L}<Commutative T, Commutative_Tuple L>
+Instance Finite{Array N T}<Finite T, Finite_Array N>(All = All_Array)
+Instance Finite_Array{!Zr}(All_Array = Lift Empty_Array)
+Instance Finite_Array{!Next N}<Finite_Array N>(All_Array = Zip Construct_Array All All)
+Instance Functor{Array N}<Functor_Array N>(Fmap = Fmap_Array)
+Instance Functor{Complex}(Fmap f x = Complex (f (Real x)) (f (Imaginary x)))
+Instance Functor{Quaternion}(Fmap f x = Quaternion (f (Qr x)) (f (Qx x)) (f (Qy x)) (f (Qz x)))
+Instance Functor_Array{!Zr}(Fmap_Array _ _ = Empty_Array)
+Instance Functor_Array{!Next N}<Functor_Array N>(Fmap_Array f a = Construct_Array (f (Head a)) (Fmap f (Tail a)))
+Def Identity[T : Star]<Ring T> : T = Convert 1
+Def Minus[T : Star]<Ring T>(x : T, y : T) : T = Add x (Negate y)
+Instance Ord{Array N T}<Ord T, Ord_Array N>(Compare = Compare_Array)
+Instance Ord{Quaternion T}<Ord T>(
+  Compare x y =
+    Compare
+      (Construct_Tuple (Qr x) (Construct_Tuple (Qx x) (Construct_Tuple (Qy x) (Construct_Tuple (Qz x) Empty_Tuple))))
+      (Construct_Tuple (Qr y) (Construct_Tuple (Qx y) (Construct_Tuple (Qy y) (Construct_Tuple (Qz y) Empty_Tuple)))))
+Instance Ord_Array{!Zr}(Compare_Array _ _ = EQ)
+Instance Ord_Array{!Next N}<Ord_Array N>(
+  Compare_Array x y =
+    Compare
+      (Construct_Tuple (Head x) (Construct_Tuple (Tail x) Empty_Tuple))
+      (Construct_Tuple (Head y) (Construct_Tuple (Tail y) Empty_Tuple)))
+Instance Ring{Complex T}<Ring T>(
+  Add = Add',
+  Convert x = Complex (Convert x) Zero,
+  Multiply x y =
+    Complex
+      (Minus (Multiply (Real x) (Real y)) (Multiply (Imaginary x) (Imaginary y)))
+      (Add (Multiply (Real x) (Imaginary y)) (Multiply (Imaginary x) (Real y))),
+  Negate = Negate')
+Instance Ring{Quaternion T}<Ring T>(
+  Add = Add',
+  Convert x = Quaternion (Convert x) Zero Zero Zero,
+  Multiply x y =
+    Quaternion
+      (Minus
+        (Minus (Minus (Multiply (Qr x) (Qr y)) (Multiply (Qx x) (Qx y))) (Multiply (Qy x) (Qy y)))
+        (Multiply (Qz x) (Qz y)))
+      (Add
+        (Minus (Add (Multiply (Qr x) (Qx y)) (Multiply (Qx x) (Qr y))) (Multiply (Qy x) (Qz y)))
+        (Multiply (Qz x) (Qy y)))
+      (Minus
+        (Add (Add (Multiply (Qr x) (Qy y)) (Multiply (Qx x) (Qz y))) (Multiply (Qy x) (Qr y)))
+        (Multiply (Qz x) (Qx y)))
+      (Add
+        (Add (Minus (Multiply (Qr x) (Qz y)) (Multiply (Qx x) (Qy y))) (Multiply (Qy x) (Qx y)))
+        (Multiply (Qz x) (Qr y))),
+  Negate = Negate')
+Def Zero[T : Star]<Ring T> : T = Convert 0
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

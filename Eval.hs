@@ -37,10 +37,10 @@ module Eval where
       Compare_Int'_expression_2 k -> case j of
         Int_expression_2 l -> Just (Algebraic_expression_2 (show (compare k l)) [])
         _ -> undefined
-      Div_Int_expression_2 -> case j of
-        Int_expression_2 k -> Just (Div_Int'_expression_2 k)
+      Div_expression_2 -> case j of
+        Int_expression_2 k -> Just (Div'_expression_2 k)
         _ -> undefined
-      Div_Int'_expression_2 k -> case j of
+      Div'_expression_2 k -> case j of
         Int_expression_2 l ->
           Just
             (case l of
@@ -53,10 +53,10 @@ module Eval where
       Function_expression_2 k l -> eval' a (case k of
         Blank_pattern -> l
         Name_pattern n -> subst_expr n l j)
-      Mod_Int_expression_2 -> case j of
-        Int_expression_2 k -> Just (Mod_Int'_expression_2 k)
+      Mod_expression_2 -> case j of
+        Int_expression_2 k -> Just (Mod'_expression_2 k)
         _ -> undefined
-      Mod_Int'_expression_2 k -> case j of
+      Mod'_expression_2 k -> case j of
         Int_expression_2 l ->
           Just
             (case l of
@@ -71,6 +71,9 @@ module Eval where
         _ -> undefined
       Negate_Int_expression_2 -> case j of
         Int_expression_2 k -> Just (Int_expression_2 (- k))
+        _ -> undefined
+      Write_Int_expression_2 -> case j of
+        Int_expression_2 k -> Just (list_expression (show k))
         _ -> undefined
       _ -> undefined
     Match_expression_2 d e -> eval' a d >>= \h -> eval' a (case e of
@@ -103,6 +106,11 @@ module Eval where
       f : g -> eval_match e g (case d of
         Blank_pattern -> c
         Name_pattern h -> subst_expr h c f)
+  list_expression :: String -> Expression_2
+  list_expression =
+    Prelude.foldr
+      (\x -> \y -> Algebraic_expression_2 "Construct_List" [Char_expression_2 x, y])
+      (Algebraic_expression_2 "Empty_List" [])
   nothing_algebraic :: Expression_2
   nothing_algebraic = Algebraic_expression_2 "Nothing" []
   subst_algebraic :: String -> Expression_2 -> Match_Algebraic_2 -> Match_Algebraic_2

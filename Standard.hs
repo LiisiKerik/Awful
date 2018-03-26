@@ -6,7 +6,7 @@ module Standard where
   import Tree
   data Def_1 =
     Basic_def_1 Name [(Name, Kind_0)] [Constraint_0] Type_0 Expression_0 |
-    Instance_1 Location_0 Name Name [Pattern_1] [Constraint_0] [(Name, Expression_0)]
+    Instance_1 Location_0 Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, Expression_0)]
       deriving Show
   data Tree_2 = Tree_2 [Data_0] [Class_0] [Def_1] deriving Show
   data Tree_3 = Tree_3 [Name] Tree_2 deriving Show
@@ -23,7 +23,7 @@ module Standard where
   standard_def :: Def_0 -> Def_1
   standard_def a = case a of
     Basic_def_0 b c g d e f -> uncurry (Basic_def_1 b c g) (standard_arguments (e, f) d)
-    Instance_def_0 b c d f g e -> Instance_1 b c d f g (second (uncurry standard_patterns) <$> e)
+    Instance_def_0 b c d h f g e -> Instance_1 b c d h f g (second (uncurry standard_patterns) <$> e)
   standard_defs :: [Def_0] -> [Def_1]
   standard_defs = (<$>) standard_def
   standard_pattern :: Pattern_1 -> Expression_0 -> Expression_0

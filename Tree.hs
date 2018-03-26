@@ -20,7 +20,7 @@ module Tree where
     deriving Show
   data Def_0 =
     Basic_def_0 Name [(Name, Kind_0)] [Constraint_0] [(Pattern_1, Type_0)] Type_0 Expression_0 |
-    Instance_def_0 Location_0 Name Name [Pattern_1] [Constraint_0] [(Name, ([Pattern_1], Expression_0))]
+    Instance_def_0 Location_0 Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, ([Pattern_1], Expression_0))]
       deriving Show
   data Expression_0 = Expression_0 Location_0 Expression_branch_0 deriving Show
   data Expression_branch_0 =
@@ -243,6 +243,7 @@ module Tree where
       parse_name' <*
       parse_token Left_curly_token <*>
       ((\x -> \y -> Name x ('!' : y)) <& parse_lift <*> parse_name <|> parse_name') <*>
+      parse_optional' (parse_brackets Left_square_token (parse_list 1 parse_kind) Right_square_token) <*>
       many parse_pattern_1 <*
       parse_token Right_curly_token <*>
       parse_constraints <*>

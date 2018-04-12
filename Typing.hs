@@ -114,7 +114,6 @@ module Typing where
     Compare_Char'_expression_2 Char |
     Compare_Int_expression_2 |
     Compare_Int'_expression_2 Integer |
-    Crash_expression_2 |
     Div_expression_2 |
     Div'_expression_2 Integer |
     Field_expression_2 String |
@@ -236,7 +235,7 @@ module Typing where
         let
           (c, i) = typestring g []
         in
-          addargs_1 b f c i (addargs_2 b h e)
+          addargs_2 b h (addargs_1 b f c i e)
   algebraics :: Map' Alg
   algebraics =
     Data.Map.fromList

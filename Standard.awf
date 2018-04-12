@@ -53,6 +53,8 @@ Instance Field{Tuple L}<Field_Tuple L>(Inverse = Inverse_Tuple)
 Instance Field_Tuple{!Empty_List[Star]}(Inverse_Tuple = Wrap)
 Instance Field_Tuple{!Construct_List[Star] T L}<Field T, Field_Tuple L>(
   Inverse_Tuple x = Zip Construct_Tuple (Inverse (Head_Tuple x)) (Inverse (Tail_Tuple x)))
+Def Filter[T : Star, F : Arrow Star Star]<Alternative F, Monad F>(f : Function T Logical, x : F T) : F T =
+  Bind x (y -> Match f y {False -> Empty, True -> Lift y})
 Instance Finite{Comparison}(All = Construct_List LT (Construct_List EQ (Construct_List GT Empty_List)))
 Instance Finite{Either T U}<Finite T, Finite U>(All = Cat (Fmap Left All) (Fmap Right All))
 Instance Finite{Logical}(All = Construct_List False (Construct_List True Empty_List))

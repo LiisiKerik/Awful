@@ -2,7 +2,6 @@
 Load Standard.awf
 Load Testing.awf
 ~/
-          "Brackets",
           "Char",
           "Compare",
           "Comparison",
@@ -22,7 +21,6 @@ Load Testing.awf
           "List",
           "Maybe",
           "Mod",
-          "Multiply",
           "Nat",
           "Negate",
           "Next",
@@ -34,12 +32,48 @@ Load Testing.awf
           "Writeable",
           "Zr"])
 /~
+Def Brackets_Int_test : List (Pair (Pair Int (List Char)) (List Char)) =
+  Test_1
+    Brackets
+    (Construct_List
+      (Pair -1 (Construct_List "-" (Construct_List "1" Empty_List)))
+      (Construct_List
+        (Pair 0 (Construct_List "0" Empty_List))
+        (Construct_List (Pair 1 (Construct_List "1" Empty_List)) Empty_List)))
 Def Add_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
   Test_2
     Add
     (Construct_List
-      (Pair (Pair 0 0) 0)
+      (Pair (Pair -1 -1) -2)
       (Construct_List
-        (Pair (Pair 0 1) 1)
-        (Construct_List (Pair (Pair 1 0) 1) (Construct_List (Pair (Pair 1 1) 2) Empty_List))))
+        (Pair (Pair -1 0) -1)
+        (Construct_List
+          (Pair (Pair -1 1) 0)
+          (Construct_List
+            (Pair (Pair 0 -1) -1)
+            (Construct_List
+              (Pair (Pair 0 0) 0)
+              (Construct_List
+                (Pair (Pair 0 1) 1)
+                (Construct_List
+                  (Pair (Pair 1 -1) 0)
+                  (Construct_List (Pair (Pair 1 0) 1) (Construct_List (Pair (Pair 1 1) 2) Empty_List)))))))))
+Def Multiply_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
+  Test_2
+    Multiply
+    (Construct_List
+      (Pair (Pair -1 -1) 1)
+      (Construct_List
+        (Pair (Pair -1 0) 0)
+        (Construct_List
+          (Pair (Pair -1 1) -1)
+          (Construct_List
+            (Pair (Pair 0 -1) 0)
+            (Construct_List
+              (Pair (Pair 0 0) 0)
+              (Construct_List
+                (Pair (Pair 0 1) 0)
+                (Construct_List
+                  (Pair (Pair 1 -1) -1)
+                  (Construct_List (Pair (Pair 1 0) 0) (Construct_List (Pair (Pair 1 1) 1) Empty_List)))))))))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

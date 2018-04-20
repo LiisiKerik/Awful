@@ -23,7 +23,7 @@ internal: remove locations from expressions except from lowest-level things wher
 switch expression that is less strict and more flexible than match?
 some limited pattern matching in function arguments (and maybe also variables introduced through algebraic matching?)
 syntactic sugar for lists, vectors, matrices... allow writing (tiny, limited to expression parsing) language extensions?
-show and read
+fix the show-read issue; give a specific error for that (different errors for unresolved type variable and missing constr)
 basic IO operations (output to console, read file, write file, append to file)
 finite n
 compilation
@@ -60,6 +60,7 @@ käskida kasutajal klasse kirjutada päriluse järjekorras? (väldiks ring-päri
 kas tüübirakendamist on kusagil vaja?
 Funktsioon mis leiab enniku pikkuse valesti (rekursioon kutsutakse välja sama pika või 1 võrra pikema peal) - mis juhtub?
 char-i kirjutamine keelest ära võtta ja standardteeki panna
+võimaldada suvalise arvu konstruktoritega algebralisi andmetüüpe. (LISAKS struktide allesjätmisele?)
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")
@@ -253,14 +254,8 @@ module Typing where
         ("Nat", Alg [] (Data.Map.fromList [("Next", [ntype "Nat"]), ("Zr", [])]) (ntype "Nat"))]
   arrow_kind :: Kind_1 -> Kind_1 -> Kind_1
   arrow_kind a = Application_kind_1 (Application_kind_1 (Name_kind_1 "Arrow") a)
-  chain_constraints ::
-    Maybe String ->
-    Map' Class_5 ->
-    (Map' (Map' [String]), Map Nat (Set String)) ->
-    String ->
-    Nat ->
-    (Map' (Map' [String]), Map Nat (Set String))
-  chain_constraints a b (c, l) e x =
+  chain_constraints :: Maybe String -> Map' Class_5 -> Map' (Map' [String]) -> String -> Map' (Map' [String])
+  chain_constraints a b c e =
     case a of
       Just d ->
         let
@@ -269,20 +264,17 @@ module Typing where
           chain_constraints
             f
             b
-            (
-              Data.Map.insert
-                d
-                (Data.Map.insert
-                  e 
-                  ((\u -> u ++ " " ++ e) <$> o)
-                  (case Data.Map.lookup d c of
-                    Just g -> g
-                    Nothing -> Data.Map.empty))
-                c,
-              adjust (Data.Set.insert d) x l)
+            (Data.Map.insert
+              d
+              (Data.Map.insert
+                e 
+                ((\u -> u ++ " " ++ e) <$> o)
+                (case Data.Map.lookup d c of
+                  Just g -> g
+                  Nothing -> Data.Map.empty))
+              c)
             e
-            x
-      Nothing -> (c, l)
+      Nothing -> c
   char_kind :: Kind_1
   char_kind = Name_kind_1 "!Char"
   char_type :: Type_1
@@ -964,23 +956,33 @@ module Typing where
   type_class_args ::
     Kind_1 ->
     [Pattern_0] ->
-    Err ([(String, Kind_1)], Integer, Type_1, Map' (Kind_1, Nat)) ->
+    Err ([(String, Kind_1)], Integer, Type_1, Map' Kind_1, Map' Nat) ->
     Kind_1 ->
     Integer ->
     Type_1 ->
-    Map' (Kind_1, Nat) ->
+    Map' Kind_1 ->
+    Map' Nat ->
     Nat ->
-    Err ([(String, Kind_1)], Integer, Type_1, Map' (Kind_1, Nat))
-  type_class_args a b e g c x c0 n = case b of
-    [] -> if a == g then Right ([], c, x, c0) else e
+    Err ([(String, Kind_1)], Integer, Type_1, Map' Kind_1, Map' Nat)
+  type_class_args a b e g c x c0 c' n = case b of
+    [] -> if a == g then Right ([], c, x, c0, c') else e
     h : d ->
       case a of
         Application_kind_1 (Application_kind_1 (Name_kind_1 "Arrow") l) f ->
           let
             i j k =
               (
-                (\(t, u, v, t') -> ((j, l) : t, u, v, t')) <$>
-                type_class_args f d e g k (Application_type_1 x (ntype j)) (Data.Map.insert j (l, n) c0) (Nxt n))
+                (\(t, u, v, t', t2) -> ((j, l) : t, u, v, t', t2)) <$>
+                type_class_args
+                  f
+                  d
+                  e
+                  g
+                  k
+                  (Application_type_1 x (ntype j))
+                  (Data.Map.insert j l c0)
+                  (Data.Map.insert j n c')
+                  (Nxt n))
           in
             case h of
               Blank_pattern -> i (show c) (c + 1)
@@ -1056,12 +1058,12 @@ module Typing where
           (Method_4 e s y f) : g ->
             if i == e then (:) (p', j, s, y, f) <$> type_cls_0 a g c k l m n else o " or the definitions are in a wrong order."
   type_constraint_0 ::
-    (Map' (Map' [String]), Map Nat (Set String)) ->
+    Map' (Map' [String]) ->
     Constraint_0 ->
-    (Map' Class_5, Map' (Kind_1, Nat)) ->
+    (Map' Class_5, Map' Kind_1) ->
     String ->
-    Err (Map' (Map' [String]), Map Nat (Set String))
-  type_constraint_0 (k, k0) (Constraint_0 (Name b c) (Name d e)) (f, g) j =
+    Err (Map' (Map' [String]))
+  type_constraint_0 k (Constraint_0 (Name b c) (Name d e)) (f, g) j =
     und_err
       c
       f
@@ -1069,26 +1071,23 @@ module Typing where
       (Location_1 j b)
       (\(Class_5 h y h') ->
         case Data.Map.lookup e g of
-          Just (i, x0) ->
+          Just i ->
             if i == h
               then
                 Right
                   (chain_constraints
                     y
                     f
-                    (
-                      Data.Map.insert
-                        c
-                        (Data.Map.insert
-                          e
-                          ((\t -> t ++ " " ++ e) <$> h')
-                          (case Data.Map.lookup c k of
-                            Just l -> l
-                            Nothing -> Data.Map.empty))
-                        k,
-                      adjust (Data.Set.insert c) x0 k0)
-                    e
-                    x0)
+                    (Data.Map.insert
+                      c
+                      (Data.Map.insert
+                        e
+                        ((\t -> t ++ " " ++ e) <$> h')
+                        (case Data.Map.lookup c k of
+                          Just l -> l
+                          Nothing -> Data.Map.empty))
+                      k)
+                    e)
               else
                 Left
                   (
@@ -1113,20 +1112,23 @@ module Typing where
         Just g -> type_constraint_1 (Constraint_1 g e) d b
         Nothing -> d
   type_constraints_0 ::
-    (Map' (Map' [String]), Map Nat (Set String)) ->
+    Map' (Map' [String]) ->
     [Constraint_0] ->
-    (Map' Class_5, Map' (Kind_1, Nat)) ->
+    (Map' Class_5, Map' Kind_1, Map' Nat) ->
     String ->
     Err ([Constraint_1], [String], [(String, Nat)])
-  type_constraints_0 (g, l) a f h =
+  type_constraints_0 g a (f, t, u) h =
     case a of
       [] ->
-        Right
-          (
-            join ((\(i, j) -> Constraint_1 i <$> j) <$> assocs (keys <$> g)),
-            join (Data.Map.elems (join <$> Data.Map.elems <$> g)),
-            join ((\(x, y) -> (\z -> (z, x)) <$> Data.Set.elems y) <$> assocs l))
-      b : c -> type_constraint_0 (g, l) b f h >>= \d -> type_constraints_0 d c f h
+        let
+          l y = join (y <$> assocs (keys <$> g))
+        in
+          Right
+            (
+              l (\(i, j) -> Constraint_1 i <$> j),
+              join (Data.Map.elems (join <$> Data.Map.elems <$> g)),
+              l (\(i, j) -> (,) i <$> ((\k -> unsafe_lookup k u) <$> j)))
+      b : c -> type_constraint_0 g b (f, t) h >>= \d -> type_constraints_0 d c (f, t, u) h
   type_constraints_1 :: [Constraint_1] -> Map' (Map' [[String]]) -> Map' Class_4 -> Map' (Map' [[String]])
   type_constraints_1 a e d = case a of
     [] -> e
@@ -1321,7 +1323,7 @@ module Typing where
         type_kinds_1 (Location_1 l) x e b Data.Map.empty >>=
         \(y, j, j') ->
           (
-            type_constraints_0 (Data.Map.empty, Data.Map.empty) e' (k2, (\k3 -> (k3, Zr)) <$> j') l >>=
+            type_constraints_0 Data.Map.empty e' (k2, j', (\_ -> Zr) <$> j') l >>=
               \(o1, o2, _) ->
               (
                 (\h -> (Basic_def_4 f d y o1 h i o2, ins_new d (Basic_type_1 y Nothing o1 h) c, t, t', u3)) <$>
@@ -1333,37 +1335,49 @@ module Typing where
         "class"
         (Location_1 l e)
         (\(Class_4 (o, p) w0 q) ->
-          und_err n b "type" (Location_1 l f) (\(Polykind r s) ->
-            (
-              ziphelp (Location_1 l) x n f Data.Map.empty r w2 >>= \(e4, w3) ->
-                type_class_args (repkinds w3 s) k' (kind_err (Location_1 l f)) p 0 (Name_type_1 n e4) Data.Map.empty Zr >>=
-                  \(q', p', s', t0) ->
+          und_err
+            n
+            b
+            "type"
+            (Location_1 l f)
+            (\(Polykind r s) ->
+              (
+                ziphelp (Location_1 l) x n f Data.Map.empty r w2 >>=
+                  \(e4, w3) ->
                     (
-                      type_constraints_0
-                        (Data.Map.empty, Data.Map.fromList ((\t6 -> (snd t6, Data.Set.empty)) <$> Data.Map.elems t0))
-                        o'
-                        (k2, t0)
-                        l >>=
-                      \(o1, o2, o3) ->
-                        let
-                          r' =
-                            (
-                              (\(x', _) ->
-                                (\(Constraint_1 y' _) -> y') <$> Data.List.filter (\(Constraint_1 _ y') -> y' == x') o1) <$>
-                              q')
-                        in
-                          type_cls_0 n q s' g (Location_1 l) m d >>= \w -> case Data.Map.lookup n (unsafe_lookup m t) of
-                            Just u -> Left (location_err ("instances of " ++ m ++ " " ++ n) u (Location_1 l d))
-                            Nothing ->
-                              Right
+                      type_class_args
+                        (repkinds w3 s)
+                        k'
+                        (kind_err (Location_1 l f))
+                        p
+                        0
+                        (Name_type_1 n e4)
+                        Data.Map.empty
+                        Data.Map.empty
+                        Zr >>=
+                      \(q', p', s', t0, t7) ->
+                        (
+                          type_constraints_0 Data.Map.empty o' (k2, t0, t7) l >>=
+                          \(o1, o2, o3) ->
+                            let
+                              r' =
                                 (
-                                  Instance_4 d m w0 o n q' p' w s' o1 o2 r',
-                                  c,
-                                  adjust (Data.Map.insert n (Library (Location_1 l d))) m t,
-                                  (case Data.Map.lookup m t' of
-                                    Just _ -> adjust (ins_new n r') m
-                                    Nothing -> Data.Map.insert m (Data.Map.singleton n (r', New))) t',
-                                  adjust (second (Data.Map.insert n o3)) m u3)))))
+                                  (\(x', _) ->
+                                    (\(Constraint_1 y' _) -> y') <$> Data.List.filter (\(Constraint_1 _ y') -> y' == x') o1) <$>
+                                  q')
+                            in
+                              type_cls_0 n q s' g (Location_1 l) m d >>= \w -> case Data.Map.lookup n (unsafe_lookup m t) of
+                                Just u -> Left (location_err ("instances of " ++ m ++ " " ++ n) u (Location_1 l d))
+                                Nothing ->
+                                  Right
+                                    (
+                                      Instance_4 d m w0 o n q' p' w s' o1 o2 r',
+                                      c,
+                                      adjust (Data.Map.insert n (Library (Location_1 l d))) m t,
+                                      (case Data.Map.lookup m t' of
+                                        Just _ -> adjust (ins_new n r') m
+                                        Nothing -> Data.Map.insert m (Data.Map.singleton n (r', New))) t',
+                                      adjust (second (Data.Map.insert n o3)) m u3))))))
   type_def_2 ::
     (Location_0 -> Location_1) ->
     Def_4 ->
@@ -1908,13 +1922,10 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
   type_method a (Method_2 b c i d) e f = type_kinds_0 a f c e >>= \(g, h) -> Method_3 b g i <$> type_type a d h f star_kind
   type_method_1 :: String -> Map' Class_5 -> Method_3 -> Err Method_4
   type_method_1 e g (Method_3 a b c d) =
-    (
-      (\(f, _, _) -> Method_4 a b f d) <$>
-      type_constraints_0
-        (Data.Map.empty, Data.Map.empty)
-        c
-        (g, Prelude.foldl (\h -> \(i, j) -> Data.Map.insert i (j, Zr) h) Data.Map.empty b)
-        e)
+    let
+      m = Prelude.foldl (\h -> \(i, j) -> Data.Map.insert i j h) Data.Map.empty b
+    in
+      (\(f, _, _) -> Method_4 a b f d) <$> type_constraints_0 Data.Map.empty c (g, m, (\_ -> Zr) <$> m) e
   type_methods_0 :: (Location_0 -> Location_1) -> [Method_2] -> Map' Polykind -> Map' Kind -> Err [Method_3]
   type_methods_0 a b c d = case b of
     [] -> Right []

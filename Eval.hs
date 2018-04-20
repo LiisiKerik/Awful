@@ -45,7 +45,7 @@ module Eval where
           Just
             (case l of
               0 -> nothing_algebraic
-              _ -> wrap_algebraic (Int_expression_2 (div k (abs l))))
+              _ -> wrap_algebraic (Int_expression_2 (div k l)))
         _ -> undefined
       Field_expression_2 k -> case j of
         Struct_expression_2 l -> Just (unsafe_lookup k l)
@@ -61,7 +61,7 @@ module Eval where
           Just
             (case l of
               0 -> nothing_algebraic
-              _ -> wrap_algebraic (Int_expression_2 (mod k (abs l))))
+              _ -> wrap_algebraic (Int_expression_2 (mod k l)))
         _ -> undefined
       Multiply_Int_expression_2 -> case j of
         Int_expression_2 k -> Just (Multiply_Int'_expression_2 k)

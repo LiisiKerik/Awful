@@ -9,6 +9,7 @@ abstract methods
 move duplicate instance control into Naming module?
 if-elif-else?
 Class Test{T : Star} -> Class Test{_ : Star}
+chars: escape, newline, quote. non-ascii chars
 eta reduction warnings
 unused type variable warnings
 unused local variable warnings

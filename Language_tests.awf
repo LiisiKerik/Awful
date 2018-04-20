@@ -1,45 +1,6 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 Load Standard.awf
 Load Testing.awf
-~/
-          "Char",
-          "Compare",
-          "Comparison",
-          "Construct_List",
-          "Convert",
-          "Crash",
-          "Div",
-          "EQ",
-          "Empty_List",
-          "Field",
-          "Function",
-          "GT",
-          "Id",
-          "Int",
-          "Inverse",
-          "LT",
-          "List",
-          "Maybe",
-          "Mod",
-          "Nat",
-          "Negate",
-          "Next",
-          "Nothing",
-          "Ord",
-          "Ring",
-          "Wrap",
-          "Write",
-          "Writeable",
-          "Zr"])
-/~
-Def Brackets_Int_test : List (Pair (Pair Int (List Char)) (List Char)) =
-  Test_1
-    Brackets
-    (Construct_List
-      (Pair -1 (Construct_List "-" (Construct_List "1" Empty_List)))
-      (Construct_List
-        (Pair 0 (Construct_List "0" Empty_List))
-        (Construct_List (Pair 1 (Construct_List "1" Empty_List)) Empty_List)))
 Def Add_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
   Test_2
     Add
@@ -58,6 +19,130 @@ Def Add_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
                 (Construct_List
                   (Pair (Pair 1 -1) 0)
                   (Construct_List (Pair (Pair 1 0) 1) (Construct_List (Pair (Pair 1 1) 2) Empty_List)))))))))
+Def Brackets_Int_test : List (Pair (Pair Int (List Char)) (List Char)) =
+  Test_1
+    Brackets
+    (Construct_List
+      (Pair -1 (Construct_List "-" (Construct_List "1" Empty_List)))
+      (Construct_List
+        (Pair 0 (Construct_List "0" Empty_List))
+        (Construct_List (Pair 1 (Construct_List "1" Empty_List)) Empty_List)))
+Def Compare_Char_test : List (Pair (Pair (Pair Char Char) Comparison) Comparison) =
+  Test_2
+    Compare
+    (Construct_List
+      (Pair (Pair "!" "!") EQ)
+      (Construct_List
+        (Pair (Pair "!" "#") LT)
+        (Construct_List (Pair (Pair "#" "!") GT) (Construct_List (Pair (Pair "#" "#") EQ) Empty_List))))
+Def Compare_Int_test : List (Pair (Pair (Pair Int Int) Comparison) Comparison) =
+  Test_2
+    Compare
+    (Construct_List
+      (Pair (Pair -1 -1) EQ)
+      (Construct_List
+        (Pair (Pair -1 0) LT)
+        (Construct_List
+          (Pair (Pair -1 1) LT)
+          (Construct_List
+            (Pair (Pair 0 -1) GT)
+            (Construct_List
+              (Pair (Pair 0 0) EQ)
+              (Construct_List
+                (Pair (Pair 0 1) LT)
+                (Construct_List
+                  (Pair (Pair 1 -1) GT)
+                  (Construct_List (Pair (Pair 1 0) GT) (Construct_List (Pair (Pair 1 1) EQ) Empty_List)))))))))
+Def Convert_Int_test : List (Pair (Pair Int Int) Int) = Test_1 Convert (Construct_List (Pair 0 0) Empty_List)
+Def Div_test : List (Pair (Pair (Pair Int Int) (Maybe Int)) (Maybe Int)) =
+  Test_2
+    Div
+    (Construct_List
+      (Pair (Pair -2 -2) (Wrap 1))
+      (Construct_List
+        (Pair (Pair -2 -1) (Wrap 2))
+        (Construct_List
+          (Pair (Pair -2 1) (Wrap -2))
+          (Construct_List
+            (Pair (Pair -2 2) (Wrap -1))
+            (Construct_List
+              (Pair (Pair -1 -2) (Wrap 0))
+              (Construct_List
+                (Pair (Pair -1 -1) (Wrap 1))
+                (Construct_List
+                  (Pair (Pair -1 1) (Wrap -1))
+                  (Construct_List
+                    (Pair (Pair -1 2) (Wrap -1))
+                    (Construct_List
+                      (Pair (Pair 0 -2) (Wrap 0))
+                      (Construct_List
+                        (Pair (Pair 0 -1) (Wrap 0))
+                        (Construct_List
+                          (Pair (Pair 0 0) Nothing)
+                          (Construct_List
+                            (Pair (Pair 0 1) (Wrap 0))
+                            (Construct_List
+                              (Pair (Pair 0 2) (Wrap 0))
+                              (Construct_List
+                                (Pair (Pair 1 -2) (Wrap -1))
+                                (Construct_List
+                                  (Pair (Pair 1 -1) (Wrap -1))
+                                  (Construct_List
+                                    (Pair (Pair 1 1) (Wrap 1))
+                                    (Construct_List
+                                      (Pair (Pair 1 2) (Wrap 0))
+                                      (Construct_List
+                                        (Pair (Pair 2 -2) (Wrap -1))
+                                        (Construct_List
+                                          (Pair (Pair 2 -1) (Wrap -2))
+                                          (Construct_List
+                                            (Pair (Pair 2 1) (Wrap 2))
+                                            (Construct_List (Pair (Pair 2 2) (Wrap 1)) Empty_List)))))))))))))))))))))
+Def Id_test : List (Pair (Pair Int Int) Int) = Test_1 Convert (Construct_List (Pair 0 0) Empty_List)
+Def Mod_test : List (Pair (Pair (Pair Int Int) (Maybe Int)) (Maybe Int)) =
+  Test_2
+    Mod
+    (Construct_List
+      (Pair (Pair -2 -2) (Wrap 0))
+      (Construct_List
+        (Pair (Pair -2 -1) (Wrap 0))
+        (Construct_List
+          (Pair (Pair -2 1) (Wrap 0))
+          (Construct_List
+            (Pair (Pair -2 2) (Wrap 0))
+            (Construct_List
+              (Pair (Pair -1 -2) (Wrap -1))
+              (Construct_List
+                (Pair (Pair -1 -1) (Wrap 0))
+                (Construct_List
+                  (Pair (Pair -1 1) (Wrap 0))
+                  (Construct_List
+                    (Pair (Pair -1 2) (Wrap 1))
+                    (Construct_List
+                      (Pair (Pair 0 -2) (Wrap 0))
+                      (Construct_List
+                        (Pair (Pair 0 -1) (Wrap 0))
+                        (Construct_List
+                          (Pair (Pair 0 0) Nothing)
+                          (Construct_List
+                            (Pair (Pair 0 1) (Wrap 0))
+                            (Construct_List
+                              (Pair (Pair 0 2) (Wrap 0))
+                              (Construct_List
+                                (Pair (Pair 1 -2) (Wrap -1))
+                                (Construct_List
+                                  (Pair (Pair 1 -1) (Wrap 0))
+                                  (Construct_List
+                                    (Pair (Pair 1 1) (Wrap 0))
+                                    (Construct_List
+                                      (Pair (Pair 1 2) (Wrap 1))
+                                      (Construct_List
+                                        (Pair (Pair 2 -2) (Wrap 0))
+                                        (Construct_List
+                                          (Pair (Pair 2 -1) (Wrap 0))
+                                          (Construct_List
+                                            (Pair (Pair 2 1) (Wrap 0))
+                                            (Construct_List (Pair (Pair 2 2) (Wrap 0)) Empty_List)))))))))))))))))))))
 Def Multiply_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
   Test_2
     Multiply
@@ -76,4 +161,12 @@ Def Multiply_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
                 (Construct_List
                   (Pair (Pair 1 -1) -1)
                   (Construct_List (Pair (Pair 1 0) 0) (Construct_List (Pair (Pair 1 1) 1) Empty_List)))))))))
+Def Negate_Int_test : List (Pair (Pair Int Int) Int) =
+  Test_1 Negate (Construct_List (Pair -1 1) (Construct_List (Pair 0 0) (Construct_List (Pair 1 -1) Empty_List)))
+Def Write_Int_test : List (Pair (Pair Int (List Char)) (List Char)) =
+  Test_1
+    Write
+    (Construct_List
+      (Pair -1 (Construct_List "-" (Construct_List "1" Empty_List)))
+      (Construct_List (Pair 0 (Construct_List "0" Empty_List)) Empty_List))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

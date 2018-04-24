@@ -27,6 +27,10 @@ Def Add'_test : List (Pair (Pair (Pair (Maybe Int) (Maybe Int)) (Maybe Int)) (Ma
                         (Construct_List
                           (Pair (Pair (Wrap 1) (Wrap 0)) (Wrap 1))
                           (Construct_List (Pair (Pair (Wrap 1) (Wrap 1)) (Wrap 2)) Empty_List))))))))))))
+Def Brackets_Char_test : List (Pair (Pair Char (List Char)) (List Char)) =
+  Test_1
+    Write
+    (Construct_List (Pair "!" (Construct_List """ (Construct_List "!" (Construct_List """ Empty_List)))) Empty_List)
 Def Cat_List_test : List (Pair (Pair (Pair (List Int) (List Int)) (List Int)) (List Int)) =
   Test_2
     Cat
@@ -67,4 +71,12 @@ Def Write_Char_test : List (Pair (Pair Char (List Char)) (List Char)) =
             (Construct_List
               (Pair "n" (Construct_List """ (Construct_List "n" (Construct_List """ Empty_List))))
               Empty_List)))))
+Def Write_Comparison_test : List (Pair (Pair Comparison (List Char)) (List Char)) =
+  Test_1
+    Write
+    (Construct_List
+      (Pair LT (Construct_List "L" (Construct_List "T" Empty_List)))
+      (Construct_List
+        (Pair EQ (Construct_List "E" (Construct_List "Q" Empty_List)))
+        (Construct_List (Pair GT (Construct_List "G" (Construct_List "T" Empty_List))) Empty_List)))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

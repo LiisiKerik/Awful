@@ -3,7 +3,6 @@ Algebraic Either[T : Star, U : Star](Left T, Right U)
 Algebraic Logical(False, True)
 Struct Pair[T : Star, U : Star](First : T, Second : U)
 Algebraic Tree[T : Star](Empty_Tree, Construct_Tree T (Tree T) (Tree T))
-Struct Trivial
 Branching Tuple[!List Star](
   !Empty_List -> Empty_Tuple,
   !Construct_List T L -> Construct_Tuple(Head_Tuple : T, Tail_Tuple : Tuple L))
@@ -48,7 +47,6 @@ Def Equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> Tr
 Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing})
 Instance Field{Logical}(Inverse x = Match x {False -> Nothing, True -> Wrap True})
 Instance Field{Pair T U}<Field T, Field U>(Inverse x = Zip Pair (Inverse (First x)) (Inverse (Second x)))
-Instance Field{Trivial}(Inverse = Wrap)
 Instance Field{Tuple L}<Field_Tuple L>(Inverse = Inverse_Tuple)
 Instance Field_Tuple{!Empty_List[Star]}(Inverse_Tuple = Wrap)
 Instance Field_Tuple{!Construct_List[Star] T L}<Field T, Field_Tuple L>(
@@ -60,7 +58,6 @@ Instance Finite{Either T U}<Finite T, Finite U>(All = Cat (Fmap Left All) (Fmap 
 Instance Finite{Logical}(All = Construct_List False (Construct_List True Empty_List))
 Instance Finite{Maybe T}<Finite T>(All = Construct_List Nothing (Fmap Wrap All))
 Instance Finite{Pair T U}<Finite T, Finite U>(All = Zip Pair All All)
-Instance Finite{Trivial}(All = Lift Trivial)
 Instance Finite{Tuple L}<Finite_Tuple L>(All = All_Tuple)
 Instance Finite_Tuple{!Empty_List[Star]}(All_Tuple = Lift Empty_Tuple)
 Instance Finite_Tuple{!Construct_List[Star] T L}<Finite T, Finite_Tuple L>(All_Tuple = Zip Construct_Tuple All All)
@@ -135,7 +132,6 @@ Instance Ord{Tree T}<Ord T>(
             Compare
               (Construct_Tuple z (Construct_Tuple a (Construct_Tuple b Empty_Tuple)))
               (Construct_Tuple c (Construct_Tuple d (Construct_Tuple e Empty_Tuple)))}})
-Instance Ord{Trivial}(Compare _ _ = EQ)
 Instance Ord{Tuple L}<Ord_Tuple L>(Compare = Compare_Tuple)
 Instance Ord_Tuple{!Empty_List[Star]}(Compare_Tuple _ _ = EQ)
 Instance Ord_Tuple{!Construct_List[Star] T L}<Ord T, Ord_Tuple L>(
@@ -147,7 +143,6 @@ Instance Ring{Pair T U}<Ring T, Ring U>(
   Convert x = Pair (Convert x) (Convert x),
   Multiply x y = Pair (Multiply (First x) (First y)) (Multiply (Second x) (Second y)),
   Negate x = Pair (Negate (First x)) (Negate (Second x)))
-Instance Ring{Trivial}(Add _ = Id, Convert _ = Trivial, Multiply _ = Id, Negate = Id)
 Instance Ring{Tuple L}<Ring_Tuple L>(
   Add = Add_Tuple,
   Convert = Convert_Tuple,
@@ -169,6 +164,150 @@ Instance Writeable{Char}(
     Construct_List
       """
       (Cat (Match c {"\n" -> Construct_List "\" (Construct_List "n" Empty_List), Default -> Lift c}) (Lift """)))
+Instance Writeable{Comparison}(
+  Brackets = Write,
+  Write x =
+    Match x {
+      LT -> Construct_List "L" (Construct_List "T" Empty_List),
+      EQ -> Construct_List "E" (Construct_List "Q" Empty_List),
+      GT -> Construct_List "G" (Construct_List "T" Empty_List)})
+Instance Writeable{Either T U}<Writeable T, Writeable U>(
+  Brackets = Brackets',
+  Write x =
+    Match x {
+      Left y ->
+        Cat
+          (Construct_List "L" (Construct_List "e" (Construct_List "f" (Construct_List "t" (Construct_List " " Empty_List)))))
+          (Brackets y),
+      Right y ->
+        Cat
+          (Construct_List
+            "R"
+            (Construct_List
+              "i"
+              (Construct_List "g" (Construct_List "h" (Construct_List "t" (Construct_List " " Empty_List))))))
+          (Brackets y)})
+Instance Writeable{List T}<Writeable T>(
+  Brackets x = (Match x {Empty_List -> Write, Construct_List _ _ -> Brackets'}) x,
+  Write x =
+    Match x {
+      Empty_List ->
+        Construct_List
+          "E"
+          (Construct_List
+            "m"
+            (Construct_List
+              "p"
+              (Construct_List
+                "t"
+                (Construct_List
+                  "y"
+                  (Construct_List
+                    "_"
+                    (Construct_List "L" (Construct_List "i" (Construct_List "s" (Construct_List "t" Empty_List))))))))),
+      Construct_List y z ->
+        Cat
+          (Construct_List
+            "C"
+            (Construct_List
+              "o"
+              (Construct_List
+                "n"
+                (Construct_List
+                  "s"
+                  (Construct_List
+                    "t"
+                    (Construct_List
+                      "r"
+                      (Construct_List
+                        "u"
+                        (Construct_List
+                          "c"
+                          (Construct_List
+                            "t"
+                            (Construct_List
+                              "_"
+                              (Construct_List
+                                "L"
+                                (Construct_List
+                                  "i"
+                                  (Construct_List "s" (Construct_List "t" (Construct_List " " Empty_List)))))))))))))))
+          (Cat (Brackets y) (Cat (Lift " ") (Brackets z)))})
+Instance Writeable{Logical}(
+  Brackets = Write,
+  Write x =
+    Match x {
+      False ->
+        Construct_List "F" (Construct_List "a" (Construct_List "l" (Construct_List "s" (Construct_List "e" Empty_List)))),
+      True -> Construct_List "T" (Construct_List "r" (Construct_List "u" (Construct_List "e" Empty_List)))})
+Instance Writeable{Maybe T}<Writeable T>(
+  Brackets x = (Match x {Nothing -> Write, Wrap _ -> Brackets'}) x,
+  Write x =
+    Match x {
+      Nothing ->
+        Construct_List
+          "N"
+          (Construct_List
+            "o"
+            (Construct_List
+              "t"
+              (Construct_List "h" (Construct_List "i" (Construct_List "n" (Construct_List "g" Empty_List)))))),
+      Wrap y ->
+        Cat
+          (Construct_List "W" (Construct_List "r" (Construct_List "a" (Construct_List "p" (Construct_List " " Empty_List)))))
+          (Brackets y)})
+Instance Writeable{Pair T U}<Writeable T, Writeable U>(
+  Brackets = Brackets',
+  Write x =
+    Cat
+      (Construct_List "P" (Construct_List "a" (Construct_List "i" (Construct_List "r" (Construct_List " " Empty_List)))))
+      (Cat (Brackets (First x)) (Cat (Lift " ") (Brackets (Second x)))))
+Instance Writeable{Tree T}<Writeable T>(
+  Brackets x = (Match x {Empty_Tree -> Write, Construct_Tree _ _ _ -> Brackets'}) x,
+  Write x =
+    Match x {
+      Empty_Tree ->
+        Construct_List
+          "E"
+          (Construct_List
+            "m"
+            (Construct_List
+              "p"
+              (Construct_List
+                "t"
+                (Construct_List
+                  "y"
+                  (Construct_List
+                    "_"
+                    (Construct_List "T" (Construct_List "r" (Construct_List "e" (Construct_List "e" Empty_List))))))))),
+      Construct_Tree y z a ->
+        Cat
+          (Construct_List
+            "C"
+            (Construct_List
+              "o"
+              (Construct_List
+                "n"
+                (Construct_List
+                  "s"
+                  (Construct_List
+                    "t"
+                    (Construct_List
+                      "r"
+                      (Construct_List
+                        "u"
+                        (Construct_List
+                          "c"
+                          (Construct_List
+                            "t"
+                            (Construct_List
+                              "_"
+                              (Construct_List
+                                "T"
+                                (Construct_List
+                                  "r"
+                                  (Construct_List "e" (Construct_List "e" (Construct_List " " Empty_List)))))))))))))))
+          (Cat (Brackets y) (Cat (Lift " ") (Cat (Brackets z) (Cat (Lift " ") (Brackets a)))))})
 Def Zip[F : Arrow Star Star, T : Star, U : Star, V : Star]<Applicative F>(f : Function T (Function U V), x : F T) :
   Function (F U) (F V) =
     Apply (Fmap f x)

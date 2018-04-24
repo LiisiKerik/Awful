@@ -16,6 +16,7 @@ Struct Toeplitz_triangle[N : !Nat, T : Star](Toeplitz_triangle' : Array N T)
 Branching Triangle[!Nat][T : Star](
   !Zr -> Empty_Triangle,
   !Next N -> Construct_Triangle(Fst_Triangle : T, Top_row_Triangle : Array N T, Triangle' : Triangle N T))
+Struct Trivial
 Class Commutative{T : Star}<Ring>
 Class Commutative_Tuple{L : !List Star}<Ring_Tuple>
 Class Finite_Array{N : !Nat}<Ord_Array>(All_Array[T : Star]<Finite T> : List (Array N T))
@@ -48,7 +49,11 @@ Def Div_left'[F : Arrow Star Star, T : Star]<Functor F, Field T>(x : T, y : F T)
 Def Div_right[T : Star]<Field T>(x : T, y : T) : Maybe T = Fmap (Multiply x) (Inverse y)
 Def Div_right'[F : Arrow Star Star, T : Star]<Functor F, Field T>(x : F T, y : T) : Maybe (F T) =
   Fmap (Multiply_right x) (Inverse y)
+Instance Field{Quaternion T}<Commutative T, Field T>(
+  Inverse x = Div_right' (Quaternion (Qr x) (Negate (Qx x)) (Negate (Qy x)) (Negate (Qz x))) (Sum_squares x))
+Instance Field{Trivial}(Inverse = Wrap)
 Instance Finite{Array N T}<Finite T, Finite_Array N>(All = All_Array)
+Instance Finite{Trivial}(All = Lift Trivial)
 Instance Finite_Array{!Zr}(All_Array = Lift Empty_Array)
 Instance Finite_Array{!Next N}<Finite_Array N>(All_Array = Zip Construct_Array All All)
 Instance Foldable{Complex}(Fold_right f x y = f (Real y) (f (Imaginary y) x))
@@ -63,28 +68,27 @@ Instance Functor_Array{!Zr}(Fmap_Array _ _ = Empty_Array)
 Instance Functor_Array{!Next N}<Functor_Array N>(Fmap_Array f a = Construct_Array (f (Head a)) (Fmap f (Tail a)))
 Def Identity[T : Star]<Ring T> : T = Convert 1
 Def Minus[T : Star]<Ring T>(x : T, y : T) : T = Add x (Negate y)
+Def Multiply_left[T : Star, F : Arrow Star Star]<Functor F, Ring T>(x : T, y : F T) : F T = Fmap (Multiply x) y
+Def Multiply_right[F : Arrow Star Star, T : Star]<Functor F, Ring T>(x : F T, y : T) : F T = Fmap (z -> Multiply z y) x
 Instance Ord{Array N T}<Ord T, Ord_Array N>(Compare = Compare_Array)
 Instance Ord{Quaternion T}<Ord T>(
   Compare x y =
     Compare
       (Construct_Tuple (Qr x) (Construct_Tuple (Qx x) (Construct_Tuple (Qy x) (Construct_Tuple (Qz x) Empty_Tuple))))
       (Construct_Tuple (Qr y) (Construct_Tuple (Qx y) (Construct_Tuple (Qy y) (Construct_Tuple (Qz y) Empty_Tuple)))))
+Instance Ord{Trivial}(Compare _ _ = EQ)
 Instance Ord_Array{!Zr}(Compare_Array _ _ = EQ)
 Instance Ord_Array{!Next N}<Ord_Array N>(
   Compare_Array x y =
     Compare
       (Construct_Tuple (Head x) (Construct_Tuple (Tail x) Empty_Tuple))
       (Construct_Tuple (Head y) (Construct_Tuple (Tail y) Empty_Tuple)))
-Instance Field{Quaternion T}<Commutative T, Field T>(
-  Inverse x = Div_right' (Quaternion (Qr x) (Negate (Qx x)) (Negate (Qy x)) (Negate (Qz x))) (Sum_squares x))
-Def Multiply_left[T : Star, F : Arrow Star Star]<Functor F, Ring T>(x : T, y : F T) : F T = Fmap (Multiply x) y
-Def Multiply_right[F : Arrow Star Star, T : Star]<Functor F, Ring T>(x : F T, y : T) : F T = Fmap (z -> Multiply z y) x
 Def Pow[T : Star]<Field T>(x : T, i : Int) : Maybe T =
   Match Less i 0 {False -> Wrap (Pow' x i), True -> Inverse (Pow' x (Negate i))}
 Def Pow'[T : Star]<Ring T>(x : T, i : Int) : T =
   Match i {
     0 -> Identity,
-    Default -> (z -> (Match Rem' i 2 {0 -> Id, 1 -> Multiply x, Default -> Crash}) (Multiply z z)) (Pow' x (Div' y 2))}
+    Default -> (z -> (Match Mod' i 2 {0 -> Id, 1 -> Multiply x, Default -> Crash}) (Multiply z z)) (Pow' x (Div' i 2))}
 Instance Ring{Complex T}<Ring T>(
   Add = Add',
   Convert x = Complex (Convert x) Zero,
@@ -93,6 +97,7 @@ Instance Ring{Complex T}<Ring T>(
       (Minus (Multiply (Real x) (Real y)) (Multiply (Imaginary x) (Imaginary y)))
       (Add (Multiply (Real x) (Imaginary y)) (Multiply (Imaginary x) (Real y))),
   Negate = Negate')
+Instance Ring{Trivial}(Add _ = Id, Convert _ = Trivial, Multiply _ = Id, Negate = Id)
 Instance Ring{Quaternion T}<Ring T>(
   Add = Add',
   Convert x = Quaternion (Convert x) Zero Zero Zero,
@@ -113,5 +118,13 @@ Instance Ring{Quaternion T}<Ring T>(
   Negate = Negate')
 Def Sum[F : Arrow Star Star, T : Star]<Foldable F, Ring T> : Function (F T) T = Fold_right Add Zero
 Def Sum_squares[F : Arrow Star Star, T : Star]<Foldable F, Functor F, Ring T>(x : F T) : T = Sum (Fmap (y -> Pow' y 2) x)
+Instance Writeable{Trivial}(
+  Brackets = Write,
+  Write _ =
+    Construct_List
+      "T"
+      (Construct_List
+        "r"
+        (Construct_List "i" (Construct_List "v" (Construct_List "i" (Construct_List "a" (Construct_List "l" Empty_List)))))))
 Def Zero[T : Star]<Ring T> : T = Convert 0
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

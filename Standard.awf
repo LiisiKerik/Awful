@@ -30,7 +30,7 @@ Class Ring_Tuple{L : !List Star}(
   Negate_Tuple : Function (Tuple L) (Tuple L))
 Def Add'[F : Arrow Star Star, T : Star]<Applicative F, Ring T> : Function (F T) (Function (F T) (F T)) = Zip Add
 Instance Alternative{List}(
-  Cat x y = Match x {Empty_List -> y, Construct_List z a -> Construct_List z (Cat y a)},
+  Cat x y = Match x {Empty_List -> y, Construct_List z a -> Construct_List z (Cat a y)},
   Empty = Empty_List)
 Instance Alternative{Maybe}(Cat x y = Match x {Nothing -> y, Wrap _ -> x}, Empty = Nothing)
 Instance Applicative{Either _}(Apply x y = Match x {Left z -> Left z, Right f -> Fmap f y}, Lift = Right)
@@ -85,6 +85,7 @@ Instance Monad{Either _}(Bind x f = Match x {Left y -> Left y, Right y -> f y})
 Instance Monad{Function _}(Bind f g x = g (f x) x)
 Instance Monad{List}(Bind x f = Match x {Empty_List -> Empty_List, Construct_List y z -> Cat (f y) (Bind z f)})
 Instance Monad{Maybe}(Bind x f = Match x {Nothing -> Nothing, Wrap y -> f y})
+Instance Monad'{Either _}(Unsafe x = Match x {Left _ -> Crash, Right y -> y})
 Instance Monad'{Maybe}(Unsafe x = Match x {Nothing -> Crash, Wrap y -> y})
 Def Multiply'[F : Arrow Star Star, T : Star]<Applicative F, Ring T> : Function (F T) (Function (F T) (F T)) = Zip Multiply
 Def Negate'[F : Arrow Star Star, T : Star]<Functor F, Ring T> : Function (F T) (F T) = Fmap Negate
@@ -162,6 +163,12 @@ Instance Ring_Tuple{!Construct_List[Star] T L}<Ring T, Ring_Tuple L>(
   Convert_Tuple x = Construct_Tuple (Convert x) (Convert x),
   Multiply_Tuple x y = Construct_Tuple (Multiply (Head_Tuple x) (Head_Tuple y)) (Multiply (Tail_Tuple x) (Tail_Tuple y)),
   Negate_Tuple x = Construct_Tuple (Negate (Head_Tuple x)) (Negate (Tail_Tuple x)))
+Instance Writeable{Char}(
+  Brackets = Write,
+  Write c =
+    Construct_List
+      """
+      (Cat (Match c {"\n" -> Construct_List "\" (Construct_List "n" Empty_List), Default -> Lift c}) (Lift """)))
 Def Zip[F : Arrow Star Star, T : Star, U : Star, V : Star]<Applicative F>(f : Function T (Function U V), x : F T) :
   Function (F U) (F V) =
     Apply (Fmap f x)

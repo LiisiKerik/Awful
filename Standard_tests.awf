@@ -1,4 +1,70 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 Load Standard.awf
 Load Testing.awf
+Def Add'_test : List (Pair (Pair (Pair (Maybe Int) (Maybe Int)) (Maybe Int)) (Maybe Int)) =
+  Test_2
+    Add'
+    (Construct_List
+      (Pair (Pair Nothing Nothing) Nothing)
+      (Construct_List
+        (Pair (Pair Nothing (Wrap 0)) Nothing)
+        (Construct_List
+          (Pair (Pair (Wrap 0) Nothing) Nothing)
+          (Construct_List
+            (Pair (Pair (Wrap -1) (Wrap -1)) (Wrap -2))
+            (Construct_List
+              (Pair (Pair (Wrap -1) (Wrap 0)) (Wrap -1))
+              (Construct_List
+                (Pair (Pair (Wrap -1) (Wrap 1)) (Wrap 0))
+                (Construct_List
+                  (Pair (Pair (Wrap 0) (Wrap -1)) (Wrap -1))
+                  (Construct_List
+                    (Pair (Pair (Wrap 0) (Wrap 0)) (Wrap 0))
+                    (Construct_List
+                      (Pair (Pair (Wrap 0) (Wrap 1)) (Wrap 1))
+                      (Construct_List
+                        (Pair (Pair (Wrap 1) (Wrap -1)) (Wrap 0))
+                        (Construct_List
+                          (Pair (Pair (Wrap 1) (Wrap 0)) (Wrap 1))
+                          (Construct_List (Pair (Pair (Wrap 1) (Wrap 1)) (Wrap 2)) Empty_List))))))))))))
+Def Cat_List_test : List (Pair (Pair (Pair (List Int) (List Int)) (List Int)) (List Int)) =
+  Test_2
+    Cat
+    (Construct_List
+      (Pair (Pair Empty_List Empty_List) Empty_List)
+      (Construct_List
+        (Pair (Pair Empty_List (Construct_List 0 Empty_List)) (Construct_List 0 Empty_List))
+        (Construct_List
+          (Pair (Pair (Construct_List 0 Empty_List) Empty_List) (Construct_List 0 Empty_List))
+          (Construct_List
+            (Pair
+              (Pair (Construct_List 0 Empty_List) (Construct_List 1 Empty_List))
+              (Construct_List 0 (Construct_List 1 Empty_List)))
+            Empty_List))))
+Def Cat_Maybe_test : List (Pair (Pair (Pair (Maybe Int) (Maybe Int)) (Maybe Int)) (Maybe Int)) =
+  Test_2
+    Cat
+    (Construct_List
+      (Pair (Pair Nothing Nothing) Nothing)
+      (Construct_List
+        (Pair (Pair Nothing (Wrap 0)) (Wrap 0))
+        (Construct_List
+          (Pair (Pair (Wrap 0) Nothing) (Wrap 0))
+          (Construct_List (Pair (Pair (Wrap 0) (Wrap 1)) (Wrap 0)) Empty_List))))
+Def Empty_List_test : Maybe (Pair (List Int) (List Int)) = Test_0 Empty Empty_List
+Def Empty_Maybe_test : Maybe (Pair (Maybe Int) (Maybe Int)) = Test_0 Empty Nothing
+Def Write_Char_test : List (Pair (Pair Char (List Char)) (List Char)) =
+  Test_1
+    Write
+    (Construct_List
+      (Pair "\n" (Construct_List """ (Construct_List "\" (Construct_List "n" (Construct_List """ Empty_List)))))
+      (Construct_List
+        (Pair "!" (Construct_List """ (Construct_List "!" (Construct_List """ Empty_List))))
+        (Construct_List
+          (Pair """ (Construct_List """ (Construct_List """ (Construct_List """ Empty_List))))
+          (Construct_List
+            (Pair "\" (Construct_List """ (Construct_List "\" (Construct_List """ Empty_List))))
+            (Construct_List
+              (Pair "n" (Construct_List """ (Construct_List "n" (Construct_List """ Empty_List))))
+              Empty_List)))))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

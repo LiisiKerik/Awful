@@ -27,16 +27,11 @@ syntactic sugar for lists, vectors, matrices... allow writing (tiny, limited to 
 fix the show-read issue; give a specific error for that (different errors for unresolved type variable and missing constr)
 basic IO operations (output to console, read file, write file, append to file)
 finite n
-compilation
 nice human-readable output for interpreter through show
 boolean function library
-parsing library
 implement map and set (AVL trees?)
-make match work with finite and char
 different ways of folding lists, vectors, sets, maps etc
 gather naming and type errors and give a list instead of returning only the first one?
-enrich kind system via promotion
-make match work with chars
 make promotion for built-in ADT-s automatic
 modify parser: make promotion of ints and chars to type level explicit (with !)
 simplify hyperkind system because there's no need to keep anything but the number of arguments
@@ -60,8 +55,8 @@ liigirakendamise eemaldamine liigituletuse kasuks (igal pool? teatud piiratud ju
 käskida kasutajal klasse kirjutada päriluse järjekorras? (väldiks ring-päriluse probleemi, võimaldaks klassid teha 1 passis)
 kas tüübirakendamist on kusagil vaja?
 Funktsioon mis leiab enniku pikkuse valesti (rekursioon kutsutakse välja sama pika või 1 võrra pikema peal) - mis juhtub?
-char-i kirjutamine keelest ära võtta ja standardteeki panna
 võimaldada suvalise arvu konstruktoritega algebralisi andmetüüpe. (LISAKS struktide allesjätmisele?)
+panna keel kuidagi aru saama, et mitte-null-konstandiga jagades ei saa tulemuseks olla Nothing
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")

@@ -153,10 +153,21 @@ module Tokenise where
         Tilde_char -> tokenise_tilde a b e d
   tokenise_char :: Location_1 -> [Char'] -> Err (Char, Tokens)
   tokenise_char a b = case b of
-    [] -> Left ("Missing character and end quote " ++ location' a)
-    c : d -> case char'_to_char c of
-      Just e -> (\f -> (e, f)) <$> tokenise_quote (next_char a) d
-      Nothing -> Left ("Newline inside quotes " ++ location' a)
+    [] -> Left ("Missing character and end quote" ++ location' a)
+    c : d ->
+      let
+        e = char'_to_char c
+      in
+        case e of
+          '\n' -> Left ("Newline inside quotes" ++ location' a)
+          '\\' ->
+            case d of
+              [] -> Left ("Missing character and end quote" ++ location' (next_char a))
+              f : g ->
+                case f of
+                  Name_char 'n' -> (,) '\n' <$> tokenise_quote (next_char (next_char a)) g
+                  _ -> (,) '\\' <$> tokenise_quote (next_char a) d
+          _ -> (,) e <$> tokenise_quote (next_char a) d
   tokenise_multiline :: Integer -> Location_1 -> [Char'] -> Err Tokens
   tokenise_multiline a b c = case c of
     [] -> Left ("Missing end comment in " ++ file_location b ++ ".")
@@ -178,7 +189,7 @@ module Tokenise where
   tokenise_quote :: Location_1 -> [Char'] -> Err Tokens
   tokenise_quote a b =
     let
-      e = Left ("Missing end quote " ++ location' a)
+      e = Left ("Missing end quote" ++ location' a)
     in case b of
       [] -> e
       c : d -> case c of
@@ -200,25 +211,26 @@ module Tokenise where
   tokenise_tilde a b c d = case d of
     Slash_char : e -> tokenise_multiline 1 (next_char c) e
     _ -> tokenise_operator a b
-  char'_to_char :: Char' -> Maybe Char
+  char'_to_char :: Char' -> Char
   char'_to_char a = case a of
-    Delimiter_char b -> Just (case b of
+    Delimiter_char b ->
+      case b of
         Comma_delimiter -> ','
         Left_curly_delimiter -> '{'
         Left_round_delimiter -> '('
         Left_square_delimiter -> '['
         Right_curly_delimiter -> '}'
         Right_round_delimiter -> ')'
-        Right_square_delimiter -> ']')
-    Int_char b -> Just b
-    Name_char b -> Just b
-    Newline_char -> Nothing
-    Operator_char b -> Just b
-    Quote_char -> Just '"'
-    Slash_char -> Just '/'
-    Space_char -> Just ' '
-    Tick_char -> Just '`'
-    Tilde_char -> Just '~'
+        Right_square_delimiter -> ']'
+    Int_char b -> b
+    Name_char b -> b
+    Newline_char -> '\n'
+    Operator_char b -> b
+    Quote_char -> '"'
+    Slash_char -> '/'
+    Space_char -> ' '
+    Tick_char -> '`'
+    Tilde_char -> '~'
   word_token :: String -> Token_0
   word_token a = case a of
     "Algebraic" -> Algebraic_token

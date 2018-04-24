@@ -3,9 +3,6 @@ Algebraic Either[T : Star, U : Star](Left T, Right U)
 Algebraic Logical(False, True)
 Struct Pair[T : Star, U : Star](First : T, Second : U)
 Algebraic Tree[T : Star](Empty_Tree, Construct_Tree T (Tree T) (Tree T))
-Branching Tuple[!List Star](
-  !Empty_List -> Empty_Tuple,
-  !Construct_List T L -> Construct_Tuple(Head_Tuple : T, Tail_Tuple : Tuple L))
 Class Alternative{F : Arrow Star Star}<Applicative>(
   Cat[T : Star] : Function (F T) (Function (F T) (F T)),
   Empty[T : Star] : F T)
@@ -15,18 +12,10 @@ Class Applicative{F : Arrow Star Star}<Functor>(
 Class Bifunctor{F : Arrow Star (Arrow Star Star)}(
   Bimap[T : Star, U : Star, V : Star, W : Star] :
     Function (Function T U) (Function (Function V W) (Function (F T V) (F U W))))
-Class Field_Tuple{L : !List Star}<Ring_Tuple>(Inverse_Tuple : Function (Tuple L) (Maybe (Tuple L)))
 Class Finite{T : Star}<Ord>(All : List T)
-Class Finite_Tuple{L : !List Star}<Ord_Tuple>(All_Tuple : List (Tuple L))
 Class Functor{F : Arrow Star Star}(Fmap[T : Star, U : Star] : Function (Function T U) (Function (F T) (F U)))
 Class Monad{F : Arrow Star Star}<Applicative>(Bind[T : Star, U : Star] : Function (F T) (Function (Function T (F U)) (F U)))
 Class Monad'{F : Arrow Star Star}<Monad>(Unsafe[T : Star] : Function (F T) T)
-Class Ord_Tuple{L : !List Star}(Compare_Tuple : Function (Tuple L) (Function (Tuple L) Comparison))
-Class Ring_Tuple{L : !List Star}(
-  Add_Tuple : Function (Tuple L) (Function (Tuple L) (Tuple L)),
-  Convert_Tuple : Function Int (Tuple L),
-  Multiply_Tuple : Function (Tuple L) (Function (Tuple L) (Tuple L)),
-  Negate_Tuple : Function (Tuple L) (Tuple L))
 Def Add'[F : Arrow Star Star, T : Star]<Applicative F, Ring T> : Function (F T) (Function (F T) (F T)) = Zip Add
 Instance Alternative{List}(
   Cat x y = Match x {Empty_List -> y, Construct_List z a -> Construct_List z (Cat a y)},
@@ -47,10 +36,6 @@ Def Equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> Tr
 Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing})
 Instance Field{Logical}(Inverse x = Match x {False -> Nothing, True -> Wrap True})
 Instance Field{Pair T U}<Field T, Field U>(Inverse x = Zip Pair (Inverse (First x)) (Inverse (Second x)))
-Instance Field{Tuple L}<Field_Tuple L>(Inverse = Inverse_Tuple)
-Instance Field_Tuple{!Empty_List[Star]}(Inverse_Tuple = Wrap)
-Instance Field_Tuple{!Construct_List[Star] T L}<Field T, Field_Tuple L>(
-  Inverse_Tuple x = Zip Construct_Tuple (Inverse (Head_Tuple x)) (Inverse (Tail_Tuple x)))
 Def Filter[T : Star, F : Arrow Star Star]<Alternative F, Monad F>(f : Function T Logical, x : F T) : F T =
   Bind x (y -> Match f y {False -> Empty, True -> Lift y})
 Instance Finite{Comparison}(All = Construct_List LT (Construct_List EQ (Construct_List GT Empty_List)))
@@ -58,9 +43,6 @@ Instance Finite{Either T U}<Finite T, Finite U>(All = Cat (Fmap Left All) (Fmap 
 Instance Finite{Logical}(All = Construct_List False (Construct_List True Empty_List))
 Instance Finite{Maybe T}<Finite T>(All = Construct_List Nothing (Fmap Wrap All))
 Instance Finite{Pair T U}<Finite T, Finite U>(All = Zip Pair All All)
-Instance Finite{Tuple L}<Finite_Tuple L>(All = All_Tuple)
-Instance Finite_Tuple{!Empty_List[Star]}(All_Tuple = Lift Empty_Tuple)
-Instance Finite_Tuple{!Construct_List[Star] T L}<Finite T, Finite_Tuple L>(All_Tuple = Zip Construct_Tuple All All)
 Instance Functor{Either _}(Fmap = Map_right)
 Instance Functor{Function _}(Fmap f g x = f (g x))
 Instance Functor{List}(Fmap f x = Match x {Empty_List -> Empty_List, Construct_List y z -> Construct_List (f y) (Fmap f z)})
@@ -104,60 +86,26 @@ Instance Ord{List T}<Ord T>(
   Compare x y =
     Match x {
       Empty_List -> Match y {Empty_List -> EQ, Construct_List _ _ -> LT},
-      Construct_List z a ->
-        Match y {
-          Empty_List -> GT,
-          Construct_List b c ->
-            Compare
-              (Construct_Tuple z (Construct_Tuple a Empty_Tuple))
-              (Construct_Tuple b (Construct_Tuple c Empty_Tuple))}})
+      Construct_List z a -> Match y {Empty_List -> GT, Construct_List b c -> Compare (Pair z a) (Pair b c)}})
 Instance Ord{Logical}(
   Compare x y = Match x {False -> Match y {False -> EQ, True -> LT}, True -> Match y {False -> GT, True -> EQ}})
 Instance Ord{Maybe T}<Ord T>(
   Compare x y =
     Match x {Nothing -> Match y {Nothing -> EQ, Wrap -> LT}, Wrap z -> Match y {Nothing -> GT, Wrap w -> Compare z w}})
 Instance Ord{Pair T U}<Ord T, Ord U>(
-  Compare x y =
-    Compare
-      (Construct_Tuple (First x) (Construct_Tuple (Second x) Empty_Tuple))
-      (Construct_Tuple (First y) (Construct_Tuple (Second y) Empty_Tuple)))
+  Compare x y = Match Compare (First x) (First y) {LT -> LT, EQ -> Compare (Second x) (Second y), GT -> GT})
 Instance Ord{Tree T}<Ord T>(
   Compare x y =
     Match x {
       Empty_Tree -> Match y {Empty_Tree -> EQ, Construct_Tree _ _ _ -> LT},
       Construct_Tree z a b ->
-        Match y {
-          Empty_Tree -> GT,
-          Construct_Tree c d e ->
-            Compare
-              (Construct_Tuple z (Construct_Tuple a (Construct_Tuple b Empty_Tuple)))
-              (Construct_Tuple c (Construct_Tuple d (Construct_Tuple e Empty_Tuple)))}})
-Instance Ord{Tuple L}<Ord_Tuple L>(Compare = Compare_Tuple)
-Instance Ord_Tuple{!Empty_List[Star]}(Compare_Tuple _ _ = EQ)
-Instance Ord_Tuple{!Construct_List[Star] T L}<Ord T, Ord_Tuple L>(
-  Compare_Tuple x y =
-    Match Compare (Head_Tuple x) (Head_Tuple y) {LT -> LT, EQ -> Compare (Tail_Tuple x) (Tail_Tuple y), GT -> GT})
+        Match y {Empty_Tree -> GT, Construct_Tree c d e -> Compare (Pair z (Pair a b)) (Pair c (Pair d e))}})
 Instance Ring{Logical}(Add = Not_equal, Convert x = Equal (Mod' x 2) 1, Multiply = Min, Negate = Id)
 Instance Ring{Pair T U}<Ring T, Ring U>(
   Add x y = Pair (Add (First x) (First y)) (Add (Second x) (Second y)),
   Convert x = Pair (Convert x) (Convert x),
   Multiply x y = Pair (Multiply (First x) (First y)) (Multiply (Second x) (Second y)),
   Negate x = Pair (Negate (First x)) (Negate (Second x)))
-Instance Ring{Tuple L}<Ring_Tuple L>(
-  Add = Add_Tuple,
-  Convert = Convert_Tuple,
-  Multiply = Multiply_Tuple,
-  Negate = Negate_Tuple)
-Instance Ring_Tuple{!Empty_List[Star]}(
-  Add_Tuple _ = Id,
-  Convert_Tuple _ = Empty_Tuple,
-  Multiply_Tuple _ = Id,
-  Negate_Tuple = Id)
-Instance Ring_Tuple{!Construct_List[Star] T L}<Ring T, Ring_Tuple L>(
-  Add_Tuple x y = Construct_Tuple (Add (Head_Tuple x) (Head_Tuple y)) (Add (Tail_Tuple x) (Tail_Tuple y)),
-  Convert_Tuple x = Construct_Tuple (Convert x) (Convert x),
-  Multiply_Tuple x y = Construct_Tuple (Multiply (Head_Tuple x) (Head_Tuple y)) (Multiply (Tail_Tuple x) (Tail_Tuple y)),
-  Negate_Tuple x = Construct_Tuple (Negate (Head_Tuple x)) (Negate (Tail_Tuple x)))
 Instance Writeable{Char}(
   Brackets = Write,
   Write c =

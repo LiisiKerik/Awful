@@ -1,0 +1,92 @@
+Load Standard.awf
+Branching Tuple[!List Star](
+  !Empty_List -> Empty_Tuple,
+  !Construct_List T L -> Construct_Tuple(Head_Tuple : T, Tail_Tuple : Tuple L))
+Class Field_Tuple{L : !List Star}<Ring_Tuple>(Inverse_Tuple : Function (Tuple L) (Maybe (Tuple L)))
+Class Finite_Tuple{L : !List Star}<Ord_Tuple>(All_Tuple : List (Tuple L))
+Class Ord_Tuple{L : !List Star}(Compare_Tuple : Function (Tuple L) (Function (Tuple L) Comparison))
+Class Ring_Tuple{L : !List Star}(
+  Add_Tuple : Function (Tuple L) (Function (Tuple L) (Tuple L)),
+  Convert_Tuple : Function Int (Tuple L),
+  Multiply_Tuple : Function (Tuple L) (Function (Tuple L) (Tuple L)),
+  Negate_Tuple : Function (Tuple L) (Tuple L))
+Class Writeable_Tuple{L : !List Star}(
+  Brackets_Tuple : Function (Tuple L) (List Char),
+  Write_Tuple : Function (Tuple L) (List Char))
+Instance Field{Tuple L}<Field_Tuple L>(Inverse = Inverse_Tuple)
+Instance Field_Tuple{!Empty_List[Star]}(Inverse_Tuple = Wrap)
+Instance Field_Tuple{!Construct_List[Star] T L}<Field T, Field_Tuple L>(
+  Inverse_Tuple x = Zip Construct_Tuple (Inverse (Head_Tuple x)) (Inverse (Tail_Tuple x)))
+Instance Finite{Tuple L}<Finite_Tuple L>(All = All_Tuple)
+Instance Finite_Tuple{!Empty_List[Star]}(All_Tuple = Lift Empty_Tuple)
+Instance Finite_Tuple{!Construct_List[Star] T L}<Finite T, Finite_Tuple L>(All_Tuple = Zip Construct_Tuple All All)
+Instance Ord{Tuple L}<Ord_Tuple L>(Compare = Compare_Tuple)
+Instance Ord_Tuple{!Empty_List[Star]}(Compare_Tuple _ _ = EQ)
+Instance Ord_Tuple{!Construct_List[Star] T L}<Ord T, Ord_Tuple L>(
+  Compare_Tuple x y = Compare (Pair (Head_Tuple x) (Tail_Tuple x)) (Pair (Head_Tuple y) (Tail_Tuple y)))
+Instance Ring{Tuple L}<Ring_Tuple L>(
+  Add = Add_Tuple,
+  Convert = Convert_Tuple,
+  Multiply = Multiply_Tuple,
+  Negate = Negate_Tuple)
+Instance Ring_Tuple{!Empty_List[Star]}(
+  Add_Tuple _ = Id,
+  Convert_Tuple _ = Empty_Tuple,
+  Multiply_Tuple _ = Id,
+  Negate_Tuple = Id)
+Instance Ring_Tuple{!Construct_List[Star] T L}<Ring T, Ring_Tuple L>(
+  Add_Tuple x y = Construct_Tuple (Add (Head_Tuple x) (Head_Tuple y)) (Add (Tail_Tuple x) (Tail_Tuple y)),
+  Convert_Tuple x = Construct_Tuple (Convert x) (Convert x),
+  Multiply_Tuple x y = Construct_Tuple (Multiply (Head_Tuple x) (Head_Tuple y)) (Multiply (Tail_Tuple x) (Tail_Tuple y)),
+  Negate_Tuple x = Construct_Tuple (Negate (Head_Tuple x)) (Negate (Tail_Tuple x)))
+Instance Writeable{Tuple L}<Writeable_Tuple L>(Brackets = Brackets_Tuple, Write = Write_Tuple)
+Instance Writeable_Tuple{!Empty_List[Star]}(
+  Brackets_Tuple = Write,
+  Write_Tuple _ =
+    Construct_List
+      "E"
+      (Construct_List
+        "m"
+        (Construct_List
+          "p"
+          (Construct_List
+            "t"
+            (Construct_List
+              "y"
+              (Construct_List
+                "_"
+                (Construct_List
+                  "T"
+                  (Construct_List "u" (Construct_List "p" (Construct_List "l" (Construct_List "e" Empty_List)))))))))))
+Instance Writeable_Tuple{!Construct_List[Star] T L}<Writeable T, Writeable_Tuple L>(
+  Brackets_Tuple = Brackets',
+  Write_Tuple x =
+    Cat
+      (Construct_List
+        "C"
+        (Construct_List
+          "o"
+          (Construct_List
+            "n"
+            (Construct_List
+              "s"
+              (Construct_List
+                "t"
+                (Construct_List
+                  "r"
+                  (Construct_List
+                    "u"
+                    (Construct_List
+                      "c"
+                      (Construct_List
+                        "t"
+                        (Construct_List
+                          "_"
+                          (Construct_List
+                            "T"
+                            (Construct_List
+                              "u"
+                              (Construct_List
+                                "p"
+                                (Construct_List "l" (Construct_List "e" (Construct_List " " Empty_List))))))))))))))))
+          (Cat (Brackets (Head_Tuple x)) (Cat (Lift " ") (Brackets (Tail_Tuple x)))))

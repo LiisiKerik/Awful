@@ -1,7 +1,10 @@
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+Load Algebra.awf
 Load Standard.awf
 Branching Tuple[!List Star](
   !Empty_List -> Empty_Tuple,
   !Construct_List T L -> Construct_Tuple(Head_Tuple : T, Tail_Tuple : Tuple L))
+Class Commutative_Tuple{L : !List Star}<Ring_Tuple>
 Class Field_Tuple{L : !List Star}<Ring_Tuple>(Inverse_Tuple : Function (Tuple L) (Maybe (Tuple L)))
 Class Finite_Tuple{L : !List Star}<Ord_Tuple>(All_Tuple : List (Tuple L))
 Class Ord_Tuple{L : !List Star}(Compare_Tuple : Function (Tuple L) (Function (Tuple L) Comparison))
@@ -13,6 +16,9 @@ Class Ring_Tuple{L : !List Star}(
 Class Writeable_Tuple{L : !List Star}(
   Brackets_Tuple : Function (Tuple L) (List Char),
   Write_Tuple : Function (Tuple L) (List Char))
+Instance Commutative{Tuple L}<Commutative_Tuple L>
+Instance Commutative_Tuple{!Empty_List[Star]}
+Instance Commutative_Tuple{!Construct_List[Star] T L}<Commutative T, Commutative_Tuple L>
 Instance Field{Tuple L}<Field_Tuple L>(Inverse = Inverse_Tuple)
 Instance Field_Tuple{!Empty_List[Star]}(Inverse_Tuple = Wrap)
 Instance Field_Tuple{!Construct_List[Star] T L}<Field T, Field_Tuple L>(
@@ -90,3 +96,4 @@ Instance Writeable_Tuple{!Construct_List[Star] T L}<Writeable T, Writeable_Tuple
                                 "p"
                                 (Construct_List "l" (Construct_List "e" (Construct_List " " Empty_List))))))))))))))))
           (Cat (Brackets (Head_Tuple x)) (Cat (Lift " ") (Brackets (Tail_Tuple x)))))
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

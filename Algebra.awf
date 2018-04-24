@@ -18,7 +18,6 @@ Branching Triangle[!Nat][T : Star](
   !Next N -> Construct_Triangle(Fst_Triangle : T, Top_row_Triangle : Array N T, Triangle' : Triangle N T))
 Struct Trivial
 Class Commutative{T : Star}<Ring>
-Class Commutative_Tuple{L : !List Star}<Ring_Tuple>
 Class Finite_Array{N : !Nat}<Ord_Array>(All_Array[T : Star]<Finite T> : List (Array N T))
 Class Foldable{F : Arrow Star Star}(
   Fold_right[T : Star, U : Star] : Function (Function T (Function U U)) (Function U (Function (F T) U)))
@@ -31,6 +30,9 @@ Class Mat{F : Arrow !Nat (Arrow Star Star)}(
   Matrix_by_vector[N : !Nat, T : Star]<Ring T> : Function (F N T) (Function (Array N T) (Array N T)),
   Vector_by_matrix[N : !Nat, T : Star]<Ring T> : Function (Array N T) (Function (F N T) (Array N T)))
 Class Ord_Array{N : !Nat}(Compare_Array[T : Star]<Ord T> : Function (Array N T) (Function (Array N T) Comparison))
+Class Writeable_Array{N : !Nat}(
+  Brackets_Array[T : Star]<Writeable T> : Function (Array N T) (List Char),
+  Write_Array[T : Star]<Writeable T> : Function (Array N T) (List Char))
 Instance Applicative{Complex}(Apply x y = Complex (Real x (Real y)) (Imaginary x (Imaginary y)), Lift x = Complex x x)
 Instance Applicative{Quaternion}(
   Apply x y = Quaternion (Qr x (Qr y)) (Qx x (Qx y)) (Qy x (Qy y)) (Qz x (Qz y)),
@@ -40,9 +42,6 @@ Instance Commutative{Int}
 Instance Commutative{Logical}
 Instance Commutative{Pair T U}<Commutative T, Commutative U>
 Instance Commutative{Trivial}
-Instance Commutative{Tuple L}<Commutative_Tuple L>
-Instance Commutative_Tuple{!Empty_List[Star]}
-Instance Commutative_Tuple{!Construct_List[Star] T L}<Commutative T, Commutative_Tuple L>
 Def Div_left[T : Star]<Field T>(x : T, y : T) : Maybe T = Fmap (z -> Multiply z y) (Inverse x)
 Def Div_left'[F : Arrow Star Star, T : Star]<Functor F, Field T>(x : T, y : F T) : Maybe (F T) =
   Fmap (z -> Multiply_left z y) (Inverse x)
@@ -72,17 +71,10 @@ Def Multiply_left[T : Star, F : Arrow Star Star]<Functor F, Ring T>(x : T, y : F
 Def Multiply_right[F : Arrow Star Star, T : Star]<Functor F, Ring T>(x : F T, y : T) : F T = Fmap (z -> Multiply z y) x
 Instance Ord{Array N T}<Ord T, Ord_Array N>(Compare = Compare_Array)
 Instance Ord{Quaternion T}<Ord T>(
-  Compare x y =
-    Compare
-      (Construct_Tuple (Qr x) (Construct_Tuple (Qx x) (Construct_Tuple (Qy x) (Construct_Tuple (Qz x) Empty_Tuple))))
-      (Construct_Tuple (Qr y) (Construct_Tuple (Qx y) (Construct_Tuple (Qy y) (Construct_Tuple (Qz y) Empty_Tuple)))))
+  Compare x y = Compare (Pair (Qr x) (Pair (Qx x) (Pair (Qy x) (Qz x)))) (Pair (Qr y) (Pair (Qx y) (Pair (Qy y) (Qz y)))))
 Instance Ord{Trivial}(Compare _ _ = EQ)
 Instance Ord_Array{!Zr}(Compare_Array _ _ = EQ)
-Instance Ord_Array{!Next N}<Ord_Array N>(
-  Compare_Array x y =
-    Compare
-      (Construct_Tuple (Head x) (Construct_Tuple (Tail x) Empty_Tuple))
-      (Construct_Tuple (Head y) (Construct_Tuple (Tail y) Empty_Tuple)))
+Instance Ord_Array{!Next N}<Ord_Array N>(Compare_Array x y = Compare (Pair (Head x) (Tail x)) (Pair (Head y) (Tail y)))
 Def Pow[T : Star]<Field T>(x : T, i : Int) : Maybe T =
   Match Less i 0 {False -> Wrap (Pow' x i), True -> Inverse (Pow' x (Negate i))}
 Def Pow'[T : Star]<Ring T>(x : T, i : Int) : T =
@@ -127,4 +119,55 @@ Instance Writeable{Trivial}(
         "r"
         (Construct_List "i" (Construct_List "v" (Construct_List "i" (Construct_List "a" (Construct_List "l" Empty_List)))))))
 Def Zero[T : Star]<Ring T> : T = Convert 0
+Instance Writeable{Array N T}<Writeable T, Writeable_Array N>(Brackets = Brackets_Array, Write = Write_Array)
+Instance Writeable_Array{!Zr}(
+  Brackets_Array = Write,
+  Write_Array _ =
+    Construct_List
+      "E"
+      (Construct_List
+        "m"
+        (Construct_List
+          "p"
+          (Construct_List
+            "t"
+            (Construct_List
+              "y"
+              (Construct_List
+                "_"
+                (Construct_List
+                  "A"
+                  (Construct_List "r" (Construct_List "r" (Construct_List "a" (Construct_List "y" Empty_List)))))))))))
+Instance Writeable_Array{!Next N}<Writeable_Array N>(
+  Brackets_Array = Brackets',
+  Write_Array x =
+    Cat
+      (Construct_List
+        "C"
+        (Construct_List
+          "o"
+          (Construct_List
+            "n"
+            (Construct_List
+              "s"
+              (Construct_List
+                "t"
+                (Construct_List
+                  "r"
+                  (Construct_List
+                    "u"
+                    (Construct_List
+                      "c"
+                      (Construct_List
+                        "t"
+                        (Construct_List
+                          "_"
+                          (Construct_List
+                            "A"
+                            (Construct_List
+                              "r"
+                              (Construct_List
+                                "r"
+                                (Construct_List "a" (Construct_List "y" (Construct_List " " Empty_List))))))))))))))))
+          (Cat (Brackets (Head x)) (Cat (Lift " ") (Brackets (Tail x)))))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

@@ -1,0 +1,18 @@
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+Load Standard.awf
+Load Testing.awf
+Load Tuple.awf
+Def Inverse_Tuple_Empty_List_test :
+  List (Pair (Pair (Tuple !Empty_List[Star]) (Maybe (Tuple !Empty_List[Star]))) (Maybe (Tuple !Empty_List[Star]))) =
+    Test_1 Inverse (Construct_List (Pair Empty_Tuple (Wrap Empty_Tuple)) Empty_List)
+Def Inverse_Tuple_Construct_List_test :
+  List
+    (Pair
+      (Pair
+        (Tuple (!Construct_List[Star] Int !Empty_List[Star]))
+        (Maybe (Tuple (!Construct_List[Star] Int !Empty_List[Star]))))
+      (Maybe (Tuple (!Construct_List[Star] Int !Empty_List[Star])))) =
+        Test_1
+          Inverse
+          (Construct_List (Pair (Construct_Tuple 1 Empty_Tuple) (Wrap (Construct_Tuple 1 Empty_Tuple))) Empty_List)
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

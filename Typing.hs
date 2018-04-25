@@ -49,9 +49,7 @@ case reduction warning (case x of c1 -> f y, c2 -> g y on sama mis (case x of c1
 mis juhtub kui esimeses moodulis on kusagil tüübimuutuja T ja järgmises moodulis sama nimega globaalne tüüp?
 mis juhtub sellisel juhul: Class Foo{T : Star}(foo<Ring T> : T = Zero)
 liigirakendamise eemaldamine liigituletuse kasuks (igal pool? teatud piiratud juhtudel?)
-käskida kasutajal klasse kirjutada päriluse järjekorras? (väldiks ring-päriluse probleemi, võimaldaks klassid teha 1 passis)
 kas tüübirakendamist on kusagil vaja?
-Funktsioon mis leiab enniku pikkuse valesti (rekursioon kutsutakse välja sama pika või 1 võrra pikema peal) - mis juhtub?
 võimaldada suvalise arvu konstruktoritega algebralisi andmetüüpe. (LISAKS struktide allesjätmisele?)
 panna keel kuidagi aru saama, et mitte-null-konstandiga jagades ei saa tulemuseks olla Nothing
 -}

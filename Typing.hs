@@ -902,25 +902,46 @@ module Typing where
     Map' Kind ->
     Map' Polykind ->
     Class_2 ->
-    (Map' (Map' Location'), Map' ([String], Map' [(String, Nat)]), Map' (Kind_1, Status), Map' (Class_5, Status)) ->
-    Err (Class_3, (Map' (Map' Location'), Map' ([String], Map' [(String, Nat)]), Map' (Kind_1, Status), Map' (Class_5, Status)))
-  type_class_0 a i j (Class_2 b (c, d) g' e) (m, w0, i', j0) =
+    (
+      Map' (Map' Location'),
+      Map' ([String], Map' [(String, Nat)]),
+      Map' (Kind_1, Status),
+      Map' (Class_5, Status),
+      Map' String) ->
+    Err
+      (
+        Class_3,
+        (
+          Map' (Map' Location'),
+          Map' ([String], Map' [(String, Nat)]),
+          Map' (Kind_1, Status),
+          Map' (Class_5, Status),
+          Map' String))
+  type_class_0 a i j (Class_2 b (c, d) g' e) (m, w0, i', j0, x2) =
     (
       type_kind_7 a i Star_kind d >>=
       \h ->
-        (
-          (\g ->
-            let
-              g2 = (\(Method_3 w1 _ _ _) -> w1) <$> g
-            in
-              (
-                Class_3 b (c, h) g' g,
-                (
-                  Data.Map.insert b Data.Map.empty m,
-                  Data.Map.insert b (g2, Data.Map.empty) w0,
-                  ins_new b h i',
-                  ins_new b (Class_5 h ((\(Name _ t4) -> t4) <$> g') g2) j0))) <$>
-          type_methods_0 a e (Data.Map.insert c (pkind h) j) i))
+        let
+          g3 = (\(Name _ t4) -> t4) <$> g'
+        in
+          (
+            type_inh b [b] g3 x2 *>
+            (
+              (\g ->
+                let
+                  g2 = (\(Method_3 w1 _ _ _) -> w1) <$> g
+                in
+                  (
+                    Class_3 b (c, h) g' g,
+                    (
+                      Data.Map.insert b Data.Map.empty m,
+                      Data.Map.insert b (g2, Data.Map.empty) w0,
+                      ins_new b h i',
+                      ins_new b (Class_5 h g3 g2) j0,
+                      case g' of
+                        Just (Name _ t0) -> Data.Map.insert b t0 x2
+                        Nothing -> x2))) <$>
+              type_methods_0 a e (Data.Map.insert c (pkind h) j) i)))
   type_class_1 ::
     String ->
     Class_3 ->
@@ -1003,18 +1024,28 @@ module Typing where
         Map' (Class_5, Status))
   type_classes a b c d (e, f, g, i, o, o') =
     (
-      type_classes_0 (Location_1 a) b c d (f, i, o, o') >>=
-      \(r, (j, m, p, p')) -> (\(k, n) -> (n, j, k, m, p, p')) <$> type_classes_1 a r (fst <$> p) (fst <$> p') (g, e))
+      type_classes_0 (Location_1 a) b c d (f, i, o, o', Data.Map.empty) >>=
+      \(r, (j, m, p, p', _)) -> (\(k, n) -> (n, j, k, m, p, p')) <$> type_classes_1 a r (fst <$> p) (fst <$> p') (g, e))
   type_classes_0 ::
     (Location_0 -> Location_1) ->
     Map' Kind ->
     Map' Polykind ->
     [Class_2] ->
-    (Map' (Map' Location'), Map' ([String], Map' [(String, Nat)]), Map' (Kind_1, Status), Map' (Class_5, Status)) ->
+    (
+      Map' (Map' Location'),
+      Map' ([String], Map' [(String, Nat)]),
+      Map' (Kind_1, Status),
+      Map' (Class_5, Status),
+      Map' String) ->
     Err
       (
         [Class_3],
-        (Map' (Map' Location'), Map' ([String], Map' [(String, Nat)]), Map' (Kind_1, Status), Map' (Class_5, Status)))
+        (
+          Map' (Map' Location'),
+          Map' ([String], Map' [(String, Nat)]),
+          Map' (Kind_1, Status),
+          Map' (Class_5, Status),
+          Map' String))
   type_classes_0 a f g b c = case b of
     [] -> Right ([], c)
     d : e -> type_class_0 a f g d c >>= \(h, i) -> first ((:) h) <$> type_classes_0 a f g e i
@@ -1677,6 +1708,14 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
   type_forms f a b g = case a of
     [] -> Right []
     c : d -> type_form f c b g >>= \e -> (:) e <$> type_forms f d b g
+  type_inh :: String -> [String] -> Maybe String -> Map' String -> Either String ()
+  type_inh a b c d =
+    case c of
+      Just e ->
+        if e == a
+          then Left ("Circular dependency between files [" ++ intercalate ", " b ++ "].")
+          else type_inh a (e : b) (Data.Map.lookup e d) d
+      Nothing -> Right ()
   type_kind :: (String, Kind_1) -> Map' Polykind -> Map' Polykind
   type_kind (a, b) = Data.Map.insert a (pkind b)
   type_kind_4 ::

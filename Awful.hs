@@ -28,7 +28,7 @@ check b m' @ (f, _, _, _, _, _) j name_qc =
     Just a -> return (Right (m', a))
     Nothing ->
       case check' name_qc b of
-        Just a -> return (Left ("Circular dependency between files " ++ intercalate ", " a ++ "."))
+        Just a -> return (Left ("Circular dependency between files [" ++ intercalate ", " a ++ "]."))
         Nothing -> do
           find_file <- findFile [""] name_qc
           case find_file of

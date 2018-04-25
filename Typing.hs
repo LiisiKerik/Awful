@@ -47,10 +47,7 @@ remove promotion of primitives? it seems that without GADT-s they are pointless?
 prettyprint evaluation results
 case reduction warning (case x of c1 -> f y, c2 -> g y on sama mis (case x of c1 -> f, c2 -> g) y)
 mis juhtub kui esimeses moodulis on kusagil tüübimuutuja T ja järgmises moodulis sama nimega globaalne tüüp?
-mis juhtub kui meil on 2 klassi millel on vastastikune pärilussuhe? ega tüübikontroll tsüklisse ei jookse?
-mis juhtub kui on klassid A, B<A> ja C<A> ja siis mingi funktsioon saab kitsendusteks B ja C
 mis juhtub sellisel juhul: Class Foo{T : Star}(foo<Ring T> : T = Zero)
-mis juhtub kui on selline pärilussuhe, et A eeldab A-d????
 liigirakendamise eemaldamine liigituletuse kasuks (igal pool? teatud piiratud juhtudel?)
 käskida kasutajal klasse kirjutada päriluse järjekorras? (väldiks ring-päriluse probleemi, võimaldaks klassid teha 1 passis)
 kas tüübirakendamist on kusagil vaja?

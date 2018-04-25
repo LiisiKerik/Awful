@@ -1,9 +1,6 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 Load Standard.awf
 Branching Array[!Nat][T : Star](!Zr -> Empty_Array, !Next N -> Construct_Array(Head : T, Tail : Array N T))
-Branching Array'[!List !Nat][T : Star](
-  !Empty_List -> Empty_Array',
-  !Construct_List N L -> Construct_Array' (Arrays : Array N (Array' L T)))
 Struct Complex[T : Star](Real : T, Imaginary : T)
 Struct Diagonal[N : !Nat, T : Star](Diagonal' : Array N T)
 Struct Fraction(Num : Int, Den : Int)
@@ -120,6 +117,20 @@ Instance Writeable{Trivial}(
         (Construct_List "i" (Construct_List "v" (Construct_List "i" (Construct_List "a" (Construct_List "l" Empty_List)))))))
 Def Zero[T : Star]<Ring T> : T = Convert 0
 Instance Writeable{Array N T}<Writeable T, Writeable_Array N>(Brackets = Brackets_Array, Write = Write_Array)
+Instance Writeable{Complex T}<Writeable T>(
+  Brackets = Brackets',
+  Write x =
+    Cat
+      (Construct_List
+        "C"
+        (Construct_List
+          "o"
+          (Construct_List
+            "m"
+            (Construct_List
+              "p"
+              (Construct_List "l" (Construct_List "e" (Construct_List "x" (Construct_List " " Empty_List))))))))
+      (Cat (Brackets (Real x)) (Cat (Lift " ") (Brackets (Imaginary x)))))
 Instance Writeable_Array{!Zr}(
   Brackets_Array = Write,
   Write_Array _ =

@@ -57,6 +57,10 @@ Def Cat_Maybe_test : List (Pair (Pair (Pair (Maybe Int) (Maybe Int)) (Maybe Int)
           (Construct_List (Pair (Pair (Wrap 0) (Wrap 1)) (Wrap 0)) Empty_List))))
 Def Empty_List_test : Maybe (Pair (List Int) (List Int)) = Test_0 Empty Empty_List
 Def Empty_Maybe_test : Maybe (Pair (Maybe Int) (Maybe Int)) = Test_0 Empty Nothing
+Def Inverse_Logical_test : List (Pair (Pair Logical (Maybe Logical)) (Maybe Logical)) =
+  Test_1
+    Inverse
+    (Construct_List (Pair False Nothing) (Construct_List (Pair True (Wrap True)) Empty_List))
 Def Write_Char_test : List (Pair (Pair Char (List Char)) (List Char)) =
   Test_1
     Write

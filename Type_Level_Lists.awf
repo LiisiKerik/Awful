@@ -1,6 +1,9 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 Load Algebra.awf
 Load Standard.awf
+Branching Array'[!List !Nat][T : Star](
+  !Empty_List -> Empty_Array',
+  !Construct_List N L -> Construct_Array' (Arrays : Array N (Array' L T)))
 Branching Tuple[!List Star](
   !Empty_List -> Empty_Tuple,
   !Construct_List T L -> Construct_Tuple(Head_Tuple : T, Tail_Tuple : Tuple L))

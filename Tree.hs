@@ -62,8 +62,8 @@ module Tree where
   (<&>) :: (Location_0 -> t -> u) -> Parser t -> Parser u
   f <&> p = f <$> parse_location <*> p
   instance Alternative Parser where
-    Parser a <|> Parser b = Parser (\c -> left_bind (b <$> update_location c) (a c))
-    empty = Parser (return (Left init_location))
+    Parser a <|> Parser b = Parser (\c -> left_bind (\d -> b (update_location c d)) (a c))
+    empty = Parser (\(State _ l) -> Left l)
   instance Applicative Parser where
     Parser a <*> Parser b = Parser (a >=> \(c, d) -> first c <$> b d)
     pure = lift_parser
@@ -86,6 +86,14 @@ module Tree where
     Right c -> Right c
   lift_parser :: t -> Parser t
   lift_parser x = Parser (\y -> Right (x, y))
+  mk_list :: Location_0 -> [Expression_0] -> Expression_branch_0
+  mk_list l =
+    Prelude.foldr
+      (\x -> \y ->
+        Application_expression_0
+          (Expression_0 l (Application_expression_0 (Expression_0 l (Name_expression_0 "Construct_List")) x))
+          (Expression_0 l y))
+      (Name_expression_0 "Empty_List")
   parse :: Parser t -> (Location_0 -> Location_1) -> String -> Err t
   parse a b c =
     let
@@ -197,7 +205,7 @@ module Tree where
   parse_comma :: Parser ()
   parse_comma = parse_token Comma_token
   parse_composite_expression :: Parser Expression_branch_0
-  parse_composite_expression = parse_application_expression <|> parse_function <|> parse_match_expression
+  parse_composite_expression = parse_list_expr <|> parse_application_expression <|> parse_function <|> parse_match_expression
   parse_constraint :: Parser Constraint_0
   parse_constraint = Constraint_0 <$> parse_name' <*> parse_name'
   parse_constraints :: Parser [Constraint_0]
@@ -205,7 +213,7 @@ module Tree where
   parse_data :: Parser Data_0
   parse_data = parse_algebraic <|> parse_brnchs <|> parse_struct
   parse_data' :: (t -> Data_branch_0) -> Token_0 -> Parser t -> Parser Data_0
-  parse_data' f a b = (\x -> \y -> \z -> Data_0 x (Plain_data_0 y (f z))) <$> parse_name'' a <*> parse_kinds <*> b--Data_0 <$> parse_name'' a <*> parse_kinds <*> (f <$> b)
+  parse_data' f a b = (\x -> \y -> \z -> Data_0 x (Plain_data_0 y (f z))) <$> parse_name'' a <*> parse_kinds <*> b
   parse_def :: Parser Def_0
   parse_def = parse_basic <|> parse_instance
   parse_default :: Parser Expression_0
@@ -220,7 +228,12 @@ module Tree where
         Just i -> Right (i, (State (Tokens g c) h))
         Nothing -> Left h)
   parse_elementary_expression :: Parser Expression_branch_0
-  parse_elementary_expression = parse_char_expression <|> parse_int_expression <|> parse_name_expression
+  parse_elementary_expression =
+    (
+      parse_char_expression <|>
+      parse_int_expression <|>
+      Name_expression_0 "Empty_List" <$ parse_name_4 "List" <|>
+      parse_name_expression)
   parse_eq :: Parser ()
   parse_eq = parse_operator "="
   parse_error :: (Location_0 -> Location_1) -> Location_0 -> Err t
@@ -271,6 +284,8 @@ module Tree where
     case i of
       1 -> (:) <$> p <*> many (parse_comma *> p)
       _ -> (:) <$> p <* parse_comma <*> parse_list (i - 1) p
+  parse_list_expr :: Parser Expression_branch_0
+  parse_list_expr = mk_list <& parse_name_4 "List" <*> parse_round (parse_list 1 parse_expression')
   parse_load :: Parser Name
   parse_load = parse_name_3 Load_token ((flip (++) ".awf" <$> parse_name) <* parse_operator "." <* parse_name_4 "awf")
   parse_location :: Parser Location_0

@@ -4,169 +4,99 @@ Load Testing.awf
 Def Add_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
   Test_2
     Add
-    (Construct_List
-      (Pair (Pair -1 -1) -2)
-      (Construct_List
-        (Pair (Pair -1 0) -1)
-        (Construct_List
-          (Pair (Pair -1 1) 0)
-          (Construct_List
-            (Pair (Pair 0 -1) -1)
-            (Construct_List
-              (Pair (Pair 0 0) 0)
-              (Construct_List
-                (Pair (Pair 0 1) 1)
-                (Construct_List
-                  (Pair (Pair 1 -1) 0)
-                  (Construct_List (Pair (Pair 1 0) 1) (Construct_List (Pair (Pair 1 1) 2) Empty_List)))))))))
+    (List (
+      Pair (Pair -1 -1) -2,
+      Pair (Pair -1 0) -1,
+      Pair (Pair -1 1) 0,
+      Pair (Pair 0 -1) -1,
+      Pair (Pair 0 0) 0,
+      Pair (Pair 0 1) 1,
+      Pair (Pair 1 -1) 0,
+      Pair (Pair 1 0) 1,
+      Pair (Pair 1 1) 2))
 Def Brackets_Int_test : List (Pair (Pair Int (List Char)) (List Char)) =
-  Test_1
-    Brackets
-    (Construct_List
-      (Pair -1 (Construct_List "-" (Construct_List "1" Empty_List)))
-      (Construct_List
-        (Pair 0 (Construct_List "0" Empty_List))
-        (Construct_List (Pair 1 (Construct_List "1" Empty_List)) Empty_List)))
+  Test_1 Brackets (List (Pair -1 (List ("-", "1")), Pair 0 (Lift "0")))
 Def Compare_Char_test : List (Pair (Pair (Pair Char Char) Comparison) Comparison) =
-  Test_2
-    Compare
-    (Construct_List
-      (Pair (Pair "!" "!") EQ)
-      (Construct_List
-        (Pair (Pair "!" "#") LT)
-        (Construct_List (Pair (Pair "#" "!") GT) (Construct_List (Pair (Pair "#" "#") EQ) Empty_List))))
+  Test_2 Compare (List (Pair (Pair "!" "!") EQ, Pair (Pair "!" "#") LT, Pair (Pair "#" "!") GT, Pair (Pair "#" "#") EQ))
 Def Compare_Int_test : List (Pair (Pair (Pair Int Int) Comparison) Comparison) =
   Test_2
     Compare
-    (Construct_List
-      (Pair (Pair -1 -1) EQ)
-      (Construct_List
-        (Pair (Pair -1 0) LT)
-        (Construct_List
-          (Pair (Pair -1 1) LT)
-          (Construct_List
-            (Pair (Pair 0 -1) GT)
-            (Construct_List
-              (Pair (Pair 0 0) EQ)
-              (Construct_List
-                (Pair (Pair 0 1) LT)
-                (Construct_List
-                  (Pair (Pair 1 -1) GT)
-                  (Construct_List (Pair (Pair 1 0) GT) (Construct_List (Pair (Pair 1 1) EQ) Empty_List)))))))))
-Def Convert_Int_test : List (Pair (Pair Int Int) Int) = Test_1 Convert (Construct_List (Pair 0 0) Empty_List)
+    (List (
+      Pair (Pair -1 -1) EQ,
+      Pair (Pair -1 0) LT,
+      Pair (Pair -1 1) LT,
+      Pair (Pair 0 -1) GT,
+      Pair (Pair 0 0) EQ,
+      Pair (Pair 0 1) LT,
+      Pair (Pair 1 -1) GT,
+      Pair (Pair 1 0) GT,
+      Pair (Pair 1 1) EQ))
+Def Convert_Int_test : List (Pair (Pair Int Int) Int) = Test_1 Convert (Lift (Pair 0 0))
 Def Div_test : List (Pair (Pair (Pair Int Int) (Maybe Int)) (Maybe Int)) =
   Test_2
     Div
-    (Construct_List
-      (Pair (Pair -2 -2) (Wrap 1))
-      (Construct_List
-        (Pair (Pair -2 -1) (Wrap 2))
-        (Construct_List
-          (Pair (Pair -2 1) (Wrap -2))
-          (Construct_List
-            (Pair (Pair -2 2) (Wrap -1))
-            (Construct_List
-              (Pair (Pair -1 -2) (Wrap 0))
-              (Construct_List
-                (Pair (Pair -1 -1) (Wrap 1))
-                (Construct_List
-                  (Pair (Pair -1 1) (Wrap -1))
-                  (Construct_List
-                    (Pair (Pair -1 2) (Wrap -1))
-                    (Construct_List
-                      (Pair (Pair 0 -2) (Wrap 0))
-                      (Construct_List
-                        (Pair (Pair 0 -1) (Wrap 0))
-                        (Construct_List
-                          (Pair (Pair 0 0) Nothing)
-                          (Construct_List
-                            (Pair (Pair 0 1) (Wrap 0))
-                            (Construct_List
-                              (Pair (Pair 0 2) (Wrap 0))
-                              (Construct_List
-                                (Pair (Pair 1 -2) (Wrap -1))
-                                (Construct_List
-                                  (Pair (Pair 1 -1) (Wrap -1))
-                                  (Construct_List
-                                    (Pair (Pair 1 1) (Wrap 1))
-                                    (Construct_List
-                                      (Pair (Pair 1 2) (Wrap 0))
-                                      (Construct_List
-                                        (Pair (Pair 2 -2) (Wrap -1))
-                                        (Construct_List
-                                          (Pair (Pair 2 -1) (Wrap -2))
-                                          (Construct_List
-                                            (Pair (Pair 2 1) (Wrap 2))
-                                            (Construct_List (Pair (Pair 2 2) (Wrap 1)) Empty_List)))))))))))))))))))))
-Def Id_test : List (Pair (Pair Int Int) Int) = Test_1 Convert (Construct_List (Pair 0 0) Empty_List)
+    (List (
+      Pair (Pair -2 -2) (Wrap 1),
+      Pair (Pair -2 -1) (Wrap 2),
+      Pair (Pair -2 1) (Wrap -2),
+      Pair (Pair -2 2) (Wrap -1),
+      Pair (Pair -1 -2) (Wrap 0),
+      Pair (Pair -1 -1) (Wrap 1),
+      Pair (Pair -1 1) (Wrap -1),
+      Pair (Pair -1 2) (Wrap -1),
+      Pair (Pair 0 -2) (Wrap 0),
+      Pair (Pair 0 -1) (Wrap 0),
+      Pair (Pair 0 0) Nothing,
+      Pair (Pair 0 1) (Wrap 0),
+      Pair (Pair 0 2) (Wrap 0),
+      Pair (Pair 1 -2) (Wrap -1),
+      Pair (Pair 1 -1) (Wrap -1),
+      Pair (Pair 1 1) (Wrap 1),
+      Pair (Pair 1 2) (Wrap 0),
+      Pair (Pair 2 -2) (Wrap -1),
+      Pair (Pair 2 -1) (Wrap -2),
+      Pair (Pair 2 1) (Wrap 2),
+      Pair (Pair 2 2) (Wrap 1)))
+Def Id_test : List (Pair (Pair Int Int) Int) = Test_1 Id (Lift (Pair 0 0))
 Def Mod_test : List (Pair (Pair (Pair Int Int) (Maybe Int)) (Maybe Int)) =
   Test_2
     Mod
-    (Construct_List
-      (Pair (Pair -2 -2) (Wrap 0))
-      (Construct_List
-        (Pair (Pair -2 -1) (Wrap 0))
-        (Construct_List
-          (Pair (Pair -2 1) (Wrap 0))
-          (Construct_List
-            (Pair (Pair -2 2) (Wrap 0))
-            (Construct_List
-              (Pair (Pair -1 -2) (Wrap -1))
-              (Construct_List
-                (Pair (Pair -1 -1) (Wrap 0))
-                (Construct_List
-                  (Pair (Pair -1 1) (Wrap 0))
-                  (Construct_List
-                    (Pair (Pair -1 2) (Wrap 1))
-                    (Construct_List
-                      (Pair (Pair 0 -2) (Wrap 0))
-                      (Construct_List
-                        (Pair (Pair 0 -1) (Wrap 0))
-                        (Construct_List
-                          (Pair (Pair 0 0) Nothing)
-                          (Construct_List
-                            (Pair (Pair 0 1) (Wrap 0))
-                            (Construct_List
-                              (Pair (Pair 0 2) (Wrap 0))
-                              (Construct_List
-                                (Pair (Pair 1 -2) (Wrap -1))
-                                (Construct_List
-                                  (Pair (Pair 1 -1) (Wrap 0))
-                                  (Construct_List
-                                    (Pair (Pair 1 1) (Wrap 0))
-                                    (Construct_List
-                                      (Pair (Pair 1 2) (Wrap 1))
-                                      (Construct_List
-                                        (Pair (Pair 2 -2) (Wrap 0))
-                                        (Construct_List
-                                          (Pair (Pair 2 -1) (Wrap 0))
-                                          (Construct_List
-                                            (Pair (Pair 2 1) (Wrap 0))
-                                            (Construct_List (Pair (Pair 2 2) (Wrap 0)) Empty_List)))))))))))))))))))))
+    (List (
+      Pair (Pair -2 -2) (Wrap 0),
+      Pair (Pair -2 -1) (Wrap 0),
+      Pair (Pair -2 1) (Wrap 0),
+      Pair (Pair -2 2) (Wrap 0),
+      Pair (Pair -1 -2) (Wrap -1),
+      Pair (Pair -1 -1) (Wrap 0),
+      Pair (Pair -1 1) (Wrap 0),
+      Pair (Pair -1 2) (Wrap 1),
+      Pair (Pair 0 -2) (Wrap 0),
+      Pair (Pair 0 -1) (Wrap 0),
+      Pair (Pair 0 0) Nothing,
+      Pair (Pair 0 1) (Wrap 0),
+      Pair (Pair 0 2) (Wrap 0),
+      Pair (Pair 1 -2) (Wrap -1),
+      Pair (Pair 1 -1) (Wrap 0),
+      Pair (Pair 1 1) (Wrap 0),
+      Pair (Pair 1 2) (Wrap 1),
+      Pair (Pair 2 -2) (Wrap 0),
+      Pair (Pair 2 -1) (Wrap 0),
+      Pair (Pair 2 1) (Wrap 0),
+      Pair (Pair 2 2) (Wrap 0)))
 Def Multiply_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
   Test_2
     Multiply
-    (Construct_List
-      (Pair (Pair -1 -1) 1)
-      (Construct_List
-        (Pair (Pair -1 0) 0)
-        (Construct_List
-          (Pair (Pair -1 1) -1)
-          (Construct_List
-            (Pair (Pair 0 -1) 0)
-            (Construct_List
-              (Pair (Pair 0 0) 0)
-              (Construct_List
-                (Pair (Pair 0 1) 0)
-                (Construct_List
-                  (Pair (Pair 1 -1) -1)
-                  (Construct_List (Pair (Pair 1 0) 0) (Construct_List (Pair (Pair 1 1) 1) Empty_List)))))))))
-Def Negate_Int_test : List (Pair (Pair Int Int) Int) =
-  Test_1 Negate (Construct_List (Pair -1 1) (Construct_List (Pair 0 0) (Construct_List (Pair 1 -1) Empty_List)))
+    (List (
+      Pair (Pair -1 -1) 1,
+      Pair (Pair -1 0) 0,
+      Pair (Pair -1 1) -1,
+      Pair (Pair 0 -1) 0,
+      Pair (Pair 0 0) 0,
+      Pair (Pair 0 1) 0,
+      Pair (Pair 1 -1) -1,
+      Pair (Pair 1 0) 0,
+      Pair (Pair 1 1) 1))
+Def Negate_Int_test : List (Pair (Pair Int Int) Int) = Test_1 Negate (List (Pair -1 1, Pair 0 0, Pair 1 -1))
 Def Write_Int_test : List (Pair (Pair Int (List Char)) (List Char)) =
-  Test_1
-    Write
-    (Construct_List
-      (Pair -1 (Construct_List "-" (Construct_List "1" Empty_List)))
-      (Construct_List (Pair 0 (Construct_List "0" Empty_List)) Empty_List))
+  Test_1 Write (List (Pair -1 (List ("-", "1")), Pair 0 (Lift "0")))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

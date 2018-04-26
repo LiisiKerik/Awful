@@ -51,52 +51,11 @@ Instance Ring_Tuple{!Construct_List[Star] T L}<Ring T, Ring_Tuple L>(
 Instance Writeable{Tuple L}<Writeable_Tuple L>(Brackets = Brackets_Tuple, Write = Write_Tuple)
 Instance Writeable_Tuple{!Empty_List[Star]}(
   Brackets_Tuple = Write,
-  Write_Tuple _ =
-    Construct_List
-      "E"
-      (Construct_List
-        "m"
-        (Construct_List
-          "p"
-          (Construct_List
-            "t"
-            (Construct_List
-              "y"
-              (Construct_List
-                "_"
-                (Construct_List
-                  "T"
-                  (Construct_List "u" (Construct_List "p" (Construct_List "l" (Construct_List "e" Empty_List)))))))))))
+  Write_Tuple _ = List ("E", "m", "p", "t", "y", "_", "T", "u", "p", "l", "e"))
 Instance Writeable_Tuple{!Construct_List[Star] T L}<Writeable T, Writeable_Tuple L>(
   Brackets_Tuple = Brackets',
   Write_Tuple x =
     Cat
-      (Construct_List
-        "C"
-        (Construct_List
-          "o"
-          (Construct_List
-            "n"
-            (Construct_List
-              "s"
-              (Construct_List
-                "t"
-                (Construct_List
-                  "r"
-                  (Construct_List
-                    "u"
-                    (Construct_List
-                      "c"
-                      (Construct_List
-                        "t"
-                        (Construct_List
-                          "_"
-                          (Construct_List
-                            "T"
-                            (Construct_List
-                              "u"
-                              (Construct_List
-                                "p"
-                                (Construct_List "l" (Construct_List "e" (Construct_List " " Empty_List))))))))))))))))
-          (Cat (Brackets (Head_Tuple x)) (Cat (Lift " ") (Brackets (Tail_Tuple x)))))
+      (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "u", "p", "l", "e", " "))
+      (Cat (Brackets (Head_Tuple x)) (Cat (Lift " ") (Brackets (Tail_Tuple x)))))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

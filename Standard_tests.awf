@@ -4,83 +4,52 @@ Load Testing.awf
 Def Add'_test : List (Pair (Pair (Pair (Maybe Int) (Maybe Int)) (Maybe Int)) (Maybe Int)) =
   Test_2
     Add'
-    (Construct_List
-      (Pair (Pair Nothing Nothing) Nothing)
-      (Construct_List
-        (Pair (Pair Nothing (Wrap 0)) Nothing)
-        (Construct_List
-          (Pair (Pair (Wrap 0) Nothing) Nothing)
-          (Construct_List
-            (Pair (Pair (Wrap -1) (Wrap -1)) (Wrap -2))
-            (Construct_List
-              (Pair (Pair (Wrap -1) (Wrap 0)) (Wrap -1))
-              (Construct_List
-                (Pair (Pair (Wrap -1) (Wrap 1)) (Wrap 0))
-                (Construct_List
-                  (Pair (Pair (Wrap 0) (Wrap -1)) (Wrap -1))
-                  (Construct_List
-                    (Pair (Pair (Wrap 0) (Wrap 0)) (Wrap 0))
-                    (Construct_List
-                      (Pair (Pair (Wrap 0) (Wrap 1)) (Wrap 1))
-                      (Construct_List
-                        (Pair (Pair (Wrap 1) (Wrap -1)) (Wrap 0))
-                        (Construct_List
-                          (Pair (Pair (Wrap 1) (Wrap 0)) (Wrap 1))
-                          (Construct_List (Pair (Pair (Wrap 1) (Wrap 1)) (Wrap 2)) Empty_List))))))))))))
+    (List (
+      Pair (Pair Nothing Nothing) Nothing,
+      Pair (Pair Nothing (Wrap 0)) Nothing,
+      Pair (Pair (Wrap 0) Nothing) Nothing,
+      Pair (Pair (Wrap -1) (Wrap -1)) (Wrap -2),
+      Pair (Pair (Wrap -1) (Wrap 0)) (Wrap -1),
+      Pair (Pair (Wrap -1) (Wrap 1)) (Wrap 0),
+      Pair (Pair (Wrap 0) (Wrap -1)) (Wrap -1),
+      Pair (Pair (Wrap 0) (Wrap 0)) (Wrap 0),
+      Pair (Pair (Wrap 0) (Wrap 1)) (Wrap 1),
+      Pair (Pair (Wrap 1) (Wrap -1)) (Wrap 0),
+      Pair (Pair (Wrap 1) (Wrap 0)) (Wrap 1),
+      Pair (Pair (Wrap 1) (Wrap 1)) (Wrap 2)))
 Def Brackets_Char_test : List (Pair (Pair Char (List Char)) (List Char)) =
-  Test_1
-    Write
-    (Construct_List (Pair "!" (Construct_List """ (Construct_List "!" (Construct_List """ Empty_List)))) Empty_List)
+  Test_1 Write (Lift (Pair "!" (List (""", "!", """))))
 Def Cat_List_test : List (Pair (Pair (Pair (List Int) (List Int)) (List Int)) (List Int)) =
   Test_2
     Cat
-    (Construct_List
-      (Pair (Pair Empty_List Empty_List) Empty_List)
-      (Construct_List
-        (Pair (Pair Empty_List (Construct_List 0 Empty_List)) (Construct_List 0 Empty_List))
-        (Construct_List
-          (Pair (Pair (Construct_List 0 Empty_List) Empty_List) (Construct_List 0 Empty_List))
-          (Construct_List
-            (Pair
-              (Pair (Construct_List 0 Empty_List) (Construct_List 1 Empty_List))
-              (Construct_List 0 (Construct_List 1 Empty_List)))
-            Empty_List))))
+    (List (
+      Pair (Pair List List) List,
+      Pair (Pair List (Lift 0)) (Lift 0),
+      Pair (Pair (Lift 0) List) (Lift 0),
+      Pair (Pair (Lift 0) (Lift 1)) (List (0, 1))))
 Def Cat_Maybe_test : List (Pair (Pair (Pair (Maybe Int) (Maybe Int)) (Maybe Int)) (Maybe Int)) =
   Test_2
     Cat
-    (Construct_List
-      (Pair (Pair Nothing Nothing) Nothing)
-      (Construct_List
-        (Pair (Pair Nothing (Wrap 0)) (Wrap 0))
-        (Construct_List
-          (Pair (Pair (Wrap 0) Nothing) (Wrap 0))
-          (Construct_List (Pair (Pair (Wrap 0) (Wrap 1)) (Wrap 0)) Empty_List))))
-Def Empty_List_test : Maybe (Pair (List Int) (List Int)) = Test_0 Empty Empty_List
+    (List (
+      Pair (Pair Nothing Nothing) Nothing,
+      Pair (Pair Nothing (Wrap 0)) (Wrap 0),
+      Pair (Pair (Wrap 0) Nothing) (Wrap 0),
+      Pair (Pair (Wrap 0) (Wrap 1)) (Wrap 0)))
+Def Empty_List_test : Maybe (Pair (List Int) (List Int)) = Test_0 Empty List
 Def Empty_Maybe_test : Maybe (Pair (Maybe Int) (Maybe Int)) = Test_0 Empty Nothing
 Def Inverse_Logical_test : List (Pair (Pair Logical (Maybe Logical)) (Maybe Logical)) =
   Test_1
     Inverse
-    (Construct_List (Pair False Nothing) (Construct_List (Pair True (Wrap True)) Empty_List))
+    (Construct_List (Pair False Nothing) (Construct_List (Pair True (Wrap True)) List))
 Def Write_Char_test : List (Pair (Pair Char (List Char)) (List Char)) =
   Test_1
     Write
-    (Construct_List
-      (Pair "\n" (Construct_List """ (Construct_List "\" (Construct_List "n" (Construct_List """ Empty_List)))))
-      (Construct_List
-        (Pair "!" (Construct_List """ (Construct_List "!" (Construct_List """ Empty_List))))
-        (Construct_List
-          (Pair """ (Construct_List """ (Construct_List """ (Construct_List """ Empty_List))))
-          (Construct_List
-            (Pair "\" (Construct_List """ (Construct_List "\" (Construct_List """ Empty_List))))
-            (Construct_List
-              (Pair "n" (Construct_List """ (Construct_List "n" (Construct_List """ Empty_List))))
-              Empty_List)))))
+    (List (
+      Pair "\n" (List (""", "\", "n", """)),
+      Pair "!" (List (""", "!", """)),
+      Pair """ (List (""", """, """)),
+      Pair "\" (List (""", "\", """)),
+      Pair "n" (List (""", "n", """))))
 Def Write_Comparison_test : List (Pair (Pair Comparison (List Char)) (List Char)) =
-  Test_1
-    Write
-    (Construct_List
-      (Pair LT (Construct_List "L" (Construct_List "T" Empty_List)))
-      (Construct_List
-        (Pair EQ (Construct_List "E" (Construct_List "Q" Empty_List)))
-        (Construct_List (Pair GT (Construct_List "G" (Construct_List "T" Empty_List))) Empty_List)))
+  Test_1 Write (List (Pair LT (List ("L", "T")), Pair EQ (List ("E", "Q")), Pair GT (List ("G", "T"))))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

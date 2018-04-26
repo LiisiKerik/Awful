@@ -14,7 +14,7 @@ Branching Triangle[!Nat][T : Star](
   !Zr -> Empty_Triangle,
   !Next N -> Construct_Triangle(Fst_Triangle : T, Top_row_Triangle : Array N T, Triangle' : Triangle N T))
 Struct Trivial
-Class Commutative{T : Star}<Ring>
+Class Commutative{_ : Star}<Ring>
 Class Finite_Array{N : !Nat}<Ord_Array>(All_Array[T : Star]<Finite T> : List (Array N T))
 Class Foldable{F : Arrow Star Star}(
   Fold_right[T : Star, U : Star] : Function (Function T (Function U U)) (Function U (Function (F T) U)))
@@ -109,76 +109,20 @@ Def Sum[F : Arrow Star Star, T : Star]<Foldable F, Ring T> : Function (F T) T = 
 Def Sum_squares[F : Arrow Star Star, T : Star]<Foldable F, Functor F, Ring T>(x : F T) : T = Sum (Fmap (y -> Pow' y 2) x)
 Instance Writeable{Trivial}(
   Brackets = Write,
-  Write _ =
-    Construct_List
-      "T"
-      (Construct_List
-        "r"
-        (Construct_List "i" (Construct_List "v" (Construct_List "i" (Construct_List "a" (Construct_List "l" Empty_List)))))))
-Def Zero[T : Star]<Ring T> : T = Convert 0
+  Write _ = List ("T", "r", "i", "v", "i", "a", "l"))
 Instance Writeable{Array N T}<Writeable T, Writeable_Array N>(Brackets = Brackets_Array, Write = Write_Array)
 Instance Writeable{Complex T}<Writeable T>(
   Brackets = Brackets',
   Write x =
-    Cat
-      (Construct_List
-        "C"
-        (Construct_List
-          "o"
-          (Construct_List
-            "m"
-            (Construct_List
-              "p"
-              (Construct_List "l" (Construct_List "e" (Construct_List "x" (Construct_List " " Empty_List))))))))
-      (Cat (Brackets (Real x)) (Cat (Lift " ") (Brackets (Imaginary x)))))
+    Cat (List ("C", "o", "m", "p", "l", "e", "x", " ")) (Cat (Brackets (Real x)) (Cat (Lift " ") (Brackets (Imaginary x)))))
 Instance Writeable_Array{!Zr}(
   Brackets_Array = Write,
-  Write_Array _ =
-    Construct_List
-      "E"
-      (Construct_List
-        "m"
-        (Construct_List
-          "p"
-          (Construct_List
-            "t"
-            (Construct_List
-              "y"
-              (Construct_List
-                "_"
-                (Construct_List
-                  "A"
-                  (Construct_List "r" (Construct_List "r" (Construct_List "a" (Construct_List "y" Empty_List)))))))))))
+  Write_Array _ = List ("E", "m", "p", "t", "y", "_", "A", "r", "r", "a", "y"))
 Instance Writeable_Array{!Next N}<Writeable_Array N>(
   Brackets_Array = Brackets',
   Write_Array x =
     Cat
-      (Construct_List
-        "C"
-        (Construct_List
-          "o"
-          (Construct_List
-            "n"
-            (Construct_List
-              "s"
-              (Construct_List
-                "t"
-                (Construct_List
-                  "r"
-                  (Construct_List
-                    "u"
-                    (Construct_List
-                      "c"
-                      (Construct_List
-                        "t"
-                        (Construct_List
-                          "_"
-                          (Construct_List
-                            "A"
-                            (Construct_List
-                              "r"
-                              (Construct_List
-                                "r"
-                                (Construct_List "a" (Construct_List "y" (Construct_List " " Empty_List))))))))))))))))
-          (Cat (Brackets (Head x)) (Cat (Lift " ") (Brackets (Tail x)))))
+      (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "A", "r", "r", "a", "y", " " ))
+      (Cat (Brackets (Head x)) (Cat (Lift " ") (Brackets (Tail x)))))
+Def Zero[T : Star]<Ring T> : T = Convert 0
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

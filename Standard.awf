@@ -109,6 +109,7 @@ Instance Ring{Pair T U}<Ring T, Ring U>(
   Convert x = Pair (Convert x) (Convert x),
   Multiply x y = Pair (Multiply (First x) (First y)) (Multiply (Second x) (Second y)),
   Negate x = Pair (Negate (First x)) (Negate (Second x)))
+Def Write'(x : List Char, y : List (List Char)) : List Char = Interleave (Lift " ") (Construct_List x y)
 Instance Writeable{Char}(
   Brackets = Write,
   Write c = Construct_List """ (Cat (Match c {"\n" -> List ("\", "n"), Default -> Lift c}) (Lift """)))
@@ -119,8 +120,8 @@ Instance Writeable{Either T U}<Writeable T, Writeable U>(
   Brackets = Brackets',
   Write x =
     Match x {
-      Left y -> Cat (List ("L", "e", "f", "t", " ")) (Brackets y),
-      Right y -> Cat (List ("R", "i", "g", "h", "t", " ")) (Brackets y)})
+      Left y -> Cat (List ("L", "e", "f", "t")) (Brackets y),
+      Right y -> Cat (List ("R", "i", "g", "h", "t")) (Brackets y)})
 Instance Writeable{List T}<Writeable T>(
   Brackets x = (Match x {Empty_List -> Write, Construct_List _ _ -> Brackets'}) x,
   Write x =
@@ -142,16 +143,16 @@ Instance Writeable{Maybe T}<Writeable T>(
       Wrap y -> Cat (List ("W", "r", "a", "p", " ")) (Brackets y)})
 Instance Writeable{Pair T U}<Writeable T, Writeable U>(
   Brackets = Brackets',
-  Write x = Cat (List ("P", "a", "i", "r", " ")) (Cat (Brackets (First x)) (Cat (Lift " ") (Brackets (Second x)))))
+  Write x = Write' (List ("P", "a", "i", "r", " ")) (List (Brackets (First x), Brackets (Second x))))
 Instance Writeable{Tree T}<Writeable T>(
   Brackets x = (Match x {Empty_Tree -> Write, Construct_Tree _ _ _ -> Brackets'}) x,
   Write x =
     Match x {
       Empty_Tree -> List ("E", "m", "p", "t", "y", "_", "T", "r", "e", "e"),
       Construct_Tree y z a ->
-        Cat
-          (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "r", "e", "e", " "))
-          (Cat (Brackets y) (Cat (Lift " ") (Cat (Brackets z) (Cat (Lift " ") (Brackets a)))))})
+        Write'
+          (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "r", "e", "e"))
+          (List (Brackets y, Brackets z, Brackets a))})
 Def Zip[F : Arrow Star Star, T : Star, U : Star, V : Star]<Applicative F>(f : Function T (Function U V), x : F T) :
   Function (F U) (F V) =
     Apply (Fmap f x)

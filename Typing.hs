@@ -52,6 +52,7 @@ liigirakendamise eemaldamine liigituletuse kasuks (igal pool? teatud piiratud ju
 kas tüübirakendamist on kusagil vaja?
 võimaldada suvalise arvu konstruktoritega algebralisi andmetüüpe. (LISAKS struktide allesjätmisele?)
 panna keel kuidagi aru saama, et mitte-null-konstandiga jagades ei saa tulemuseks olla Nothing
+todo: make a function writing operator/function. For printing stuff like "Complex (Fraction 0 1) (Fraction 1 1)"
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")

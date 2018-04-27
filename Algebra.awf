@@ -2,7 +2,6 @@
 Load Standard.awf
 Branching Array[!Nat][T : Star](!Zr -> Empty_Array, !Next N -> Construct_Array(Head : T, Tail : Array N T))
 Struct Complex[T : Star](Real : T, Imaginary : T)
-Struct Diagonal[N : !Nat, T : Star](Diagonal' : Array N T)
 Struct Fraction(Num : Int, Den : Int)
 Struct Quaternion[T : Star](Qr : T, Qx : T, Qy : T, Qz : T)
 Branching Square[!Nat][T : Star](
@@ -107,22 +106,30 @@ Instance Ring{Quaternion T}<Ring T>(
   Negate = Negate')
 Def Sum[F : Arrow Star Star, T : Star]<Foldable F, Ring T> : Function (F T) T = Fold_right Add Zero
 Def Sum_squares[F : Arrow Star Star, T : Star]<Foldable F, Functor F, Ring T>(x : F T) : T = Sum (Fmap (y -> Pow' y 2) x)
-Instance Writeable{Trivial}(
-  Brackets = Write,
-  Write _ = List ("T", "r", "i", "v", "i", "a", "l"))
 Instance Writeable{Array N T}<Writeable T, Writeable_Array N>(Brackets = Brackets_Array, Write = Write_Array)
 Instance Writeable{Complex T}<Writeable T>(
   Brackets = Brackets',
+  Write x = Write' (List ("C", "o", "m", "p", "l", "e", "x")) (List (Brackets (Real x), Brackets (Imaginary x))))
+Instance Writeable{Fraction}(
+  Brackets = Brackets',
+  Write x = Write' (List ("F", "r", "a", "c", "t", "i", "o", "n")) (List (Brackets (Num x), Brackets (Den x))))
+Instance Writeable{Quaternion T}<Writeable T>(
+  Brackets = Brackets',
   Write x =
-    Cat (List ("C", "o", "m", "p", "l", "e", "x", " ")) (Cat (Brackets (Real x)) (Cat (Lift " ") (Brackets (Imaginary x)))))
+    Write'
+      (List ("Q", "u", "a", "t", "e", "r", "n", "i", "o", "n"))
+      (List (Brackets (Qr x), Brackets (Qx x), Brackets (Qy x), Brackets (Qz x))))
+Instance Writeable{Trivial}(
+  Brackets = Write,
+  Write _ = List ("T", "r", "i", "v", "i", "a", "l"))
 Instance Writeable_Array{!Zr}(
   Brackets_Array = Write,
   Write_Array _ = List ("E", "m", "p", "t", "y", "_", "A", "r", "r", "a", "y"))
 Instance Writeable_Array{!Next N}<Writeable_Array N>(
   Brackets_Array = Brackets',
   Write_Array x =
-    Cat
-      (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "A", "r", "r", "a", "y", " " ))
-      (Cat (Brackets (Head x)) (Cat (Lift " ") (Brackets (Tail x)))))
+    Write'
+      (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "A", "r", "r", "a", "y"))
+      (List (Brackets (Head x), Brackets (Tail x))))
 Def Zero[T : Star]<Ring T> : T = Convert 0
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

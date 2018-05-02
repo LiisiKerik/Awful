@@ -16,6 +16,9 @@ Class Ring_Tuple{L : !List Star}(
   Convert_Tuple : Function Int (Tuple L),
   Multiply_Tuple : Function (Tuple L) (Function (Tuple L) (Tuple L)),
   Negate_Tuple : Function (Tuple L) (Tuple L))
+Class Writeable_Array'{L : !List !Nat}(
+  Brackets_Array'[T : Star]<Writeable T> : Function (Array' L T) (List Char),
+  Write_Array'[T : Star]<Writeable T> : Function (Array' L T) (List Char))
 Class Writeable_Tuple{L : !List Star}(
   Brackets_Tuple : Function (Tuple L) (List Char),
   Write_Tuple : Function (Tuple L) (List Char))
@@ -48,6 +51,7 @@ Instance Ring_Tuple{!Construct_List[Star] T L}<Ring T, Ring_Tuple L>(
   Convert_Tuple x = Construct_Tuple (Convert x) (Convert x),
   Multiply_Tuple x y = Construct_Tuple (Multiply (Head_Tuple x) (Head_Tuple y)) (Multiply (Tail_Tuple x) (Tail_Tuple y)),
   Negate_Tuple x = Construct_Tuple (Negate (Head_Tuple x)) (Negate (Tail_Tuple x)))
+Instance Writeable{Array' N T}<Writeable T, Writeable_Array' N>(Brackets = Brackets_Array', Write = Write_Array')
 Instance Writeable{Tuple L}<Writeable_Tuple L>(Brackets = Brackets_Tuple, Write = Write_Tuple)
 Instance Writeable_Tuple{!Empty_List[Star]}(
   Brackets_Tuple = Write,
@@ -55,7 +59,16 @@ Instance Writeable_Tuple{!Empty_List[Star]}(
 Instance Writeable_Tuple{!Construct_List[Star] T L}<Writeable T, Writeable_Tuple L>(
   Brackets_Tuple = Brackets',
   Write_Tuple x =
+    Write'
+      (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "u", "p", "l", "e"))
+      (List (Brackets (Head_Tuple x), Brackets (Tail_Tuple x))))
+Instance Writeable_Array'{!Empty_List[!Nat]}(
+  Brackets_Array' = Write,
+  Write_Array' _ = List ("E", "m", "p", "t", "y", "_", "A", "r", "r", "a", "y", "'"))
+Instance Writeable_Array'{!Construct_List[!Nat] N L}<Writeable_Array N, Writeable_Array' L>(
+  Brackets_Array' = Brackets',
+  Write_Array' x =
     Cat
-      (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "u", "p", "l", "e", " "))
-      (Cat (Brackets (Head_Tuple x)) (Cat (Lift " ") (Brackets (Tail_Tuple x)))))
+      (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "A", "r", "r", "a", "y", "'", " "))
+      (Brackets (Arrays x)))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

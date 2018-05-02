@@ -8,7 +8,7 @@ Branching Square[!Nat][T : Star](
   !Zr -> Empty_Square,
   !Next N ->
     Construct_Square(Fst_Square : T, Top_row_Square : Array N T, Left_column_Square : Array N T, Square' : Square N T))
-Struct Toeplitz_triangle[N : !Nat, T : Star](Toeplitz_triangle' : Array N T)
+Struct Toeplitz[N : !Nat, T : Star](Toeplitz' : Array N T)
 Branching Triangle[!Nat][T : Star](
   !Zr -> Empty_Triangle,
   !Next N -> Construct_Triangle(Fst_Triangle : T, Top_row_Triangle : Array N T, Triangle' : Triangle N T))
@@ -29,6 +29,12 @@ Class Ord_Array{N : !Nat}(Compare_Array[T : Star]<Ord T> : Function (Array N T) 
 Class Writeable_Array{N : !Nat}(
   Brackets_Array[T : Star]<Writeable T> : Function (Array N T) (List Char),
   Write_Array[T : Star]<Writeable T> : Function (Array N T) (List Char))
+Class Writeable_Square{N : !Nat}(
+  Brackets_Square[T : Star]<Writeable T> : Function (Square N T) (List Char),
+  Write_Square[T : Star]<Writeable T> : Function (Square N T) (List Char))
+Class Writeable_Triangle{N : !Nat}(
+  Brackets_Triangle[T : Star]<Writeable T> : Function (Triangle N T) (List Char),
+  Write_Triangle[T : Star]<Writeable T> : Function (Triangle N T) (List Char))
 Instance Applicative{Complex}(Apply x y = Complex (Real x (Real y)) (Imaginary x (Imaginary y)), Lift x = Complex x x)
 Instance Applicative{Quaternion}(
   Apply x y = Quaternion (Qr x (Qr y)) (Qx x (Qx y)) (Qy x (Qy y)) (Qz x (Qz y)),
@@ -119,6 +125,11 @@ Instance Writeable{Quaternion T}<Writeable T>(
     Write'
       (List ("Q", "u", "a", "t", "e", "r", "n", "i", "o", "n"))
       (List (Brackets (Qr x), Brackets (Qx x), Brackets (Qy x), Brackets (Qz x))))
+Instance Writeable{Square N T}<Writeable T, Writeable_Square N>(Brackets = Brackets_Square, Write = Write_Square)
+Instance Writeable{Toeplitz N T}<Writeable T, Writeable_Array N>(
+  Brackets = Brackets',
+  Write x = Cat (List ("T", "o", "e", "p", "l", "i", "t", "z", " ")) (Brackets (Toeplitz' x)))
+Instance Writeable{Triangle N T}<Writeable T, Writeable_Triangle N>(Brackets = Brackets_Triangle, Write = Write_Triangle)
 Instance Writeable{Trivial}(
   Brackets = Write,
   Write _ = List ("T", "r", "i", "v", "i", "a", "l"))
@@ -131,5 +142,23 @@ Instance Writeable_Array{!Next N}<Writeable_Array N>(
     Write'
       (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "A", "r", "r", "a", "y"))
       (List (Brackets (Head x), Brackets (Tail x))))
+Instance Writeable_Square{!Zr}(
+  Brackets_Square = Write,
+  Write_Square _ = List ("E", "m", "p", "t", "y", "_", "S", "q", "u", "a", "r", "e"))
+Instance Writeable_Square{!Next N}<Writeable_Array N, Writeable_Square N>(
+  Brackets_Square = Brackets',
+  Write_Square x =
+    Write'
+      (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "S", "q", "u", "a", "r", "e"))
+      (List (Brackets (Fst_Square x), Brackets (Top_row_Square x), Brackets (Left_column_Square x), Brackets (Square' x))))
+Instance Writeable_Triangle{!Zr}(
+  Brackets_Triangle = Write,
+  Write_Triangle _ = List ("E", "m", "p", "t", "y", "_", "T", "r", "i", "a", "n", "g", "l", "e"))
+Instance Writeable_Triangle{!Next N}<Writeable_Array N, Writeable_Triangle N>(
+  Brackets_Triangle = Brackets',
+  Write_Triangle x =
+    Write'
+      (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "r", "i", "a", "n", "g", "l", "e"))
+      (List (Brackets (Fst_Triangle x), Brackets (Top_row_Triangle x), Brackets (Triangle' x))))
 Def Zero[T : Star]<Ring T> : T = Convert 0
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

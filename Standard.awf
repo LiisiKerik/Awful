@@ -143,7 +143,7 @@ Instance Writeable{Maybe T}<Writeable T>(
       Wrap y -> Cat (List ("W", "r", "a", "p", " ")) (Brackets y)})
 Instance Writeable{Pair T U}<Writeable T, Writeable U>(
   Brackets = Brackets',
-  Write x = Write' (List ("P", "a", "i", "r", " ")) (List (Brackets (First x), Brackets (Second x))))
+  Write x = Write' (List ("P", "a", "i", "r")) (List (Brackets (First x), Brackets (Second x))))
 Instance Writeable{Tree T}<Writeable T>(
   Brackets x = (Match x {Empty_Tree -> Write, Construct_Tree _ _ _ -> Brackets'}) x,
   Write x =

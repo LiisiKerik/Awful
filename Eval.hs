@@ -12,10 +12,10 @@ module Eval where
     _ -> case c of
       0 -> Nothing
       _ -> (\d -> div (a * d + b) c) <$> div_finite c (mod (- b) c) (mod a c)
-  eval :: Map' Expression_2 -> Expression_2 -> Expression_2
+  eval :: Map' Expression_2 -> Expression_2 -> String
   eval a b = case eval' a b of
-    Just c -> c
-    Nothing -> Name_expression_2 "Crash."
+    Just c -> tostr c
+    Nothing -> "Crash"
   eval' :: Map' Expression_2 -> Expression_2 -> Maybe Expression_2
   eval' a c = case c of
     Application_expression_2 d e -> eval' a d >>= \h -> eval' a e >>= \j -> case h of
@@ -151,9 +151,13 @@ module Eval where
     Map' ([String], Map' [(String, Nat)]) ->
     Err String
   tokenise_parse_naming_typing_eval c f (g, h, i) l b u v =
-    (
-      parse_expression b >>=
-      \e -> naming_expression "input" e c >>= \j -> show <$> eval l <$> type_expr' (Location_1 "input") (f, g, h, i) j u v)
+    parse_expression b >>= \e -> naming_expression "input" e c >>= \j -> eval l <$> type_expr' (f, g, h, i) j u v
+  tostr :: Expression_2 -> String
+  tostr x =
+    case x of
+      Algebraic_expression_2 "Empty_List" [] -> []
+      Algebraic_expression_2 "Construct_List" [Char_expression_2 y, z] -> y : tostr z
+      _ -> undefined
   wrap_algebraic :: Expression_2 -> Expression_2
   wrap_algebraic x = Algebraic_expression_2 "Wrap" [x]
 -----------------------------------------------------------------------------------------------------------------------------

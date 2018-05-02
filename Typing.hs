@@ -44,8 +44,6 @@ write in error where the need for class constraint occurred?
 make command line arguments nicer
 check for free type variables after typechecking an expression. throw an error (they are a problem with type classes!)
 remove promotion of primitives? it seems that without GADT-s they are pointless?
-prettyprint evaluation results
-case reduction warning (case x of c1 -> f y, c2 -> g y on sama mis (case x of c1 -> f, c2 -> g) y)
 mis juhtub kui esimeses moodulis on kusagil tüübimuutuja T ja järgmises moodulis sama nimega globaalne tüüp?
 mis juhtub sellisel juhul: Class Foo{T : Star}(foo<Ring T> : T = Zero)
 liigirakendamise eemaldamine liigituletuse kasuks (igal pool? teatud piiratud juhtudel?)
@@ -1531,14 +1529,22 @@ module Typing where
           solvesys ("Type error" ++ n) i j (x, g) >>=
           \(y, p) -> addargs w' p <$ slv m y (\t -> "Failure to resolve constraints for class " ++ t ++ n)))
   type_expr' ::
-    (Location_0 -> Location_1) ->
     (Map' Polykind, Map' Alg, Map' String, Map' Type_2) ->
     Expression_1 ->
     Map' (Map' [[String]]) ->
     Map' ([String], Map' [(String, Nat)]) ->
     Err Expression_2
-  type_expr' a (b, c, d, e) f g =
-    type_expr "input." (ntype "!") a (Data.Map.insert "!" (Right star_kind) (Left <$> b), c, d, e) f g 0
+  type_expr' (b, c, d, e) f g =
+    type_expr
+      "input."
+      (list_type char_type)
+      (Location_1 "input")
+      (Left <$> b, c, d, e)
+      (Expression_1
+        (Location_0 0 0)
+        (Application_expression_1 (Expression_1 (Location_0 0 0) (Name_expression_1 "Write")) f))
+      g
+      0
   type_expression ::
     Map' Alg ->
     Map' String ->

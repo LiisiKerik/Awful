@@ -29,7 +29,6 @@ syntactic sugar for lists, vectors, matrices... allow writing (tiny, limited to 
 fix the show-read issue; give a specific error for that (different errors for unresolved type variable and missing constr)
 basic IO operations (output to console, read file, write file, append to file)
 finite n
-nice human-readable output for interpreter through show
 boolean function library
 implement map and set (AVL trees?)
 different ways of folding lists, vectors, sets, maps etc
@@ -55,7 +54,7 @@ todo: make a function writing operator/function. For printing stuff like "Comple
 olukordades, kus blanki ei eeldata, võib üksik alakriips käituda muutujanimena. likvideerida see jama!
 checki abil võiks saada tüübikontrollida korraga mitut moodulit, andes ette nimekirja
 eeldusel, et käsitleme ainult ascii märke, on match märkide peal lõplik ja default ei ole tingimata vajalik, nagu modulariga
-ühildada Standard ja parser? või vastupidi, süntaktiline suhkur (int overload, listide sün.suhk.) standard moodulisse?
+ühildada Standard ja parser? või vastupidi, süntaktiline suhkur (listide sün.suhk.) standard moodulisse?
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")

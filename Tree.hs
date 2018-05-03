@@ -289,11 +289,7 @@ module Tree where
           Int_token b -> Just b
           _ -> Nothing)
   parse_int_expression :: Parser Expression_branch_0
-  parse_int_expression =
-    (
-      (\x -> \y ->
-        Application_expression_0 (Expression_0 x (Name_expression_0 "Convert")) (Expression_0 x (Int_expression_0 y))) <&>
-      parse_int)
+  parse_int_expression = Int_expression_0 <$> parse_int
   parse_int_type :: Parser Type_branch_0
   parse_int_type = Int_type_0 <$ parse_lift <*> parse_int
   parse_kind :: Parser Kind_0

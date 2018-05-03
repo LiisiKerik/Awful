@@ -55,6 +55,7 @@ todo: make a function writing operator/function. For printing stuff like "Comple
 olukordades, kus blanki ei eeldata, võib üksik alakriips käituda muutujanimena. likvideerida see jama!
 checki abil võiks saada tüübikontrollida korraga mitut moodulit, andes ette nimekirja
 eeldusel, et käsitleme ainult ascii märke, on match märkide peal lõplik ja default ei ole tingimata vajalik, nagu modulariga
+ühildada Standard ja parser? või vastupidi, süntaktiline suhkur (int overload, listide sün.suhk.) standard moodulisse?
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")
@@ -1825,7 +1826,7 @@ module Typing where
                                       case j of
                                         Just (_, j0) ->
                                           (
-                                            (\(a', b', c2, d', e', a4) -> (k0 (Just a'), b', c2, d', e', a4)) <$>
+                                            (\(a', b', c2, d7, e', a4) -> (k0 (Just a'), b', c2, d7, e', a4)) <$>
                                             type_expression v w r g0 h0 e0 f0 d j0 e a3)
                                         Nothing -> Left ("Incomplete match" ++ x')))
         Modular_expression_1 c ->

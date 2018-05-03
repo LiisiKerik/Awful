@@ -29,20 +29,24 @@ module Tree where
     Function_expression_0 Pattern_1 Expression_0 |
     Int_expression_0 Integer |
     Match_expression_0 Expression_0 Matches_0 |
+    Modular_expression_0 Modular |
     Name_expression_0 String
       deriving Show
   data Form_0 = Form_0 Name [Type_0] deriving Show
   data Kind_0 = Kind_0 Location_0 Kind_branch_0 deriving (Eq, Show)
   data Kind_branch_0 = Application_kind_0 Kind_0 Kind_0 | Name_kind_0 String deriving (Eq, Show)
   data Match_Algebraic_0 = Match_Algebraic_0 Name [Pattern_1] Expression_0 deriving Show
-  data Match_char_0 = Match_char_0 Char Expression_0 deriving Show
-  data Match_Int_0 = Match_Int_0 Integer Expression_0 deriving Show
+  data Match_char_0 = Match_char_0 Location_0 Char Expression_0 deriving Show
+  data Match_Int_0 = Match_Int_0 Location_0 Integer Expression_0 deriving Show
+  data Match_Modular_0 = Match_Modular_0 Location_0 Modular Expression_0 deriving Show
   data Matches_0 =
     Matches_Algebraic_0 [Match_Algebraic_0] (Maybe (Location_0, Expression_0)) |
     Matches_char_0 [Match_char_0] Expression_0 |
-    Matches_Int_0 [Match_Int_0] Expression_0
+    Matches_Int_0 [Match_Int_0] Expression_0 |
+    Matches_Modular_0 [Match_Modular_0] (Maybe (Location_0, Expression_0))
       deriving Show
   data Method = Method Name [(Name, Kind_0)] [Constraint_0] Type_0 deriving Show
+  data Modular = Modular Integer Integer deriving Show
   data Name = Name Location_0 String deriving Show
   data Pattern_1 = Pattern_1 Location_0 Pattern_0 deriving Show
   data Pattern_0 = Blank_pattern | Name_pattern String deriving Show
@@ -66,7 +70,7 @@ module Tree where
     empty = Parser (\(State _ l) -> Left l)
   instance Applicative Parser where
     Parser a <*> Parser b = Parser (a >=> \(c, d) -> first c <$> b d)
-    pure = lift_parser
+    pure x = Parser (\y -> Right (x, y))
   instance Functor Parser where
     fmap a (Parser b) = Parser (\c -> first a <$> b c)
   instance Get_location Kind_0 where
@@ -75,17 +79,13 @@ module Tree where
     get_location (Pattern_1 a _) = a
   instance Get_location Type_0 where
     get_location (Type_0 a _) = a
-  instance Monad Parser where
-    Parser a >>= b = Parser (a >=> \(c, d) -> parser (b c) d)
-    return = lift_parser
   init_location :: Location_0
   init_location = Location_0 0 0
   left_bind :: (t -> Either u v) -> Either t v -> Either u v
-  left_bind a b = case b of
-    Left c -> a c
-    Right c -> Right c
-  lift_parser :: t -> Parser t
-  lift_parser x = Parser (\y -> Right (x, y))
+  left_bind a b =
+    case b of
+      Left c -> a c
+      Right c -> Right c
   mk_list :: Location_0 -> [Expression_0] -> Expression_branch_0
   mk_list l =
     Prelude.foldr
@@ -98,11 +98,16 @@ module Tree where
   parse a b c =
     let
        d = parse_error b
-    in tokenise b c >>= \e -> case parser a (State e init_location) of
-      Left f -> d f
-      Right (f, State (Tokens h _) g) -> case h of
-        [] -> Right f
-        _ -> d g
+    in
+      (
+        tokenise b c >>=
+        \e ->
+          case parser a (State e init_location) of
+            Left f -> d f
+            Right (f, State (Tokens h _) g) ->
+              case h of
+                [] -> Right f
+                _ -> d g)
   parse_algebraic :: Parser Data_0
   parse_algebraic = parse_data' Algebraic_data_0 Algebraic_token (parse_round (parse_list 2 parse_form))
   parse_application_expression :: Parser Expression_branch_0
@@ -183,9 +188,12 @@ module Tree where
         parse_list 2 parse_brnch <*
         parse_token Right_round_token))
   parse_char :: Parser Char
-  parse_char = parse_elementary (\a -> case a of
-    Char_token b -> Just b
-    _ -> Nothing)
+  parse_char =
+    parse_elementary
+      (\a ->
+        case a of
+          Char_token b -> Just b
+          _ -> Nothing)
   parse_char_expression :: Parser Expression_branch_0
   parse_char_expression = Char_expression_0 <$> parse_char
   parse_char_type :: Parser Type_branch_0
@@ -198,14 +206,15 @@ module Tree where
       parse_token Left_curly_token <*>
       ((,) <$> parse_name' <* parse_colon <*> parse_kind) <*
       parse_token Right_curly_token <*>
-      (Just <$ parse_operator "<" <*> parse_name' <* parse_operator ">" <|> return Nothing) <*>
+      (Just <$ parse_operator "<" <*> parse_name' <* parse_operator ">" <|> pure Nothing) <*>
       parse_optional parse_round parse_method)
   parse_colon :: Parser ()
   parse_colon = parse_operator ":"
   parse_comma :: Parser ()
   parse_comma = parse_token Comma_token
   parse_composite_expression :: Parser Expression_branch_0
-  parse_composite_expression = parse_list_expr <|> parse_application_expression <|> parse_function <|> parse_match_expression
+  parse_composite_expression =
+    parse_mod_expr <|> parse_list_expr <|> parse_application_expression <|> parse_function <|> parse_match_expression
   parse_constraint :: Parser Constraint_0
   parse_constraint = Constraint_0 <$> parse_name' <*> parse_name'
   parse_constraints :: Parser [Constraint_0]
@@ -218,15 +227,22 @@ module Tree where
   parse_def = parse_basic <|> parse_instance
   parse_default :: Parser Expression_0
   parse_default = parse_comma *> parse_token Default_token *> parse_arrow *> parse_expression'
+  parse_default' :: Parser (Maybe (Location_0, Expression_0))
+  parse_default' =
+    Just <$ parse_comma <*> ((,) <& parse_token Default_token <* parse_arrow <*> parse_expression') <|> pure Nothing
   parse_elementary :: (Token_0 -> Maybe t) -> Parser t
-  parse_elementary a = Parser (\(State (Tokens b c) d) -> case b of
-    [] -> Left c
-    Token_1 e f : g ->
-      let
-        h = max d e
-      in case a f of
-        Just i -> Right (i, (State (Tokens g c) h))
-        Nothing -> Left h)
+  parse_elementary a =
+    Parser
+      (\(State (Tokens b c) d) ->
+        case b of
+          [] -> Left c
+          Token_1 e f : g ->
+            let
+              h = max d e
+            in
+              case a f of
+                Just i -> Right (i, (State (Tokens g c) h))
+                Nothing -> Left h)
   parse_elementary_expression :: Parser Expression_branch_0
   parse_elementary_expression =
     (
@@ -264,9 +280,14 @@ module Tree where
         parse_round
         ((\x -> \y -> \z -> (x, (y, z))) <$> parse_name' <*> many parse_pattern_1 <* parse_eq <*> parse_expression'))
   parse_int :: Parser Integer
-  parse_int = (negate <$ parse_operator "-" <|> return id) <*> parse_elementary (\a -> case a of
-    Int_token b -> Just b
-    _ -> Nothing)
+  parse_int = (negate <$ parse_operator "-" <|> pure id) <*> parse_int'
+  parse_int' :: Parser Integer
+  parse_int' =
+    parse_elementary
+      (\a ->
+        case a of
+          Int_token b -> Just b
+          _ -> Nothing)
   parse_int_expression :: Parser Expression_branch_0
   parse_int_expression = Int_expression_0 <$> parse_int
   parse_int_type :: Parser Type_branch_0
@@ -293,7 +314,7 @@ module Tree where
   parse_match_algebraic :: Parser Match_Algebraic_0
   parse_match_algebraic = parse_arrow' (Match_Algebraic_0 <$> parse_name' <*> many parse_pattern_1)
   parse_match_char :: Parser Match_char_0
-  parse_match_char = parse_arrow' (Match_char_0 <$> parse_char)
+  parse_match_char = parse_arrow' (Match_char_0 <&> parse_char)
   parse_match_expression :: Parser Expression_branch_0
   parse_match_expression =
     (
@@ -304,25 +325,32 @@ module Tree where
       parse_matches <*
       parse_token Right_curly_token)
   parse_match_int :: Parser Match_Int_0
-  parse_match_int = parse_arrow' (Match_Int_0 <$> parse_int)
+  parse_match_int = parse_arrow' (Match_Int_0 <&> parse_int)
+  parse_match_modular :: Parser Match_Modular_0
+  parse_match_modular = parse_arrow' (Match_Modular_0 <&> parse_modular)
   parse_matches :: Parser Matches_0
   parse_matches = parse_matches_algebraic <|> parse_matches_char <|> parse_matches_int
   parse_matches_algebraic :: Parser Matches_0
-  parse_matches_algebraic =
-    (
-      Matches_Algebraic_0 <$>
-      parse_list 1 parse_match_algebraic <*>
-      (Just <$ parse_comma <*> ((,) <& parse_token Default_token <* parse_arrow <*> parse_expression') <|> return Nothing))
+  parse_matches_algebraic = Matches_Algebraic_0 <$> parse_list 1 parse_match_algebraic <*> parse_default'
   parse_matches_char :: Parser Matches_0
   parse_matches_char = Matches_char_0 <$> parse_list 1 parse_match_char <*> parse_default
   parse_matches_int :: Parser Matches_0
   parse_matches_int = Matches_Int_0 <$> parse_list 1 parse_match_int <*> parse_default
+  parse_matches_modular :: Parser Matches_0
+  parse_matches_modular = Matches_Modular_0 <$> parse_list 1 parse_match_modular <*> parse_default'
   parse_method :: Parser Method
   parse_method = Method <$> parse_name' <*> parse_kinds <*> parse_constraints <* parse_colon <*> parse_type
+  parse_mod_expr :: Parser Expression_branch_0
+  parse_mod_expr = Modular_expression_0 <$> parse_modular
+  parse_modular :: Parser Modular
+  parse_modular = flip Modular <$> parse_int' <* parse_token Hash_token <*> parse_int'
   parse_name :: Parser String
-  parse_name = parse_elementary (\a -> case a of
-    Name_token b -> Just b
-    _ -> Nothing)
+  parse_name =
+    parse_elementary
+      (\a ->
+        case a of
+          Name_token b -> Just b
+          _ -> Nothing)
   parse_name' :: Parser Name
   parse_name' = Name <&> parse_name
   parse_name'' :: Token_0 -> Parser Name
@@ -350,7 +378,7 @@ module Tree where
   parse_optional :: (Parser [t] -> Parser [t]) -> Parser t -> Parser [t]
   parse_optional a b = parse_optional' (a (parse_list 1 b))
   parse_optional' :: Parser [t] -> Parser [t]
-  parse_optional' a = a <|> return []
+  parse_optional' a = a <|> pure []
   parse_pattern_0 :: Parser Pattern_0
   parse_pattern_0 = parse_blank <|> parse_name_pattern
   parse_pattern_1 :: Parser Pattern_1
@@ -372,9 +400,10 @@ module Tree where
   parse_type_branch :: Parser Type_branch_0
   parse_type_branch = parse_application_type <|> parse_name_type
   state_location :: State -> Location_0
-  state_location (State (Tokens a b) _) = case a of
-    [] -> b
-    Token_1 c _ : _ -> c
+  state_location (State (Tokens a b) _) =
+    case a of
+      [] -> b
+      Token_1 c _ : _ -> c
   update_location :: State -> Location_0 -> State
   update_location (State a b) c = State a (max b c)
 -----------------------------------------------------------------------------------------------------------------------------

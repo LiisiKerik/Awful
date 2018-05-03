@@ -49,21 +49,30 @@ check b m' @ (f, _, _, _, _, _) j name_qc =
                         (
                           (\(k, n, o, q, s, t') -> ((Data.Map.insert name_qc n h, k, o, q, s, t'), n)) <$>
                           naming_typing name_qc d (i, m, l, p, p', r')))
-            Nothing -> err ("Failed to find file " ++ name_qc ++ " requested" ++ case j of
-              Language -> " in the command."
-              Library k -> location' k)
+            Nothing ->
+              err
+                (
+                  "Failed to find file " ++
+                  name_qc ++
+                  " requested" ++
+                  case j of
+                    Language -> " in the command."
+                    Library k -> location' k)
 check' :: String -> [String] -> Maybe [String]
-check' a b = case b of
-  [] -> Nothing
-  c : d -> if c == a then Just [a] else (:) c <$> check' a d
+check' a b =
+  case b of
+    [] -> Nothing
+    c : d -> if c == a then Just [a] else (:) c <$> check' a d
 check_extension :: String -> Err ()
-check_extension a = case takeExtension a of
-  ".awf" -> Right ()
-  _ -> Left ("File " ++ a ++ " has an invalid extension. You can only use a .awf file.")
+check_extension a =
+  case takeExtension a of
+    ".awf" -> Right ()
+    _ -> Left ("File " ++ a ++ " has an invalid extension. You can only use a .awf file.")
 check_extensions :: String -> [String] -> Err ([String], String)
-check_extensions a c = case c of
-  [] -> Right ([], a)
-  d : e -> check_extension a >> first ((:) a) <$> check_extensions d e
+check_extensions a c =
+  case c of
+    [] -> Right ([], a)
+    d : e -> check_extension a >> first ((:) a) <$> check_extensions d e
 check_imports ::
   [String] ->
   (
@@ -75,13 +84,14 @@ check_imports ::
       (
         (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])),
         File))
-check_imports a b @ (f, k) c = case c of
-  [] -> return (Right b)
-  (d, g) : e -> do
-    x <- check a f d g
-    case x of
-      Left i -> err i
-      Right (i, n) -> check_imports a (i, context_union k n) e
+check_imports a b @ (f, k) c =
+  case c of
+    [] -> return (Right b)
+    (d, g) : e -> do
+      x <- check a f d g
+      case x of
+        Left i -> err i
+        Right (i, n) -> check_imports a (i, context_union k n) e
 err :: String -> IO (Err t)
 err = return <$> Left
 eval'' :: [String] -> String -> IO (Err String)
@@ -113,24 +123,31 @@ main = do
   args <- getArgs
   case args of
     [] -> putStrLn "Missing command."
-    command : arguments -> case command of
-      "check" -> case arguments of
-        [f] -> case check_extension f of
-          Left a -> putStrLn a
-          _ -> do
-            res <- check [] init' Language f
-            putStrLn (case res of
-              Left e -> e
-              _ -> "Library check successful!")
-        _ -> putStrLn "Command check expects 1 argument."
-      "eval" -> case arguments of
-        a : b -> case check_extensions a b of
-          Left e -> putStrLn e
-          Right (c, d) -> do
-            e <- eval'' c d
-            putStrLn (case e of
-              Left f -> f
-              Right f -> f)
-        _ -> putStrLn "Command eval expects at least 1 argument."
-      _ -> putStrLn ("Invalid command " ++ command ++ ".")
+    command : arguments ->
+      case command of
+        "check" ->
+          case arguments of
+            [f] ->
+              case check_extension f of
+                Left a -> putStrLn a
+                _ -> do
+                  res <- check [] init' Language f
+                  putStrLn
+                    (case res of
+                      Left e -> e
+                      _ -> "Library check successful!")
+            _ -> putStrLn "Command check expects 1 argument."
+        "eval" ->
+          case arguments of
+            a : b ->
+              case check_extensions a b of
+                Left e -> putStrLn e
+                Right (c, d) -> do
+                  e <- eval'' c d
+                  putStrLn
+                    (case e of
+                      Left f -> f
+                      Right f -> f)
+            _ -> putStrLn "Command eval expects at least 1 argument."
+        _ -> putStrLn ("Invalid command " ++ command ++ ".")
 -----------------------------------------------------------------------------------------------------------------------------

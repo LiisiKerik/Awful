@@ -21,9 +21,10 @@ module Standard where
   standard_arguments :: (Type_0, Expression_0) -> [(Pattern_1, Type_0)] -> (Type_0, Expression_0)
   standard_arguments = foldr standard_argument
   standard_def :: Def_0 -> Def_1
-  standard_def a = case a of
-    Basic_def_0 b c g d e f -> uncurry (Basic_def_1 b c g) (standard_arguments (e, f) d)
-    Instance_def_0 b c d h f g e -> Instance_1 b c d h f g (second (uncurry standard_patterns) <$> e)
+  standard_def a =
+    case a of
+      Basic_def_0 b c g d e f -> uncurry (Basic_def_1 b c g) (standard_arguments (e, f) d)
+      Instance_def_0 b c d h f g e -> Instance_1 b c d h f g (second (uncurry standard_patterns) <$> e)
   standard_defs :: [Def_0] -> [Def_1]
   standard_defs = (<$>) standard_def
   standard_pattern :: Pattern_1 -> Expression_0 -> Expression_0
@@ -34,5 +35,6 @@ module Standard where
   standard_type a b =
     let
       c = get_location a
-    in Type_0 c (Application_type_0 (Type_0 c (Application_type_0 (Type_0 c (Name_type_0 "Function" [])) a)) b)
+    in
+      Type_0 c (Application_type_0 (Type_0 c (Application_type_0 (Type_0 c (Name_type_0 "Function" [])) a)) b)
 -----------------------------------------------------------------------------------------------------------------------------

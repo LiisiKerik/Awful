@@ -108,16 +108,18 @@ init' =
     kinds,
     fromList
       [
+        ("Division", fromList [("!Next", Language)]),
         ("Field", fromList []),
         ("Ord", fromList [("Char", Language), ("Int", Language)]),
         ("Ring", fromList [("Int", Language)]),
-        ("Writeable", fromList [("Int", Language)])],
+        ("Writeable", fromList [("Int", Language), ("Modular", Language)])],
     fromList
       [
+        ("Division", (["Div'"], fromList [("!Next", [])])),
         ("Field", (["Inverse"], fromList [])),
         ("Ord", (["Compare"], fromList [("Char", []), ("Int", [])])),
         ("Ring", (["Add", "Convert", "Multiply", "Negate"], fromList [("Int", [])])),
-        ("Writeable", (["Brackets", "Write"], fromList [("Int", [])]))])
+        ("Writeable", (["Brackets", "Write"], fromList [("Int", []), ("Modular", [])]))])
 main :: IO ()
 main = do
   args <- getArgs

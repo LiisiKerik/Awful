@@ -29,6 +29,7 @@ syntactic sugar for lists, vectors, matrices... allow writing (tiny, limited to 
 fix the show-read issue; give a specific error for that (different errors for unresolved type variable and missing constr)
 basic IO operations (output to console, read file, write file, append to file)
 finite n
+is it necessary to keep modular types after typechecking? probably not. clean up.
 boolean function library
 implement map and set (AVL trees?)
 different ways of folding lists, vectors, sets, maps etc
@@ -101,30 +102,34 @@ module Typing where
       [[String]]
         deriving Show
   data Expression_2 =
-    Add_Int_expression_2 |
-    Add_Int'_expression_2 Integer |
+    Add_Int_0_expression_2 |
+    Add_Int_1_expression_2 Integer |
     Algebraic_expression_2 String [Expression_2] |
     Application_expression_2 Expression_2 Expression_2 |
+    Brackets_Modular_expression_2 Integer |
     Char_expression_2 Char |
-    Compare_Char_expression_2 |
-    Compare_Char'_expression_2 Char |
-    Compare_Int_expression_2 |
-    Compare_Int'_expression_2 Integer |
-    Div_expression_2 |
+    Compare_Char_0_expression_2 |
+    Compare_Char_1_expression_2 Char |
+    Compare_Int_0_expression_2 |
+    Compare_Int_1_expression_2 Integer |
+    Convert_Int_expression_2 |
+    Div_0_expression_2 |
+    Div_1_expression_2 Integer |
     Div'_expression_2 Integer |
     Field_expression_2 String |
     Function_expression_2 Pattern_0 Expression_2 |
     Int_expression_2 Integer |
     Match_expression_2 Expression_2 Matches_2 |
-    Mod_expression_2 |
-    Mod'_expression_2 Integer |
-    Modular_expression_2 Modular |
-    Multiply_Int_expression_2 |
-    Multiply_Int'_expression_2 Integer |
+    Mod_0_expression_2 |
+    Mod_1_expression_2 Integer |
+    Modular_expression_2 Integer |
+    Multiply_Int_0_expression_2 |
+    Multiply_Int_1_expression_2 Integer |
     Name_expression_2 String |
     Negate_Int_expression_2 |
     Struct_expression_2 (Map' Expression_2) |
-    Write_Int_expression_2
+    Write_Int_expression_2 |
+    Write_Modular_expression_2 Integer
       deriving Show
   data File =
     File
@@ -167,7 +172,7 @@ module Typing where
     Function_texpr Pattern_0 Typedexpr |
     Int_texpr Integer |
     Match_texpr Typedexpr Typedmatches |
-    Modular_texpr Modular |
+    Modular_texpr Integer |
     Name_texpr_0 String String Type_1 |
     Name_texpr_1 String [(String, Type_1)]
       deriving Show
@@ -197,6 +202,11 @@ module Typing where
               Tmatch_int f g -> Matches_Int_2 (h <$> f) (h g)
               Tmatch_Modular f g -> Matches_Modular_2 (h <$> f) (h <$> g))
         Modular_texpr d -> Modular_expression_2 d
+        Name_texpr_0 "Brackets" "Writeable" (Application_type_1 (Name_type_1 "Modular" []) d) ->
+          Brackets_Modular_expression_2 (nat_to_int d)
+        Name_texpr_0 "Div'" "Division" d -> Div'_expression_2 (nat_to_int d)
+        Name_texpr_0 "Write" "Writeable" (Application_type_1 (Name_type_1 "Modular" []) d) ->
+          Write_Modular_expression_2 (nat_to_int d)
         Name_texpr_0 d e f ->
           let
             (g, i) = typestring f []
@@ -293,11 +303,14 @@ module Typing where
         Char_type_1 _ -> Right char_kind
         Int_type_1 _ -> Right int_kind
 -- TODO: are more checks necessary? is it possible that there are problems and potential crash in Name_type_1 case?
-        Name_type_1 d e -> if d == c then x else
-          let
-            (f, g) = check_kind' (unsafe_lookup d a)
-          in
-            Right (repkinds (Data.Map.fromList (zip f e)) g)
+        Name_type_1 d e ->
+          if d == c
+            then x
+            else
+              let
+                (f, g) = check_kind' (unsafe_lookup d a)
+              in
+                Right (repkinds (Data.Map.fromList (zip f e)) g)
   check_kind' :: Either Polykind Kind_1 -> ([String], Kind_1)
   check_kind' a =
     case a of
@@ -309,6 +322,7 @@ module Typing where
   classes_0 =
     Data.Map.fromList
       [
+        ("Division", Class_4 ("N", nat_kind) Nothing [Method_4 "Div'" [] [] (function_type int_type int_type)]),
         (
           "Field",
           Class_4
@@ -413,10 +427,10 @@ module Typing where
   defs =
     Data.Map.fromList
       [
-        ("Add Int", Add_Int_expression_2),
-        ("Brackets Int", Name_expression_2 "Write Int"),
-        ("Compare Char", Compare_Char_expression_2),
-        ("Compare Int", Compare_Int_expression_2),
+        ("Add Int", Add_Int_0_expression_2),
+        ("Brackets Int", Write_Int_expression_2),
+        ("Compare Char", Compare_Char_0_expression_2),
+        ("Compare Int", Compare_Int_0_expression_2),
         (
           "Construct_List",
           Function_expression_2
@@ -424,15 +438,14 @@ module Typing where
             (Function_expression_2
               (Name_pattern "y")
               (Algebraic_expression_2 "Construct_List" [Name_expression_2 "x", Name_expression_2 "y"]))),
-        ("Convert Int", Name_expression_2 "Id"),
-        ("Div", Div_expression_2),
+        ("Convert Int", Convert_Int_expression_2),
+        ("Div", Div_0_expression_2),
         ("EQ", Algebraic_expression_2 "EQ" []),
         ("Empty_List", Algebraic_expression_2 "Empty_List" []),
         ("GT", Algebraic_expression_2 "GT" []),
-        ("Id", Function_expression_2 (Name_pattern "x") (Name_expression_2 "x")),
         ("LT", Algebraic_expression_2 "LT" []),
-        ("Mod", Mod_expression_2),
-        ("Multiply Int", Multiply_Int_expression_2),
+        ("Mod", Mod_0_expression_2),
+        ("Multiply Int", Multiply_Int_0_expression_2),
         ("Negate Int", Negate_Int_expression_2),
         ("Next", Function_expression_2 (Name_pattern "x") (Algebraic_expression_2 "Next" [Name_expression_2 "x"])),
         ("Nothing", Algebraic_expression_2 "Nothing" []),
@@ -511,16 +524,18 @@ module Typing where
   instances =
     Data.Map.fromList
       [
+        ("Division", Data.Map.fromList [("Next", [])]),
+        ("Field", Data.Map.fromList []),
         ("Ord", Data.Map.fromList [("Char", []), ("Int", [])]),
         ("Ring", Data.Map.fromList [("Int", [])]),
-        ("Writeable", Data.Map.fromList [("Int", [])])]
+        ("Writeable", Data.Map.fromList [("Int", []), ("Modular", [[]])])]
   int_kind :: Kind_1
   int_kind = Name_kind_1 "!Int"
   int_to_nat_type :: Integer -> Type_1
   int_to_nat_type x =
     case x of
       0 -> ntype "!Zr"
-      _ -> Application_type_1 (ntype "!Next") (int_to_nat_type (x - 1))
+      _ -> next_type (int_to_nat_type (x - 1))
   int_type :: Type_1
   int_type = ntype "Int"
   isLeft :: Either t u -> Bool
@@ -553,6 +568,7 @@ module Typing where
         ("Int", Polykind [] star_kind),
         ("List", Polykind [] (arrow_kind star_kind star_kind)),
         ("Maybe", Polykind [] (arrow_kind star_kind star_kind)),
+        ("Modular", Polykind [] (arrow_kind nat_kind star_kind)),
         ("Nat", Polykind [] star_kind)]
   list_kind :: Kind_1 -> Kind_1
   list_kind = Application_kind_1 (Name_kind_1 "!List")
@@ -575,18 +591,20 @@ module Typing where
           "Convert",
           "Crash",
           "Div",
+          "Div'",
+          "Division",
           "EQ",
           "Empty_List",
           "Field",
           "Function",
           "GT",
-          "Id",
           "Int",
           "Inverse",
           "LT",
           "List",
           "Maybe",
           "Mod",
+          "Modular",
           "Multiply",
           "Nat",
           "Negate",
@@ -635,8 +653,16 @@ module Typing where
     naming f a b >>= \(d, e) -> (\(h, i, k, n, u) -> (d, h, i, k, n, u)) <$> typing f e (c, g, j, m, w)
   nat_kind :: Kind_1
   nat_kind = Name_kind_1 "!Nat"
+  nat_to_int :: Type_1 -> Integer
+  nat_to_int x =
+    case x of
+      Name_type_1 "!Zr" [] -> 0
+      Application_type_1 (Name_type_1 "!Next" []) y -> nat_to_int y + 1
+      _ -> undefined
   nat_type :: Type_1
   nat_type = ntype "Nat"
+  next_type :: Type_1 -> Type_1
+  next_type = Application_type_1 (ntype "!Next")
   not_promoted :: String -> Bool
   not_promoted a =
     case a of
@@ -1829,7 +1855,7 @@ module Typing where
                                             type_expression v w r g0 h0 e0 f0 d j0 e a3)
                                         Nothing -> Left ("Incomplete match" ++ x')))
         Modular_expression_1 c ->
-          (\(Modular g _) -> (Modular_texpr c, f, (e, mod_type (int_to_nat_type g)) : h, o, s, c')) <$> check_mod x' c
+          (\(Modular g g1) -> (Modular_texpr g1, f, (e, mod_type (int_to_nat_type g)) : h, o, s, c')) <$> check_mod x' c
 {-
 INEFFICIENCY.
 ONE COULD CONSTRUCT AN IDENTITY MAP AND PUT IT INTO BASIC_TYPE AND THEN MAP (++ SUFFIX) OVER IT
@@ -2520,10 +2546,16 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
             (function_type int_type (ntype "T"))),
         ("Crash", Basic_type_1 [("T", star_kind)] Nothing [] (ntype "T")),
         ("Div", Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type (maybe_type int_type)))),
+        (
+          "Div'",
+          Basic_type_1
+            [("N", nat_kind)]
+            (Just (Constraint_1 "Division" "N"))
+            [Constraint_1 "Division" "N"]
+            (function_type int_type int_type)),
         ("EQ", Basic_type_1 [] Nothing [] comparison_type),
         ("Empty_List", Basic_type_1 [("T", star_kind)] Nothing [] (list_type (ntype "T"))),
         ("GT", Basic_type_1 [] Nothing [] comparison_type),
-        ("Id", Basic_type_1 [("T", star_kind)] Nothing [] (function_type (ntype "T") (ntype "T"))),
         (
           "Inverse",
           Basic_type_1

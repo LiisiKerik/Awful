@@ -53,6 +53,7 @@ Instance Functor{Tree}(
   Fmap f x = Match x {Empty_Tree -> Empty_Tree, Construct_Tree y z a -> Construct_Tree (f y) (Fmap f z) (Fmap f a)})
 Def Greater[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> True, Default -> False}
 Def Greater_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> False, Default -> True}
+Def Id[T : Star](x : T) : T = x
 Def Interleave[T : Star](x : List T, y : List (List T)) : List T =
   Match y {Empty_List -> List, Construct_List z a -> Cat z (Flatten (Fmap (Cat x) a))}
 Def Less[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> True, Default -> False}

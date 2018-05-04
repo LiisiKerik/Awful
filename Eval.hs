@@ -30,41 +30,50 @@ module Eval where
               eval' a e >>=
               \j ->
                 case h of
-                  Add_Int_expression_2 ->
+                  Add_Int_0_expression_2 ->
                     case j of
-                      Int_expression_2 l -> Just (Add_Int'_expression_2 l)
+                      Int_expression_2 l -> Just (Add_Int_1_expression_2 l)
                       _ -> undefined
-                  Add_Int'_expression_2 k ->
+                  Add_Int_1_expression_2 k ->
                     case j of
                       Int_expression_2 n -> Just (Int_expression_2 (k + n))
                       _ -> undefined
-                  Compare_Char_expression_2 ->
+                  Brackets_Modular_expression_2 k ->
                     case j of
-                      Char_expression_2 k -> Just (Compare_Char'_expression_2 k)
+                      Modular_expression_2 l -> Just (list_expression ("(" ++ show_mod (Modular k l) ++ ")"))
                       _ -> undefined
-                  Compare_Char'_expression_2 k ->
+                  Compare_Char_0_expression_2 ->
+                    case j of
+                      Char_expression_2 k -> Just (Compare_Char_1_expression_2 k)
+                      _ -> undefined
+                  Compare_Char_1_expression_2 k ->
                     case j of
                       Char_expression_2 l -> Just (Algebraic_expression_2 (show (compare k l)) [])
                       _ -> undefined
-                  Compare_Int_expression_2 ->
+                  Compare_Int_0_expression_2 ->
                     case j of
-                      Int_expression_2 k -> Just (Compare_Int'_expression_2 k)
+                      Int_expression_2 k -> Just (Compare_Int_1_expression_2 k)
                       _ -> undefined
-                  Compare_Int'_expression_2 k ->
+                  Compare_Int_1_expression_2 k ->
                     case j of
                       Int_expression_2 l -> Just (Algebraic_expression_2 (show (compare k l)) [])
                       _ -> undefined
-                  Div_expression_2 ->
+                  Convert_Int_expression_2 -> Just j
+                  Div_0_expression_2 ->
                     case j of
-                      Int_expression_2 k -> Just (Div'_expression_2 k)
+                      Int_expression_2 k -> Just (Div_1_expression_2 k)
                       _ -> undefined
-                  Div'_expression_2 k ->
+                  Div_1_expression_2 k ->
                     case j of
                       Int_expression_2 l ->
                         Just
                           (case l of
                             0 -> nothing_algebraic
                             _ -> wrap_algebraic (Int_expression_2 (div k l)))
+                      _ -> undefined
+                  Div'_expression_2 k ->
+                    case j of
+                      Int_expression_2 l -> Just (Int_expression_2 (div l k))
                       _ -> undefined
                   Field_expression_2 k ->
                     case j of
@@ -76,11 +85,11 @@ module Eval where
                       (case k of
                         Blank_pattern -> l
                         Name_pattern n -> subst_expr n l j)
-                  Mod_expression_2 ->
+                  Mod_0_expression_2 ->
                     case j of
-                      Int_expression_2 k -> Just (Mod'_expression_2 k)
+                      Int_expression_2 k -> Just (Mod_1_expression_2 k)
                       _ -> undefined
-                  Mod'_expression_2 k ->
+                  Mod_1_expression_2 k ->
                     case j of
                       Int_expression_2 l ->
                         Just
@@ -88,11 +97,11 @@ module Eval where
                             0 -> nothing_algebraic
                             _ -> wrap_algebraic (Int_expression_2 (mod k l)))
                       _ -> undefined
-                  Multiply_Int_expression_2 ->
+                  Multiply_Int_0_expression_2 ->
                     case j of
-                      Int_expression_2 k -> Just (Multiply_Int'_expression_2 k)
+                      Int_expression_2 k -> Just (Multiply_Int_1_expression_2 k)
                       _ -> undefined
-                  Multiply_Int'_expression_2 k ->
+                  Multiply_Int_1_expression_2 k ->
                     case j of
                       Int_expression_2 l -> Just (Int_expression_2 (k * l))
                       _ -> undefined
@@ -103,6 +112,10 @@ module Eval where
                   Write_Int_expression_2 ->
                     case j of
                       Int_expression_2 k -> Just (list_expression (show k))
+                      _ -> undefined
+                  Write_Modular_expression_2 k ->
+                    case j of
+                      Modular_expression_2 l -> Just (list_expression (show_mod (Modular k l)))
                       _ -> undefined
                   _ -> undefined))
       Match_expression_2 d e ->
@@ -138,7 +151,7 @@ module Eval where
                     _ -> undefined
                 Matches_Modular_2 i j ->
                   case h of
-                    Modular_expression_2 (Modular _ k) ->
+                    Modular_expression_2 k ->
                       case Data.Map.lookup k i of
                         Just o -> o
                         Nothing ->

@@ -119,7 +119,7 @@ init' =
         ("Field", (["Inverse"], fromList [])),
         ("Ord", (["Compare"], fromList [("Char", []), ("Int", [])])),
         ("Ring", (["Add", "Convert", "Multiply", "Negate"], fromList [("Int", [])])),
-        ("Writeable", (["Brackets", "Write"], fromList [("Int", []), ("Modular", [])]))])
+        ("Writeable", (["Brackets"], fromList [("Int", []), ("Modular", [])]))])
 main :: IO ()
 main = do
   args <- getArgs

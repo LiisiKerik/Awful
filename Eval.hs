@@ -38,10 +38,6 @@ module Eval where
                     case j of
                       Int_expression_2 n -> Just (Int_expression_2 (k + n))
                       _ -> undefined
-                  Brackets_Modular_expression_2 k ->
-                    case j of
-                      Modular_expression_2 l -> Just (list_expression ("(" ++ show_mod (Modular k l) ++ ")"))
-                      _ -> undefined
                   Compare_Char_0_expression_2 ->
                     case j of
                       Char_expression_2 k -> Just (Compare_Char_1_expression_2 k)
@@ -109,13 +105,15 @@ module Eval where
                     case j of
                       Int_expression_2 k -> Just (Int_expression_2 (- k))
                       _ -> undefined
-                  Write_Int_expression_2 ->
+                  Write_Brackets_Int_expression_2 ->
                     case j of
-                      Int_expression_2 k -> Just (list_expression (show k))
+                      Int_expression_2 k ->
+                        Just (pair_expression (list_expression (show k)) (Algebraic_expression_2 "False" []))
                       _ -> undefined
-                  Write_Modular_expression_2 k ->
+                  Write_Brackets_Modular_expression_2 k ->
                     case j of
-                      Modular_expression_2 l -> Just (list_expression (show_mod (Modular k l)))
+                      Modular_expression_2 l ->
+                        Just (pair_expression (list_expression (show_mod (Modular k l))) (Algebraic_expression_2 "True" []))
                       _ -> undefined
                   _ -> undefined))
       Match_expression_2 d e ->
@@ -185,6 +183,8 @@ module Eval where
       (Algebraic_expression_2 "Empty_List" [])
   nothing_algebraic :: Expression_2
   nothing_algebraic = Algebraic_expression_2 "Nothing" []
+  pair_expression :: Expression_2 -> Expression_2 -> Expression_2
+  pair_expression x y = Struct_expression_2 (fromList [("First", x), ("Second", y)])
   subst_algebraic :: String -> Expression_2 -> Match_Algebraic_2 -> Match_Algebraic_2
   subst_algebraic a b (Match_Algebraic_2 c d) = Match_Algebraic_2 c (if subst_help c a then d else subst_expr a d b)
   subst_expr :: String -> Expression_2 -> Expression_2 -> Expression_2

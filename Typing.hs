@@ -106,7 +106,6 @@ module Typing where
     Add_Int_1_expression_2 Integer |
     Algebraic_expression_2 String [Expression_2] |
     Application_expression_2 Expression_2 Expression_2 |
-    Brackets_Modular_expression_2 Integer |
     Char_expression_2 Char |
     Compare_Char_0_expression_2 |
     Compare_Char_1_expression_2 Char |
@@ -128,8 +127,8 @@ module Typing where
     Name_expression_2 String |
     Negate_Int_expression_2 |
     Struct_expression_2 (Map' Expression_2) |
-    Write_Int_expression_2 |
-    Write_Modular_expression_2 Integer
+    Write_Brackets_Int_expression_2 |
+    Write_Brackets_Modular_expression_2 Integer
       deriving Show
   data File =
     File
@@ -202,11 +201,9 @@ module Typing where
               Tmatch_int f g -> Matches_Int_2 (h <$> f) (h g)
               Tmatch_Modular f g -> Matches_Modular_2 (h <$> f) (h <$> g))
         Modular_texpr d -> Modular_expression_2 d
-        Name_texpr_0 "Brackets" "Writeable" (Application_type_1 (Name_type_1 "Modular" []) d) ->
-          Brackets_Modular_expression_2 (nat_to_int d)
         Name_texpr_0 "Div'" "Division" d -> Div'_expression_2 (nat_to_int d)
-        Name_texpr_0 "Write" "Writeable" (Application_type_1 (Name_type_1 "Modular" []) d) ->
-          Write_Modular_expression_2 (nat_to_int d)
+        Name_texpr_0 "Write_Brackets" "Writeable" (Application_type_1 (Name_type_1 "Modular" []) d) ->
+          Write_Brackets_Modular_expression_2 (nat_to_int d)
         Name_texpr_0 d e f ->
           let
             (g, i) = typestring f []
@@ -259,6 +256,7 @@ module Typing where
             [("T", star_kind)]
             (Data.Map.fromList [("Construct_List", [ntype "T", list_type (ntype "T")]), ("Empty_List", [])])
             (list_type (ntype "T"))),
+        ("Logical", Alg [] (Data.Map.fromList [("False", []), ("True", [])]) logical_type),
         (
           "Maybe",
           Alg [("T", star_kind)] (Data.Map.fromList [("Nothing", []), ("Wrap", [ntype "T"])]) (maybe_type (ntype "T"))),
@@ -350,9 +348,7 @@ module Typing where
           Class_4
             ("T", star_kind)
             Nothing
-            [
-              Method_4 "Brackets" [] [] (function_type (ntype "T") (list_type char_type)),
-              Method_4 "Write" [] [] (function_type (ntype "T") (list_type char_type))])]
+            [Method_4 "Write_Brackets" [] [] (function_type (ntype "T") (pair_type (list_type char_type) logical_type))])]
   classes_1 :: Map' Class_5
   classes_1 = (\(Class_4 (_, a) b c) -> Class_5 a b ((\(Method_4 d _ _ _) -> d) <$> c)) <$> classes_0
   classes_2 :: Map' Kind_1
@@ -403,10 +399,12 @@ module Typing where
         ("Construct_List", "List"),
         ("EQ", "Comparison"),
         ("Empty_List", "List"),
+        ("False", "Logical"),
         ("GT", "Comparison"),
         ("LT", "Comparison"),
         ("Next", "Nat"),
         ("Nothing", "Maybe"),
+        ("True", "Logical"),
         ("Wrap", "Maybe"),
         ("Zr", "Nat")]
   context_union :: File -> File -> File
@@ -428,7 +426,6 @@ module Typing where
     Data.Map.fromList
       [
         ("Add Int", Add_Int_0_expression_2),
-        ("Brackets Int", Write_Int_expression_2),
         ("Compare Char", Compare_Char_0_expression_2),
         ("Compare Int", Compare_Int_0_expression_2),
         (
@@ -442,6 +439,8 @@ module Typing where
         ("Div", Div_0_expression_2),
         ("EQ", Algebraic_expression_2 "EQ" []),
         ("Empty_List", Algebraic_expression_2 "Empty_List" []),
+        ("False", Algebraic_expression_2 "False" []),
+        ("First", Field_expression_2 "First"),
         ("GT", Algebraic_expression_2 "GT" []),
         ("LT", Algebraic_expression_2 "LT" []),
         ("Mod", Mod_0_expression_2),
@@ -449,8 +448,18 @@ module Typing where
         ("Negate Int", Negate_Int_expression_2),
         ("Next", Function_expression_2 (Name_pattern "x") (Algebraic_expression_2 "Next" [Name_expression_2 "x"])),
         ("Nothing", Algebraic_expression_2 "Nothing" []),
+        (
+          "Pair",
+          Function_expression_2
+            (Name_pattern "x")
+            (Function_expression_2
+              (Name_pattern "y")
+              (Struct_expression_2
+                (Data.Map.fromList [("First", Name_expression_2 "x"), ("Second", Name_expression_2 "y")])))),
+        ("Second", Field_expression_2 "Second"),
+        ("True", Algebraic_expression_2 "False" []),
         ("Wrap", Function_expression_2 (Name_pattern "x") (Algebraic_expression_2 "Wrap" [Name_expression_2 "x"])),
-        ("Write Int", Write_Int_expression_2),
+        ("Write_Brackets Int", Write_Brackets_Int_expression_2),
         ("Zr", Algebraic_expression_2 "Zr" [])]
   find_and_delete :: Ord t => Map t u -> t -> Maybe (u, Map t u)
   find_and_delete a b = (\c -> (c, Data.Map.delete b a)) <$> Data.Map.lookup b a
@@ -496,13 +505,15 @@ module Typing where
   hkinds =
     Data.Map.fromList
       [
-        ("Arrow", Arrow_kind Star_kind (Arrow_kind Star_kind Star_kind)),
         ("!Char", Star_kind),
         ("!Comparison", Star_kind),
         ("!Int", Star_kind),
         ("!List", Arrow_kind Star_kind Star_kind),
+        ("!Logical", Star_kind),
         ("!Maybe", Arrow_kind Star_kind Star_kind),
         ("!Nat", Star_kind),
+        ("!Pair", Arrow_kind Star_kind (Arrow_kind Star_kind Star_kind)),
+        ("Arrow", Arrow_kind Star_kind (Arrow_kind Star_kind Star_kind)),
         ("Star", Star_kind)]
   init_type_context :: File
   init_type_context =
@@ -555,11 +566,18 @@ module Typing where
             ["K"]
             (arrow_kind (Name_kind_1 "K") (arrow_kind (list_kind (Name_kind_1 "K")) (list_kind (Name_kind_1 "K"))))),
         ("!EQ", Polykind [] comparison_kind),
-        ("!Empty_List", Polykind ["K"] (list_kind (Name_kind_1 "K"))), 
+        ("!Empty_List", Polykind ["K"] (list_kind (Name_kind_1 "K"))),
+        ("!False", Polykind [] logical_kind),
         ("!GT", Polykind [] comparison_kind),
-        ("!Next", Polykind [] (arrow_kind nat_kind nat_kind)),
-        ("!Nothing", Polykind ["K"] (maybe_kind (Name_kind_1 "K"))), 
         ("!LT", Polykind [] comparison_kind),
+        ("!Next", Polykind [] (arrow_kind nat_kind nat_kind)),
+        ("!Nothing", Polykind ["K"] (maybe_kind (Name_kind_1 "K"))),
+        (
+          "!Pair",
+          Polykind
+            ["K", "L"]
+            (arrow_kind (Name_kind_1 "K") (arrow_kind (Name_kind_1 "L") (pair_kind (Name_kind_1 "K") (Name_kind_1 "L"))))),
+        ("!True", Polykind [] logical_kind),
         ("!Wrap", Polykind ["K"] (arrow_kind (Name_kind_1 "K") (maybe_kind (Name_kind_1 "K")))),
         ("!Zr", Polykind [] nat_kind),
         ("Char", Polykind [] star_kind),
@@ -567,9 +585,11 @@ module Typing where
         ("Function", Polykind [] (arrow_kind star_kind (arrow_kind star_kind star_kind))),
         ("Int", Polykind [] star_kind),
         ("List", Polykind [] (arrow_kind star_kind star_kind)),
+        ("Logical", Polykind [] star_kind),
         ("Maybe", Polykind [] (arrow_kind star_kind star_kind)),
         ("Modular", Polykind [] (arrow_kind nat_kind star_kind)),
-        ("Nat", Polykind [] star_kind)]
+        ("Nat", Polykind [] star_kind),
+        ("Pair", Polykind [] (arrow_kind star_kind (arrow_kind star_kind star_kind)))]
   list_kind :: Kind_1 -> Kind_1
   list_kind = Application_kind_1 (Name_kind_1 "!List")
   list_type :: Type_1 -> Type_1
@@ -583,7 +603,6 @@ module Typing where
         (\x -> (x, Language)) <$>
         [
           "Add",
-          "Brackets",
           "Char",
           "Compare",
           "Comparison",
@@ -595,13 +614,16 @@ module Typing where
           "Division",
           "EQ",
           "Empty_List",
+          "False",
           "Field",
+          "First",
           "Function",
           "GT",
           "Int",
           "Inverse",
           "LT",
           "List",
+          "Logical",
           "Maybe",
           "Mod",
           "Modular",
@@ -611,11 +633,18 @@ module Typing where
           "Next",
           "Nothing",
           "Ord",
+          "Pair",
           "Ring",
+          "Second",
+          "True",
           "Wrap",
-          "Write",
+          "Write_Brackets",
           "Writeable",
           "Zr"])
+  logical_kind :: Kind_1
+  logical_kind = Name_kind_1 "!Logical"
+  logical_type :: Type_1
+  logical_type = ntype "Logical"
   make_eq :: Data_2 -> Map' (Either Bool (Map' Location_0), Status) -> Map' (Either Bool (Map' Location_0), Status)
   make_eq (Data_2 (Name _ a) b') =
     case b' of
@@ -674,6 +703,10 @@ module Typing where
   old = (<$>) (flip (,) Old)
   old' :: Map' (Map' t) -> Map' (Map' (t, Status))
   old' = (<$>) old
+  pair_type :: Type_1 -> Type_1 -> Type_1
+  pair_type x = Application_type_1 (Application_type_1 (ntype "Pair") x)
+  pair_kind :: Kind_1 -> Kind_1 -> Kind_1
+  pair_kind x = Application_kind_1 (Application_kind_1 (Name_kind_1 "!Pair") x)
   pkind :: Kind_1 -> Polykind
   pkind = Polykind []
   prom_algs :: Map' Prom_alg
@@ -689,6 +722,7 @@ module Typing where
               [
                 ("!Empty_List", []),
                 ("!Construct_List", [Name_kind_1 "K", Application_kind_1 (Name_kind_1 "!List") (Name_kind_1 "K")])])),
+        ("!Logical", Prom_alg [] (Data.Map.fromList [("!False", []), ("!True", [])])),
         ("!Maybe", Prom_alg ["K"] (Data.Map.fromList [("!Nothing", []), ("!Wrap", [Name_kind_1 "K"])])),
         ("!Nat", Prom_alg [] (Data.Map.fromList [("!Next", [nat_kind]), ("!Zr", [])]))]
   prom_type :: Set String -> Type_1 -> Kind_1
@@ -711,7 +745,8 @@ module Typing where
   promotable' :: Kind_0 -> Bool
   promotable' (Kind_0 _ a) = a == Name_kind_0 "Star"
   promotables :: Map' Bool
-  promotables = Data.Map.fromList ((\a -> (a, True)) <$> ["Char", "Comparison", "Int", "List", "Maybe", "Nat"])
+  promotables =
+    Data.Map.fromList ((\a -> (a, True)) <$> ["Char", "Comparison", "Int", "List", "Logical", "Maybe", "Nat", "Pair"])
   rem_old :: Map' (t, Status) -> Map' t
   rem_old a = fst <$> Data.Map.filter (\(_, b) -> b == New) a
   rem_old' :: Map' (Map' (t, Status)) -> Map' (Map' t)
@@ -1684,7 +1719,11 @@ module Typing where
       (Left <$> b, c, d, e)
       (Expression_1
         (Location_0 0 0)
-        (Application_expression_1 (Expression_1 (Location_0 0 0) (Name_expression_1 "Write")) f))
+        (Application_expression_1
+          (Expression_1 (Location_0 0 0) (Name_expression_1 "First"))
+          (Expression_1
+            (Location_0 0 0)
+            (Application_expression_1 (Expression_1 (Location_0 0 0) (Name_expression_1 "Write_Brackets")) f))))
       g
       0
   type_expression ::
@@ -1933,7 +1972,7 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
     case c of
       Just e ->
         if e == a
-          then Left ("Circular dependency between files [" ++ intercalate ", " b ++ "].")
+          then Left ("Circular dependency between classes [" ++ intercalate ", " b ++ "].")
           else type_inh a (e : b) (Data.Map.lookup e d) d
       Nothing -> Right ()
   type_kind :: (String, Kind_1) -> Map' Polykind -> Map' Polykind
@@ -2517,13 +2556,6 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
             [Constraint_1 "Ring" "T"]
             (function_type (ntype "T") (function_type (ntype "T") (ntype "T")))),
         (
-          "Brackets",
-          Basic_type_1
-            [("T", star_kind)]
-            (Just (Constraint_1 "Writeable" "T"))
-            [Constraint_1 "Writeable" "T"]
-            (function_type (ntype "T") (list_type char_type))),
-        (
           "Compare",
           Basic_type_1
             [("T", star_kind)]
@@ -2555,6 +2587,14 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
             (function_type int_type int_type)),
         ("EQ", Basic_type_1 [] Nothing [] comparison_type),
         ("Empty_List", Basic_type_1 [("T", star_kind)] Nothing [] (list_type (ntype "T"))),
+        ("False", Basic_type_1 [] Nothing [] logical_type),
+        (
+          "First",
+          Basic_type_1
+            [("T", star_kind), ("U", star_kind)]
+            Nothing
+            []
+            (function_type (pair_type (ntype "T") (ntype "U")) (ntype "T"))),
         ("GT", Basic_type_1 [] Nothing [] comparison_type),
         (
           "Inverse",
@@ -2581,14 +2621,29 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
             (function_type (ntype "T") (ntype "T"))),
         ("Next", Basic_type_1 [] Nothing [] (function_type nat_type nat_type)),
         ("Nothing", Basic_type_1 [("T", star_kind)] Nothing [] (maybe_type (ntype "T"))),
+        (
+          "Pair",
+          Basic_type_1
+            [("T", star_kind), ("U", star_kind)]
+            Nothing
+            []
+            (function_type (ntype "T") (function_type (ntype "U") (pair_type (ntype "T") (ntype "U"))))),
+        (
+          "Second",
+          Basic_type_1
+            [("T", star_kind), ("U", star_kind)]
+            Nothing
+            []
+            (function_type (pair_type (ntype "T") (ntype "U")) (ntype "U"))),
+        ("True", Basic_type_1 [] Nothing [] logical_type),
         ("Wrap", Basic_type_1 [("T", star_kind)] Nothing [] (function_type (ntype "T") (maybe_type (ntype "T")))),
         (
-          "Write",
+          "Write_Brackets",
           Basic_type_1
             [("T", star_kind)]
             (Just (Constraint_1 "Writeable" "T"))
             [Constraint_1 "Writeable" "T"]
-            (function_type (ntype "T") (list_type char_type))),
+            (function_type (ntype "T") (pair_type (list_type char_type) logical_type))),
         ("Zr", Basic_type_1 [] Nothing [] nat_type)]
   typestring :: Type_1 -> [Type_1] -> (String, [Type_1])
   typestring a d =

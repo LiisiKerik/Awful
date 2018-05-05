@@ -1,7 +1,5 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 Algebraic Either[T : Star, U : Star](Left T, Right U)
-Algebraic Logical(False, True)
-Struct Pair[T : Star, U : Star](First : T, Second : U)
 Algebraic Tree[T : Star](Empty_Tree, Construct_Tree T (Tree T) (Tree T))
 Class Alternative{F : Arrow Star Star}<Applicative>(
   Cat[T : Star] : Function (F T) (Function (F T) (F T)),
@@ -29,9 +27,9 @@ Instance Applicative{List}(
 Instance Applicative{Maybe}(Apply x y = Match x {Nothing -> Nothing, Wrap f -> Fmap f y}, Lift = Wrap)
 Instance Bifunctor{Either}(Bimap f g x = Match x {Left y -> Left (f y), Right y -> Right (g y)})
 Instance Bifunctor{Pair}(Bimap f g x = Pair (f (First x)) (g (Second x)))
-Def Brackets'[T : Star]<Writeable T>(x : T) : List Char = Cat (Lift "(") (Cat (Write x) (Lift ")"))
+Def Brackets[T : Star]<Writeable T>(x : T) : List Char =
+  (y -> Match Second y {False -> First y, True -> Cat (Lift "(") (Cat (First y) (Lift ")"))}) (Write_Brackets x)
 Def Convert'[F : Arrow Star Star, T : Star]<Applicative F, Ring T>(x : Int) : F T = Lift (Convert x)
-Def Div'(x : Int, y : Int) : Int = Unsafe (Div x y)
 Def Equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> True, Default -> False}
 Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing})
 Instance Field{Logical}(Inverse x = Match x {False -> Nothing, True -> Wrap True})
@@ -110,50 +108,49 @@ Instance Ring{Pair T U}<Ring T, Ring U>(
   Convert x = Pair (Convert x) (Convert x),
   Multiply x y = Pair (Multiply (First x) (First y)) (Multiply (Second x) (Second y)),
   Negate x = Pair (Negate (First x)) (Negate (Second x)))
+Def Write[T : Star]<Writeable T>(x : T) : List Char = First (Write_Brackets x)
 Def Write'(x : List Char, y : List (List Char)) : List Char = Interleave (Lift " ") (Construct_List x y)
 Instance Writeable{Char}(
-  Brackets = Write,
-  Write c = Construct_List """ (Cat (Match c {"\n" -> List ("\", "n"), Default -> Lift c}) (Lift """)))
+  Write_Brackets c = Pair (Construct_List """ (Cat (Match c {"\n" -> List ("\", "n"), Default -> Lift c}) (Lift """))) False)
 Instance Writeable{Comparison}(
-  Brackets = Write,
-  Write x = Match x {LT -> List ("L", "T"), EQ -> List ("E", "Q"), GT -> List ("G", "T")})
+  Write_Brackets x = Pair (Match x {LT -> List ("L", "T"), EQ -> List ("E", "Q"), GT -> List ("G", "T")}) False)
 Instance Writeable{Either T U}<Writeable T, Writeable U>(
-  Brackets = Brackets',
-  Write x =
-    Match x {
-      Left y -> Cat (List ("L", "e", "f", "t")) (Brackets y),
-      Right y -> Cat (List ("R", "i", "g", "h", "t")) (Brackets y)})
+  Write_Brackets x =
+    Pair
+      (Match x {
+        Left y -> Cat (List ("L", "e", "f", "t")) (Brackets y),
+        Right y -> Cat (List ("R", "i", "g", "h", "t")) (Brackets y)})
+      True)
 Instance Writeable{List T}<Writeable T>(
-  Brackets x = (Match x {Empty_List -> Write, Construct_List _ _ -> Brackets'}) x,
-  Write x =
+  Write_Brackets x =
     Match x {
-      Empty_List -> List ("L", "i", "s", "t"),
+      Empty_List -> Pair (List ("L", "i", "s", "t")) False,
       Construct_List y z ->
-        Match z {
-          Empty_List -> Cat (List ("L", "i", "f", "t", " ")) (Brackets y),
-          Construct_List _ _ ->
-            Cat (List ("L", "i", "s", "t", " ", "(")) (Cat (Interleave (List (",", " ")) (Fmap Write x)) (Lift ")"))}})
+        Pair
+          (Match z {
+            Empty_List -> Cat (List ("L", "i", "f", "t", " ")) (Brackets y),
+            Construct_List _ _ ->
+              Cat (List ("L", "i", "s", "t", " ", "(")) (Cat (Interleave (List (",", " ")) (Fmap Write x)) (Lift ")"))})
+          True})
 Instance Writeable{Logical}(
-  Brackets = Write,
-  Write x = Match x {False -> List ("F", "a", "l", "s", "e"), True -> List ("T", "r", "u", "e")})
+  Write_Brackets x = Pair (Match x {False -> List ("F", "a", "l", "s", "e"), True -> List ("T", "r", "u", "e")}) False)
 Instance Writeable{Maybe T}<Writeable T>(
-  Brackets x = (Match x {Nothing -> Write, Wrap _ -> Brackets'}) x,
-  Write x =
+  Write_Brackets x =
     Match x {
-      Nothing -> List ("N", "o", "t", "h", "i", "n", "g"),
-      Wrap y -> Cat (List ("W", "r", "a", "p", " ")) (Brackets y)})
+      Nothing -> Pair (List ("N", "o", "t", "h", "i", "n", "g")) False,
+      Wrap y -> Pair (Cat (List ("W", "r", "a", "p", " ")) (Brackets y)) True})
 Instance Writeable{Pair T U}<Writeable T, Writeable U>(
-  Brackets = Brackets',
-  Write x = Write' (List ("P", "a", "i", "r")) (List (Brackets (First x), Brackets (Second x))))
+  Write_Brackets x = Pair (Write' (List ("P", "a", "i", "r")) (List (Brackets (First x), Brackets (Second x)))) True)
 Instance Writeable{Tree T}<Writeable T>(
-  Brackets x = (Match x {Empty_Tree -> Write, Construct_Tree _ _ _ -> Brackets'}) x,
-  Write x =
+  Write_Brackets x =
     Match x {
-      Empty_Tree -> List ("E", "m", "p", "t", "y", "_", "T", "r", "e", "e"),
+      Empty_Tree -> Pair (List ("E", "m", "p", "t", "y", "_", "T", "r", "e", "e")) False,
       Construct_Tree y z a ->
-        Write'
-          (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "r", "e", "e"))
-          (List (Brackets y, Brackets z, Brackets a))})
+        Pair
+          (Write'
+            (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "r", "e", "e"))
+            (List (Brackets y, Brackets z, Brackets a)))
+          True})
 Def Zip[F : Arrow Star Star, T : Star, U : Star, V : Star]<Applicative F>(f : Function T (Function U V), x : F T) :
   Function (F U) (F V) =
     Apply (Fmap f x)

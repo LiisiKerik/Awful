@@ -38,6 +38,14 @@ module Eval where
                     case j of
                       Int_expression_2 n -> Just (Int_expression_2 (k + n))
                       _ -> undefined
+                  Add_Modular_0_expression_2 k ->
+                    case j of
+                      Modular_expression_2 l -> Just (Add_Modular_1_expression_2 k l)
+                      _ -> undefined
+                  Add_Modular_1_expression_2 l k ->
+                    case j of
+                      Modular_expression_2 n -> Just (Modular_expression_2 (mod (k + n) l))
+                      _ -> undefined
                   Compare_Char_0_expression_2 ->
                     case j of
                       Char_expression_2 k -> Just (Compare_Char_1_expression_2 k)
@@ -55,6 +63,10 @@ module Eval where
                       Int_expression_2 l -> Just (Algebraic_expression_2 (show (compare k l)) [])
                       _ -> undefined
                   Convert_Int_expression_2 -> Just j
+                  Convert_Modular_expression_2 k ->
+                    case j of
+                      Int_expression_2 l -> Just (Modular_expression_2 (mod l k))
+                      _ -> undefined
                   Div_0_expression_2 ->
                     case j of
                       Int_expression_2 k -> Just (Div_1_expression_2 k)
@@ -101,9 +113,21 @@ module Eval where
                     case j of
                       Int_expression_2 l -> Just (Int_expression_2 (k * l))
                       _ -> undefined
+                  Multiply_Modular_0_expression_2 k ->
+                    case j of
+                      Modular_expression_2 l -> Just (Multiply_Modular_1_expression_2 k l)
+                      _ -> undefined
+                  Multiply_Modular_1_expression_2 l k ->
+                    case j of
+                      Modular_expression_2 n -> Just (Modular_expression_2 (mod (k * n) l))
+                      _ -> undefined
                   Negate_Int_expression_2 ->
                     case j of
                       Int_expression_2 k -> Just (Int_expression_2 (- k))
+                      _ -> undefined
+                  Negate_Modular_expression_2 k ->
+                    case j of
+                      Modular_expression_2 l -> Just (Modular_expression_2 (mod k (- l)))
                       _ -> undefined
                   Write_Brackets_Int_expression_2 ->
                     case j of

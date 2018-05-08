@@ -104,6 +104,8 @@ module Typing where
   data Expression_2 =
     Add_Int_0_expression_2 |
     Add_Int_1_expression_2 Integer |
+    Add_Modular_0_expression_2 Integer |
+    Add_Modular_1_expression_2 Integer Integer |
     Algebraic_expression_2 String [Expression_2] |
     Application_expression_2 Expression_2 Expression_2 |
     Char_expression_2 Char |
@@ -112,6 +114,7 @@ module Typing where
     Compare_Int_0_expression_2 |
     Compare_Int_1_expression_2 Integer |
     Convert_Int_expression_2 |
+    Convert_Modular_expression_2 Integer |
     Div_0_expression_2 |
     Div_1_expression_2 Integer |
     Div'_expression_2 Integer |
@@ -124,8 +127,11 @@ module Typing where
     Modular_expression_2 Integer |
     Multiply_Int_0_expression_2 |
     Multiply_Int_1_expression_2 Integer |
+    Multiply_Modular_0_expression_2 Integer |
+    Multiply_Modular_1_expression_2 Integer Integer |
     Name_expression_2 String |
     Negate_Int_expression_2 |
+    Negate_Modular_expression_2 Integer |
     Struct_expression_2 (Map' Expression_2) |
     Write_Brackets_Int_expression_2 |
     Write_Brackets_Modular_expression_2 Integer
@@ -201,7 +207,11 @@ module Typing where
               Tmatch_int f g -> Matches_Int_2 (h <$> f) (h g)
               Tmatch_Modular f g -> Matches_Modular_2 (h <$> f) (h <$> g))
         Modular_texpr d -> Modular_expression_2 d
-        Name_texpr_0 "Div'" "Division" d -> Div'_expression_2 (nat_to_int d)
+        Name_texpr_0 "Add_Modular" "Ring_Modular" d -> Add_Modular_0_expression_2 (nat_to_int d)
+        Name_texpr_0 "Convert_Modular" "Ring_Modular" d -> Convert_Modular_expression_2 (nat_to_int d)
+        Name_texpr_0 "Div'" "Ring_Modular" d -> Div'_expression_2 (nat_to_int d)
+        Name_texpr_0 "Multiply_Modular" "Ring_Modular" d -> Multiply_Modular_0_expression_2 (nat_to_int d)
+        Name_texpr_0 "Negate_Modular" "Ring_Modular" d -> Negate_Modular_expression_2 (nat_to_int d)
         Name_texpr_0 "Write_Brackets" "Writeable" (Application_type_1 (Name_type_1 "Modular" []) d) ->
           Write_Brackets_Modular_expression_2 (nat_to_int d)
         Name_texpr_0 d e f ->
@@ -320,7 +330,6 @@ module Typing where
   classes_0 =
     Data.Map.fromList
       [
-        ("Division", Class_4 ("N", nat_kind) Nothing [Method_4 "Div'" [] [] (function_type int_type int_type)]),
         (
           "Field",
           Class_4
@@ -343,6 +352,25 @@ module Typing where
               Method_4 "Convert" [] [] (function_type int_type (ntype "T")),
               Method_4 "Multiply" [] [] (function_type (ntype "T") (function_type (ntype "T") (ntype "T"))),
               Method_4 "Negate" [] [] (function_type (ntype "T") (ntype "T"))]),
+        (
+          "Ring_Modular",
+          Class_4
+            ("N", nat_kind)
+            Nothing
+            [
+              Method_4
+                "Add_Modular"
+                []
+                []
+                (function_type (mod_type (ntype "N")) (function_type (mod_type (ntype "N")) (mod_type (ntype "N")))),
+              Method_4 "Div'" [] [] (function_type int_type int_type),
+              Method_4 "Convert_Modular" [] [] (function_type int_type (mod_type (ntype "N"))),
+              Method_4
+                "Multiply_Modular"
+                []
+                []
+                (function_type (mod_type (ntype "N")) (function_type (mod_type (ntype "N")) (mod_type (ntype "N")))),
+              Method_4 "Negate_Modular" [] [] (function_type (mod_type (ntype "N")) (mod_type (ntype "N")))]),
         (
           "Writeable",
           Class_4
@@ -535,10 +563,10 @@ module Typing where
   instances =
     Data.Map.fromList
       [
-        ("Division", Data.Map.fromList [("Next", [])]),
         ("Field", Data.Map.fromList []),
         ("Ord", Data.Map.fromList [("Char", []), ("Int", [])]),
-        ("Ring", Data.Map.fromList [("Int", [])]),
+        ("Ring", Data.Map.fromList [("Int", []), ("Modular", [["Ring_Modular"]])]),
+        ("Ring_Modular", Data.Map.fromList [("Next", [])]),
         ("Writeable", Data.Map.fromList [("Int", []), ("Modular", [[]])])]
   int_kind :: Kind_1
   int_kind = Name_kind_1 "!Int"
@@ -611,7 +639,6 @@ module Typing where
           "Crash",
           "Div",
           "Div'",
-          "Division",
           "EQ",
           "Empty_List",
           "False",
@@ -635,6 +662,7 @@ module Typing where
           "Ord",
           "Pair",
           "Ring",
+          "Ring_Modular",
           "Second",
           "True",
           "Wrap",
@@ -2582,8 +2610,8 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
           "Div'",
           Basic_type_1
             [("N", nat_kind)]
-            (Just (Constraint_1 "Division" "N"))
-            [Constraint_1 "Division" "N"]
+            (Just (Constraint_1 "Ring_Modular" "N"))
+            [Constraint_1 "Ring_Modular" "N"]
             (function_type int_type int_type)),
         ("EQ", Basic_type_1 [] Nothing [] comparison_type),
         ("Empty_List", Basic_type_1 [("T", star_kind)] Nothing [] (list_type (ntype "T"))),

@@ -47,7 +47,6 @@ module Tokenise where
     Match_token |
     Name_token String |
     Operator_token String |
-    Requires_token |
     Right_curly_token |
     Right_round_token |
     Right_square_token |
@@ -278,7 +277,6 @@ module Tokenise where
       "Load" -> Load_token
       "Match" -> Match_token
       "Newline" -> Char_token '\n'
-      "Requires" -> Requires_token
       "Struct" -> Struct_token
       _ -> Name_token a
 -----------------------------------------------------------------------------------------------------------------------------

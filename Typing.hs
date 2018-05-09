@@ -207,10 +207,18 @@ module Typing where
               Tmatch_int f g -> Matches_Int_2 (h <$> f) (h g)
               Tmatch_Modular f g -> Matches_Modular_2 (h <$> f) (h <$> g))
         Modular_texpr d -> Modular_expression_2 d
+        Name_texpr_0 "Add" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
+          Add_Modular_0_expression_2 (nat_to_int d)
         Name_texpr_0 "Add_Modular" "Ring_Modular" d -> Add_Modular_0_expression_2 (nat_to_int d)
+        Name_texpr_0 "Convert" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
+          Convert_Modular_expression_2 (nat_to_int d)
         Name_texpr_0 "Convert_Modular" "Ring_Modular" d -> Convert_Modular_expression_2 (nat_to_int d)
         Name_texpr_0 "Div'" "Ring_Modular" d -> Div'_expression_2 (nat_to_int d)
+        Name_texpr_0 "Multiply" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
+          Multiply_Modular_0_expression_2 (nat_to_int d)
         Name_texpr_0 "Multiply_Modular" "Ring_Modular" d -> Multiply_Modular_0_expression_2 (nat_to_int d)
+        Name_texpr_0 "Negate" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
+          Negate_Modular_expression_2 (nat_to_int d)
         Name_texpr_0 "Negate_Modular" "Ring_Modular" d -> Negate_Modular_expression_2 (nat_to_int d)
         Name_texpr_0 "Write_Brackets" "Writeable" (Application_type_1 (Name_type_1 "Modular" []) d) ->
           Write_Brackets_Modular_expression_2 (nat_to_int d)
@@ -566,7 +574,7 @@ module Typing where
         ("Field", Data.Map.fromList []),
         ("Ord", Data.Map.fromList [("Char", []), ("Int", [])]),
         ("Ring", Data.Map.fromList [("Int", []), ("Modular", [["Ring_Modular"]])]),
-        ("Ring_Modular", Data.Map.fromList [("Next", [])]),
+        ("Ring_Modular", Data.Map.fromList [("!Next", [[]])]),
         ("Writeable", Data.Map.fromList [("Int", []), ("Modular", [[]])])]
   int_kind :: Kind_1
   int_kind = Name_kind_1 "!Int"
@@ -1727,12 +1735,13 @@ module Typing where
   type_expr k h a (b, c, d, e) f m w w' =
     let
       n = " in " ++ k
-    in (
-      type_expression c d a w 0 b [] e f h [] >>=
-      \(g, i, j, _, _, x) ->
-        (
-          solvesys ("Type error" ++ n) i j (x, g) >>=
-          \(y, p) -> addargs w' p <$ slv m y (\t -> "Failure to resolve constraints for class " ++ t ++ n)))
+    in
+      (
+        type_expression c d a w 0 b [] e f h [] >>=
+        \(g, i, j, _, _, x) ->
+          (
+            solvesys ("Type error" ++ n) i j (x, g) >>=
+            \(y, p) -> addargs w' p <$ slv m y (\t -> "Failure to resolve constraints for class " ++ t ++ n)))
   type_expr' ::
     (Map' Polykind, Map' Alg, Map' String, Map' Type_2) ->
     Expression_1 ->

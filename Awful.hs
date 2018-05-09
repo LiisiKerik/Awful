@@ -97,8 +97,7 @@ err = return <$> Left
 eval'' :: [String] -> String -> IO (Err String)
 eval'' a b = do
   c <- check_imports [] (init', init_type_context) ((,) Language <$> a)
-  return
-    (c >>= \((_, e, f, j, _, y), (File _ g h i _ _ _ _ m _ _)) -> tokenise_parse_naming_typing_eval e j (g, h, i) f b m y)
+  return (c >>= \((_, e, f, j, _, y),File _ g h i _ _ _ _ m _ _) -> tokenise_parse_naming_typing_eval e j (g, h, i) f b m y)
 init' :: (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)]))
 init' =
   (
@@ -117,9 +116,7 @@ init' =
       [
         ("Field", (["Inverse"], fromList [])),
         ("Ord", (["Compare"], fromList [("Char", []), ("Int", [])])),
-        (
-          "Ring",
-          (["Add", "Convert", "Multiply", "Negate"], fromList [("Int", []), ("Modular", [("Ring_Modular", Nxt Zr)])])),
+        ("Ring", (["Add", "Convert", "Multiply", "Negate"], fromList [("Int", []), ("Modular", [("Ring_Modular", Zr)])])),
         (
           "Ring_Modular",
           (["Add_Modular", "Div'", "Convert_Modular", "Multiply_Modular", "Negate_Modular"], fromList [("!Next", [])])),

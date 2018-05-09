@@ -209,17 +209,13 @@ module Typing where
         Modular_texpr d -> Modular_expression_2 d
         Name_texpr_0 "Add" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
           Add_Modular_0_expression_2 (nat_to_int d)
-        Name_texpr_0 "Add_Modular" "Ring_Modular" d -> Add_Modular_0_expression_2 (nat_to_int d)
         Name_texpr_0 "Convert" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
           Convert_Modular_expression_2 (nat_to_int d)
-        Name_texpr_0 "Convert_Modular" "Ring_Modular" d -> Convert_Modular_expression_2 (nat_to_int d)
         Name_texpr_0 "Div'" "Ring_Modular" d -> Div'_expression_2 (nat_to_int d)
         Name_texpr_0 "Multiply" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
           Multiply_Modular_0_expression_2 (nat_to_int d)
-        Name_texpr_0 "Multiply_Modular" "Ring_Modular" d -> Multiply_Modular_0_expression_2 (nat_to_int d)
         Name_texpr_0 "Negate" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
           Negate_Modular_expression_2 (nat_to_int d)
-        Name_texpr_0 "Negate_Modular" "Ring_Modular" d -> Negate_Modular_expression_2 (nat_to_int d)
         Name_texpr_0 "Write_Brackets" "Writeable" (Application_type_1 (Name_type_1 "Modular" []) d) ->
           Write_Brackets_Modular_expression_2 (nat_to_int d)
         Name_texpr_0 d e f ->
@@ -360,25 +356,7 @@ module Typing where
               Method_4 "Convert" [] [] (function_type int_type (ntype "T")),
               Method_4 "Multiply" [] [] (function_type (ntype "T") (function_type (ntype "T") (ntype "T"))),
               Method_4 "Negate" [] [] (function_type (ntype "T") (ntype "T"))]),
-        (
-          "Ring_Modular",
-          Class_4
-            ("N", nat_kind)
-            Nothing
-            [
-              Method_4
-                "Add_Modular"
-                []
-                []
-                (function_type (mod_type (ntype "N")) (function_type (mod_type (ntype "N")) (mod_type (ntype "N")))),
-              Method_4 "Div'" [] [] (function_type int_type int_type),
-              Method_4 "Convert_Modular" [] [] (function_type int_type (mod_type (ntype "N"))),
-              Method_4
-                "Multiply_Modular"
-                []
-                []
-                (function_type (mod_type (ntype "N")) (function_type (mod_type (ntype "N")) (mod_type (ntype "N")))),
-              Method_4 "Negate_Modular" [] [] (function_type (mod_type (ntype "N")) (mod_type (ntype "N")))]),
+        ("Ring_Modular", Class_4 ("N", nat_kind) Nothing [Method_4 "Div'" [] [] (function_type int_type int_type)]),
         (
           "Writeable",
           Class_4

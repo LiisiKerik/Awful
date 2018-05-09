@@ -117,9 +117,7 @@ init' =
         ("Field", (["Inverse"], fromList [])),
         ("Ord", (["Compare"], fromList [("Char", []), ("Int", [])])),
         ("Ring", (["Add", "Convert", "Multiply", "Negate"], fromList [("Int", []), ("Modular", [("Ring_Modular", Zr)])])),
-        (
-          "Ring_Modular",
-          (["Add_Modular", "Div'", "Convert_Modular", "Multiply_Modular", "Negate_Modular"], fromList [("!Next", [])])),
+        ("Ring_Modular", (["Div'"], fromList [("!Next", [])])),
         ("Writeable", (["Write_Brackets"], fromList [("Int", []), ("Modular", [])]))])
 main :: IO ()
 main = do

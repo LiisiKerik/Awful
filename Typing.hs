@@ -493,7 +493,7 @@ module Typing where
               (Struct_expression_2
                 (Data.Map.fromList [("First", Name_expression_2 "x"), ("Second", Name_expression_2 "y")])))),
         ("Second", Field_expression_2 "Second"),
-        ("True", Algebraic_expression_2 "False" []),
+        ("True", Algebraic_expression_2 "True" []),
         ("Wrap", Function_expression_2 (Name_pattern "x") (Algebraic_expression_2 "Wrap" [Name_expression_2 "x"])),
         ("Write_Brackets Int", Write_Brackets_Int_expression_2),
         ("Zr", Algebraic_expression_2 "Zr" [])]

@@ -28,7 +28,7 @@ Instance Applicative{Maybe}(Apply x y = Match x {Nothing -> Nothing, Wrap f -> F
 Instance Bifunctor{Either}(Bimap f g x = Match x {Left y -> Left (f y), Right y -> Right (g y)})
 Instance Bifunctor{Pair}(Bimap f g x = Pair (f (First x)) (g (Second x)))
 Def Brackets[T : Star]<Writeable T>(x : T) : List Char =
-  (y -> Match Second y {False -> First y, True -> Cat (Lift "(") (Cat (First y) (Lift ")"))}) (Write_Brackets x)
+  Let {y = Write_Brackets x} In Match Second y {False -> First y, True -> Cat (Lift "(") (Cat (First y) (Lift ")"))}
 Def Convert'[F : Arrow Star Star, T : Star]<Applicative F, Ring T>(x : Int) : F T = Lift (Convert x)
 Def Equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> True, Default -> False}
 Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing})

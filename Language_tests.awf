@@ -14,25 +14,19 @@ Def Add_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
       Pair (Pair 1 -1) 0,
       Pair (Pair 1 0) 1,
       Pair (Pair 1 1) 2))
-Def Add_Modular_test :
-  List
-    (Pair
-      (Pair
-        (Pair (Modular (!Next (!Next (!Next !Zr)))) (Modular (!Next (!Next (!Next !Zr)))))
-        (Modular (!Next (!Next (!Next !Zr)))))
-      (Modular (!Next (!Next (!Next !Zr))))) =
-        Test_2
-          Multiply
-          (List (
-            Pair (Pair (0 # 3) (0 # 3)) (0 # 3),
-            Pair (Pair (0 # 3) (1 # 3)) (1 # 3),
-            Pair (Pair (0 # 3) (2 # 3)) (2 # 3),
-            Pair (Pair (1 # 3) (0 # 3)) (1 # 3),
-            Pair (Pair (1 # 3) (1 # 3)) (2 # 3),
-            Pair (Pair (1 # 3) (2 # 3)) (0 # 3),
-            Pair (Pair (2 # 3) (0 # 3)) (2 # 3),
-            Pair (Pair (2 # 3) (1 # 3)) (0 # 3),
-            Pair (Pair (2 # 3) (2 # 3)) (1 # 3)))
+Def Add_Modular_test : List (Pair (Pair (Pair (Modular 3) (Modular 3)) (Modular 3)) (Modular 3)) =
+  Test_2
+    Multiply
+    (List (
+      Pair (Pair (0 # 3) (0 # 3)) (0 # 3),
+      Pair (Pair (0 # 3) (1 # 3)) (1 # 3),
+      Pair (Pair (0 # 3) (2 # 3)) (2 # 3),
+      Pair (Pair (1 # 3) (0 # 3)) (1 # 3),
+      Pair (Pair (1 # 3) (1 # 3)) (2 # 3),
+      Pair (Pair (1 # 3) (2 # 3)) (0 # 3),
+      Pair (Pair (2 # 3) (0 # 3)) (2 # 3),
+      Pair (Pair (2 # 3) (1 # 3)) (0 # 3),
+      Pair (Pair (2 # 3) (2 # 3)) (1 # 3)))
 Def Brackets_Int_test : List (Pair (Pair Int (List Char)) (List Char)) =
   Test_1 Brackets (List (Pair -1 (List ("-", "1")), Pair 0 (Lift "0")))
 Def Compare_Char_test : List (Pair (Pair (Pair Char Char) Comparison) Comparison) =
@@ -51,9 +45,8 @@ Def Compare_Int_test : List (Pair (Pair (Pair Int Int) Comparison) Comparison) =
       Pair (Pair 1 0) GT,
       Pair (Pair 1 1) EQ))
 Def Convert_Int_test : List (Pair (Pair Int Int) Int) = Test_1 Convert (Lift (Pair 0 0))
-Def Convert_Modular_test :
-  List (Pair (Pair Int (Modular (!Next (!Next (!Next !Zr))))) (Modular (!Next (!Next (!Next !Zr))))) =
-    Test_1 Convert (List (Pair -1 (2 # 3), Pair 0 (0 # 3), Pair 1 (1 # 3)))
+Def Convert_Modular_test : List (Pair (Pair Int (Modular 3)) (Modular 3)) =
+  Test_1 Convert (List (Pair -1 (2 # 3), Pair 0 (0 # 3), Pair 1 (1 # 3)))
 Def Div_test : List (Pair (Pair (Pair Int Int) (Maybe Int)) (Maybe Int)) =
   Test_2
     Div
@@ -80,14 +73,10 @@ Def Div_test : List (Pair (Pair (Pair Int Int) (Maybe Int)) (Maybe Int)) =
       Pair (Pair 2 1) (Wrap 2),
       Pair (Pair 2 2) (Wrap 1)))
 Def Id_test : List (Pair (Pair Int Int) Int) = Test_1 Id (Lift (Pair 0 0))
-Def Inverse_Modular_test :
-  List
-    (Pair
-      (Pair (Modular (!Next (!Next (!Next (!Next !Zr))))) (Maybe (Modular (!Next (!Next (!Next (!Next !Zr)))))))
-      (Maybe (Modular (!Next (!Next (!Next (!Next !Zr))))))) =
-        Test_1
-          Inverse
-          (List (Pair (0 # 4) Nothing, Pair (1 # 4) (Wrap (1 # 4)), Pair (2 # 4) Nothing, Pair (3 # 4) (Wrap (3 # 4))))
+Def Inverse_Modular_test : List (Pair (Pair (Modular 4) (Maybe (Modular 4))) (Maybe (Modular 4))) =
+  Test_1
+    Inverse
+    (List (Pair (0 # 4) Nothing, Pair (1 # 4) (Wrap (1 # 4)), Pair (2 # 4) Nothing, Pair (3 # 4) (Wrap (3 # 4))))
 Def Mod_test : List (Pair (Pair (Pair Int Int) (Maybe Int)) (Maybe Int)) =
   Test_2
     Mod
@@ -126,35 +115,24 @@ Def Multiply_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
       Pair (Pair 1 -1) -1,
       Pair (Pair 1 0) 0,
       Pair (Pair 1 1) 1))
-Def Multiply_Modular_test :
-  List
-    (Pair
-      (Pair
-        (Pair (Modular (!Next (!Next (!Next !Zr)))) (Modular (!Next (!Next (!Next !Zr)))))
-        (Modular (!Next (!Next (!Next !Zr)))))
-      (Modular (!Next (!Next (!Next !Zr))))) =
-        Test_2
-          Multiply
-          (List (
-            Pair (Pair (0 # 3) (0 # 3)) (0 # 3),
-            Pair (Pair (0 # 3) (1 # 3)) (0 # 3),
-            Pair (Pair (0 # 3) (2 # 3)) (0 # 3),
-            Pair (Pair (1 # 3) (0 # 3)) (0 # 3),
-            Pair (Pair (1 # 3) (1 # 3)) (1 # 3),
-            Pair (Pair (1 # 3) (2 # 3)) (2 # 3),
-            Pair (Pair (2 # 3) (0 # 3)) (0 # 3),
-            Pair (Pair (2 # 3) (1 # 3)) (2 # 3),
-            Pair (Pair (2 # 3) (2 # 3)) (1 # 3)))
+Def Multiply_Modular_test : List (Pair (Pair (Pair (Modular 3) (Modular 3)) (Modular 3)) (Modular 3)) =
+  Test_2
+    Multiply
+    (List (
+      Pair (Pair (0 # 3) (0 # 3)) (0 # 3),
+      Pair (Pair (0 # 3) (1 # 3)) (0 # 3),
+      Pair (Pair (0 # 3) (2 # 3)) (0 # 3),
+      Pair (Pair (1 # 3) (0 # 3)) (0 # 3),
+      Pair (Pair (1 # 3) (1 # 3)) (1 # 3),
+      Pair (Pair (1 # 3) (2 # 3)) (2 # 3),
+      Pair (Pair (2 # 3) (0 # 3)) (0 # 3),
+      Pair (Pair (2 # 3) (1 # 3)) (2 # 3),
+      Pair (Pair (2 # 3) (2 # 3)) (1 # 3)))
 Def Negate_Int_test : List (Pair (Pair Int Int) Int) = Test_1 Negate (List (Pair -1 1, Pair 0 0, Pair 1 -1))
-Def Negate_Modular_test :
-  List
-    (Pair
-      (Pair (Modular (!Next (!Next (!Next !Zr)))) (Modular (!Next (!Next (!Next !Zr)))))
-      (Modular (!Next (!Next (!Next !Zr))))) =
-        Test_1 Negate (List (Pair (0 # 3) (0 # 3), Pair (1 # 3) (2 # 3), Pair (2 # 3) (1 # 3)))
+Def Negate_Modular_test : List (Pair (Pair (Modular 3) (Modular 3)) (Modular 3)) =
+  Test_1 Negate (List (Pair (0 # 3) (0 # 3), Pair (1 # 3) (2 # 3), Pair (2 # 3) (1 # 3)))
 Def Write_Brackets_Int_test : List (Pair (Pair Int (Pair (List Char) Logical)) (Pair (List Char) Logical)) =
   Test_1 Write_Brackets (List (Pair -1 (Pair (List ("-", "1")) False), Pair 0 (Pair (Lift "0") False)))
-Def Write_Brackets_Modular_test :
-  List (Pair (Pair (Modular (!Next !Zr)) (Pair (List Char) Logical)) (Pair (List Char) Logical)) =
-    Test_1 Write_Brackets (Lift (Pair (0 # 1) (Pair (List ("0", " ", "#", " ", "1")) True)))
+Def Write_Brackets_Modular_test : List (Pair (Pair (Modular 1) (Pair (List Char) Logical)) (Pair (List Char) Logical)) =
+  Test_1 Write_Brackets (Lift (Pair (0 # 1) (Pair (List ("0", " ", "#", " ", "1")) True)))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

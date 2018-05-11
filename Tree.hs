@@ -81,6 +81,11 @@ module Tree where
     get_location (Type_0 a _) = a
   init_location :: Location_0
   init_location = Location_0 0 0
+  int_to_nat_type_0 :: Location_0 -> Integer -> Type_branch_0
+  int_to_nat_type_0 l x =
+    case x of
+      0 -> Name_type_0 "!Zr" []
+      _ -> Application_type_0 (Type_0 l (Name_type_0 "!Next" [])) (Type_0 l (int_to_nat_type_0 l (x - 1)))
   left_bind :: (t -> Either u v) -> Either t v -> Either u v
   left_bind a b =
     case b of
@@ -159,8 +164,7 @@ module Tree where
   parse_bracketed_kind :: Parser Kind_0
   parse_bracketed_kind = Kind_0 <&> (parse_round parse_application_kind <|> parse_name_kind)
   parse_bracketed_type :: Parser Type_0
-  parse_bracketed_type =
-    Type_0 <&> (parse_round parse_application_type <|> parse_char_type <|> parse_int_type <|> parse_name_type)
+  parse_bracketed_type = Type_0 <&> (parse_round parse_application_type <|> parse_elementary_type)
   parse_brackets :: Token_0 -> Parser t -> Token_0 -> Parser t
   parse_brackets a b c = parse_token a *> b <* parse_token c
   parse_brnch :: Parser Brnch_0
@@ -250,6 +254,8 @@ module Tree where
       parse_int_expression <|>
       Name_expression_0 "Empty_List" <$ parse_name_4 "List" <|>
       parse_name_expression)
+  parse_elementary_type :: Parser Type_branch_0
+  parse_elementary_type = parse_char_type <|> parse_int_type <|> parse_name_type <|> (int_to_nat_type_0 <&> parse_int')
   parse_eq :: Parser ()
   parse_eq = parse_operator "="
   parse_error :: (Location_0 -> Location_1) -> Location_0 -> Err t
@@ -398,7 +404,7 @@ module Tree where
   parse_type :: Parser Type_0
   parse_type = Type_0 <&> parse_type_branch
   parse_type_branch :: Parser Type_branch_0
-  parse_type_branch = parse_application_type <|> parse_name_type
+  parse_type_branch = parse_application_type <|> parse_elementary_type
   state_location :: State -> Location_0
   state_location (State (Tokens a b) _) =
     case a of

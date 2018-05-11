@@ -109,14 +109,14 @@ init' =
       [
         ("Field", fromList [("Modular", Language)]),
         ("Nonzero", fromList [("!Next", Language)]),
-        ("Ord", fromList [("Char", Language), ("Int", Language)]),
+        ("Ord", fromList [("Char", Language), ("Int", Language), ("Modular", Language)]),
         ("Ring", fromList [("Int", Language), ("Modular", Language)]),
         ("Writeable", fromList [("Int", Language), ("Modular", Language)])],
     fromList
       [
         ("Field", (["Inverse"], fromList [("Modular", [("Nonzero", Zr)])])),
         ("Nonzero", (["Div'"], fromList [("!Next", [])])),
-        ("Ord", (["Compare"], fromList [("Char", []), ("Int", [])])),
+        ("Ord", (["Compare"], fromList [("Char", []), ("Int", []), ("Modular", [])])),
         ("Ring", (["Add", "Convert", "Multiply", "Negate"], fromList [("Int", []), ("Modular", [("Nonzero", Zr)])])),
         ("Writeable", (["Write_Brackets"], fromList [("Int", []), ("Modular", [])]))])
 main :: IO ()

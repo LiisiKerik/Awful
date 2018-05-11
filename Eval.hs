@@ -62,6 +62,14 @@ module Eval where
                     case j of
                       Int_expression_2 l -> Just (Algebraic_expression_2 (show (compare k l)) [])
                       _ -> undefined
+                  Compare_Modular_0_expression_2 ->
+                    case j of
+                      Modular_expression_2 k -> Just (Compare_Modular_1_expression_2 k)
+                      _ -> undefined
+                  Compare_Modular_1_expression_2 k ->
+                    case j of
+                      Modular_expression_2 l -> Just (Algebraic_expression_2 (show (compare k l)) [])
+                      _ -> undefined
                   Convert_Int_expression_2 -> Just j
                   Convert_Modular_expression_2 k ->
                     case j of

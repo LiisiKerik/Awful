@@ -113,6 +113,8 @@ module Typing where
     Compare_Char_1_expression_2 Char |
     Compare_Int_0_expression_2 |
     Compare_Int_1_expression_2 Integer |
+    Compare_Modular_0_expression_2 |
+    Compare_Modular_1_expression_2 Integer |
     Convert_Int_expression_2 |
     Convert_Modular_expression_2 Integer |
     Div_0_expression_2 |
@@ -468,6 +470,7 @@ module Typing where
             (Function_expression_2
               (Name_pattern "y")
               (Algebraic_expression_2 "Construct_List" [Name_expression_2 "x", Name_expression_2 "y"]))),
+        ("Compare Modular", Compare_Modular_0_expression_2),
         ("Convert Int", Convert_Int_expression_2),
         ("Div", Div_0_expression_2),
         ("EQ", Algebraic_expression_2 "EQ" []),
@@ -570,7 +573,7 @@ module Typing where
       [
         ("Field", Data.Map.fromList [("Modular", [["Nonzero"]])]),
         ("Nonzero", Data.Map.fromList [("!Next", [[]])]),
-        ("Ord", Data.Map.fromList [("Char", []), ("Int", [])]),
+        ("Ord", Data.Map.fromList [("Char", []), ("Int", []), ("Modular", [[]])]),
         ("Ring", Data.Map.fromList [("Int", []), ("Modular", [["Nonzero"]])]),
         ("Writeable", Data.Map.fromList [("Int", []), ("Modular", [[]])])]
   int_kind :: Kind_1
@@ -818,12 +821,12 @@ module Typing where
           (
             get_args (Left i) d [] >>=
             \(f, g) ->
-                case Data.Map.lookup c a of
-                  Just x ->
-                    case Data.Map.lookup f x of
-                      Just j -> slv_constrs a e h g j
-                      Nothing -> Left i
-                  Nothing -> Left i)
+              case Data.Map.lookup c a of
+                Just x ->
+                  case Data.Map.lookup f x of
+                    Just j -> slv_constrs a e h g j
+                    Nothing -> Left i
+                Nothing -> Left i)
   slv_constrs :: Map' (Map' [[String]]) -> [(String, Type_1)] -> (String -> String) -> [Type_1] -> [[String]] -> Err ()
   slv_constrs a b c d e =
     case d of

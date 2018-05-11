@@ -97,6 +97,9 @@ Def Multiply_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
       Pair (Pair 1 0) 0,
       Pair (Pair 1 1) 1))
 Def Negate_Int_test : List (Pair (Pair Int Int) Int) = Test_1 Negate (List (Pair -1 1, Pair 0 0, Pair 1 -1))
-Def Write_Int_test : List (Pair (Pair Int (List Char)) (List Char)) =
-  Test_1 Write (List (Pair -1 (List ("-", "1")), Pair 0 (Lift "0")))
+Def Write_Brackets_Int_test : List (Pair (Pair Int (Pair (List Char) Logical)) (Pair (List Char) Logical)) =
+  Test_1 Write_Brackets (List (Pair -1 (Pair (List ("-", "1")) False), Pair 0 (Pair (Lift "0") False)))
+Def Write_Brackets_Modular_test :
+  List (Pair (Pair (Modular (!Next !Zr)) (Pair (List Char) Logical)) (Pair (List Char) Logical)) =
+    Test_1 Write_Brackets (Lift (Pair (0 # 1) (Pair (List ("0", " ", "#", " ", "1")) True)))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

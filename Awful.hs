@@ -107,17 +107,17 @@ init' =
     kinds,
     fromList
       [
-        ("Field", fromList []),
+        ("Field", fromList [("Modular", Language)]),
+        ("Nonzero", fromList [("!Next", Language)]),
         ("Ord", fromList [("Char", Language), ("Int", Language)]),
         ("Ring", fromList [("Int", Language), ("Modular", Language)]),
-        ("Ring_Modular", fromList [("!Next", Language)]),
         ("Writeable", fromList [("Int", Language), ("Modular", Language)])],
     fromList
       [
-        ("Field", (["Inverse"], fromList [])),
+        ("Field", (["Inverse"], fromList [("Modular", [("Nonzero", Zr)])])),
+        ("Nonzero", (["Div'"], fromList [("!Next", [])])),
         ("Ord", (["Compare"], fromList [("Char", []), ("Int", [])])),
-        ("Ring", (["Add", "Convert", "Multiply", "Negate"], fromList [("Int", []), ("Modular", [("Ring_Modular", Zr)])])),
-        ("Ring_Modular", (["Div'"], fromList [("!Next", [])])),
+        ("Ring", (["Add", "Convert", "Multiply", "Negate"], fromList [("Int", []), ("Modular", [("Nonzero", Zr)])])),
         ("Writeable", (["Write_Brackets"], fromList [("Int", []), ("Modular", [])]))])
 main :: IO ()
 main = do

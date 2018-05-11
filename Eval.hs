@@ -93,6 +93,14 @@ module Eval where
                       (case k of
                         Blank_pattern -> l
                         Name_pattern n -> subst_expr n l j)
+                  Inverse_Modular_expression_2 k ->
+                    case j of
+                      Modular_expression_2 l ->
+                        Just
+                          (case div_finite k 1 l of
+                            Nothing -> nothing_algebraic
+                            Just w -> wrap_algebraic (Modular_expression_2 w))
+                      _ -> undefined
                   Mod_0_expression_2 ->
                     case j of
                       Int_expression_2 k -> Just (Mod_1_expression_2 k)
@@ -127,7 +135,7 @@ module Eval where
                       _ -> undefined
                   Negate_Modular_expression_2 k ->
                     case j of
-                      Modular_expression_2 l -> Just (Modular_expression_2 (mod k (- l)))
+                      Modular_expression_2 l -> Just (Modular_expression_2 (mod (- l) k))
                       _ -> undefined
                   Write_Brackets_Int_expression_2 ->
                     case j of

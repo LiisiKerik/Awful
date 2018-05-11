@@ -121,6 +121,7 @@ module Typing where
     Field_expression_2 String |
     Function_expression_2 Pattern_0 Expression_2 |
     Int_expression_2 Integer |
+    Inverse_Modular_expression_2 Integer |
     Match_expression_2 Expression_2 Matches_2 |
     Mod_0_expression_2 |
     Mod_1_expression_2 Integer |
@@ -211,7 +212,9 @@ module Typing where
           Add_Modular_0_expression_2 (nat_to_int d)
         Name_texpr_0 "Convert" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
           Convert_Modular_expression_2 (nat_to_int d)
-        Name_texpr_0 "Div'" "Ring_Modular" d -> Div'_expression_2 (nat_to_int d)
+        Name_texpr_0 "Div'" "Nonzero" d -> Div'_expression_2 (nat_to_int d)
+        Name_texpr_0 "Inverse" "Field" (Application_type_1 (Name_type_1 "Modular" []) d) ->
+          Inverse_Modular_expression_2 (nat_to_int d)
         Name_texpr_0 "Multiply" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
           Multiply_Modular_0_expression_2 (nat_to_int d)
         Name_texpr_0 "Negate" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
@@ -236,20 +239,36 @@ module Typing where
     let
       (h, i) = unsafe_lookup d c
     in
-      Prelude.foldl
-        (\j -> \k ->
-          Application_expression_2
-            j
-            (addargs_2
-              c
-              (
-                second (getarg f) <$>
-                case Data.Map.lookup e i of
-                  Just l -> l
-                  Nothing -> [])
-              (Name_expression_2 (k ++ " " ++ e))))
-        g
-        h
+      if e == "Modular" && elem d ["Field", "Ring", "Writeable"]
+        then
+          Prelude.foldl
+            (\j -> \k -> Application_expression_2 j (k (nat_to_int (head f))))
+            g
+            (case d of
+              "Field" -> [Inverse_Modular_expression_2]
+              "Ring" ->
+                [
+                  Add_Modular_0_expression_2,
+                  Convert_Modular_expression_2,
+                  Multiply_Modular_0_expression_2,
+                  Negate_Modular_expression_2]
+              "Writeable" -> [Write_Brackets_Modular_expression_2]
+              _ -> undefined)
+        else
+          Prelude.foldl
+            (\j -> \k ->
+              Application_expression_2
+                j
+                (addargs_2
+                  c
+                  (
+                    second (getarg f) <$>
+                    case Data.Map.lookup e i of
+                      Just l -> l
+                      Nothing -> [])
+                  (Name_expression_2 (k ++ " " ++ e))))
+            g
+            h
   addargs_2 :: Map' ([String], Map' [(String, Nat)]) -> [(String, Type_1)] -> Expression_2 -> Expression_2
   addargs_2 b d e =
     case d of
@@ -340,6 +359,7 @@ module Typing where
             ("T", star_kind)
             (Just "Ring")
             [Method_4 "Inverse" [] [] (function_type (ntype "T") (maybe_type (ntype "T")))]),
+        ("Nonzero", Class_4 ("N", nat_kind) Nothing [Method_4 "Div'" [] [] (function_type int_type int_type)]),
         (
           "Ord",
           Class_4
@@ -356,7 +376,6 @@ module Typing where
               Method_4 "Convert" [] [] (function_type int_type (ntype "T")),
               Method_4 "Multiply" [] [] (function_type (ntype "T") (function_type (ntype "T") (ntype "T"))),
               Method_4 "Negate" [] [] (function_type (ntype "T") (ntype "T"))]),
-        ("Ring_Modular", Class_4 ("N", nat_kind) Nothing [Method_4 "Div'" [] [] (function_type int_type int_type)]),
         (
           "Writeable",
           Class_4
@@ -549,10 +568,10 @@ module Typing where
   instances =
     Data.Map.fromList
       [
-        ("Field", Data.Map.fromList []),
+        ("Field", Data.Map.fromList [("Modular", [["Nonzero"]])]),
+        ("Nonzero", Data.Map.fromList [("!Next", [[]])]),
         ("Ord", Data.Map.fromList [("Char", []), ("Int", [])]),
-        ("Ring", Data.Map.fromList [("Int", []), ("Modular", [["Ring_Modular"]])]),
-        ("Ring_Modular", Data.Map.fromList [("!Next", [[]])]),
+        ("Ring", Data.Map.fromList [("Int", []), ("Modular", [["Nonzero"]])]),
         ("Writeable", Data.Map.fromList [("Int", []), ("Modular", [[]])])]
   int_kind :: Kind_1
   int_kind = Name_kind_1 "!Int"
@@ -644,11 +663,11 @@ module Typing where
           "Nat",
           "Negate",
           "Next",
+          "Nonzero",
           "Nothing",
           "Ord",
           "Pair",
           "Ring",
-          "Ring_Modular",
           "Second",
           "True",
           "Wrap",
@@ -2597,8 +2616,8 @@ OR SUFFIX COULD BE GIVEN AS ARGUMENT TO REPL AND ADDED INSIDE REPL
           "Div'",
           Basic_type_1
             [("N", nat_kind)]
-            (Just (Constraint_1 "Ring_Modular" "N"))
-            [Constraint_1 "Ring_Modular" "N"]
+            (Just (Constraint_1 "Nonzero" "N"))
+            [Constraint_1 "Nonzero" "N"]
             (function_type int_type int_type)),
         ("EQ", Basic_type_1 [] Nothing [] comparison_type),
         ("Empty_List", Basic_type_1 [("T", star_kind)] Nothing [] (list_type (ntype "T"))),

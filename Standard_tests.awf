@@ -52,4 +52,5 @@ Def Write_Char_test : List (Pair (Pair Char (List Char)) (List Char)) =
       Pair "n" (List (""", "n", """))))
 Def Write_Comparison_test : List (Pair (Pair Comparison (List Char)) (List Char)) =
   Test_1 Write (List (Pair LT (List ("L", "T")), Pair EQ (List ("E", "Q")), Pair GT (List ("G", "T"))))
+Def Write_Int_test : List (Pair (Pair Int (List Char)) (List Char)) = Test_1 Write (Lift (Pair 0 (Lift "0")))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

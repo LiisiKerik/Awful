@@ -112,8 +112,7 @@ module Naming where
   naming_class_0 :: String -> Class_0 -> Locations -> Err (Locations, Class_1)
   naming_class_0 a (Class_0 b c h d) e = naming_name a b e >>= \(f, g) -> second (Class_1 g c h) <$> naming_methods_0 a d f
   naming_class_1 :: String -> Class_1 -> Locations -> Err Class_2
-  naming_class_1 a (Class_1 b (c, d) h e) f =
-    naming_name a c f >>= \(i, g) -> Class_2 b (g, d) h <$> naming_methods_1 a e i
+  naming_class_1 a (Class_1 b (c, d) h e) f = naming_name a c f >>= \(i, g) -> Class_2 b (g, d) h <$> naming_methods_1 a e i
   naming_classes_0 :: String -> [Class_0] -> Locations -> Err (Locations, [Class_1])
   naming_classes_0 a b c =
     case b of

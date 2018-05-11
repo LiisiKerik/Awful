@@ -38,11 +38,13 @@ module Tokenise where
     Def_token |
     Default_token |
     Hash_token |
+    In_token |
     Instance_token |
     Int_token Integer |
     Left_curly_token |
     Left_round_token |
     Left_square_token |
+    Let_token |
     Load_token |
     Match_token |
     Name_token String |
@@ -273,7 +275,9 @@ module Tokenise where
       "Class" -> Class_token
       "Def" -> Def_token
       "Default" -> Default_token
+      "In" -> In_token
       "Instance" -> Instance_token
+      "Let" -> Let_token
       "Load" -> Load_token
       "Match" -> Match_token
       "Newline" -> Char_token '\n'

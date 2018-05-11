@@ -22,6 +22,7 @@ module Tree where
     Basic_def_0 Name [(Name, Kind_0)] [Constraint_0] [(Pattern_1, Type_0)] Type_0 Expression_0 |
     Instance_def_0 Location_0 Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, ([Pattern_1], Expression_0))]
       deriving Show
+  data Eqq = Eqq Name [Pattern_1] Expression_0 deriving Show
   data Expression_0 = Expression_0 Location_0 Expression_branch_0 deriving Show
   data Expression_branch_0 =
     Application_expression_0 Expression_0 Expression_0 |
@@ -91,6 +92,15 @@ module Tree where
     case b of
       Left c -> a c
       Right c -> Right c
+  mk_let :: [Eqq] -> Expression_0 -> Expression_branch_0
+  mk_let x y = (\(Expression_0 _ z) -> z) (Prelude.foldr mk_let' y x)
+  mk_let' :: Eqq -> Expression_0 -> Expression_0
+  mk_let' (Eqq (Name l x) y z) w =
+    Expression_0
+      l
+      (Application_expression_0
+        (Expression_0 l (Function_expression_0 (Pattern_1 l (Name_pattern x)) w))
+        (Prelude.foldr (\(Pattern_1 m a) -> \b -> Expression_0 m (Function_expression_0 (Pattern_1 m a) b)) z y))
   mk_list :: Location_0 -> [Expression_0] -> Expression_branch_0
   mk_list l =
     Prelude.foldr
@@ -218,7 +228,13 @@ module Tree where
   parse_comma = parse_token Comma_token
   parse_composite_expression :: Parser Expression_branch_0
   parse_composite_expression =
-    parse_mod_expr <|> parse_list_expr <|> parse_application_expression <|> parse_function <|> parse_match_expression
+    (
+      parse_mod_expr <|>
+      parse_list_expr <|>
+      parse_application_expression <|>
+      parse_function <|>
+      parse_match_expression <|>
+      parse_let_expression)
   parse_constraint :: Parser Constraint_0
   parse_constraint = Constraint_0 <$> parse_name' <*> parse_name'
   parse_constraints :: Parser [Constraint_0]
@@ -258,6 +274,8 @@ module Tree where
   parse_elementary_type = parse_char_type <|> parse_int_type <|> parse_name_type <|> (int_to_nat_type_0 <&> parse_int')
   parse_eq :: Parser ()
   parse_eq = parse_operator "="
+  parse_eq' :: Parser Eqq
+  parse_eq' = Eqq <$> parse_name' <*> many parse_pattern_1 <* parse_eq <*> parse_expression'
   parse_error :: (Location_0 -> Location_1) -> Location_0 -> Err t
   parse_error a b = Left ("Parse error" ++ location' (a b))
   parse_expression :: String -> Err Expression_0
@@ -298,6 +316,16 @@ module Tree where
   parse_int_expression = Int_expression_0 <$> parse_int
   parse_int_type :: Parser Type_branch_0
   parse_int_type = Int_type_0 <$ parse_lift <*> parse_int
+  parse_let_expression :: Parser Expression_branch_0
+  parse_let_expression =
+    (
+      mk_let <$
+      parse_token Let_token <*
+      parse_token Left_curly_token <*>
+      parse_list 1 parse_eq' <*
+      parse_token Right_curly_token <*
+      parse_token In_token <*>
+      parse_expression')
   parse_kind :: Parser Kind_0
   parse_kind = Kind_0 <&> parse_kind_branch
   parse_kind_branch :: Parser Kind_branch_0

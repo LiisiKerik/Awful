@@ -16,7 +16,7 @@ Def Add_Int_test : List (Pair (Pair (Pair Int Int) Int) Int) =
       Pair (Pair 1 1) 2))
 Def Add_Modular_test : List (Pair (Pair (Pair (Modular 3) (Modular 3)) (Modular 3)) (Modular 3)) =
   Test_2
-    Multiply
+    Add
     (List (
       Pair (Pair (0 # 3) (0 # 3)) (0 # 3),
       Pair (Pair (0 # 3) (1 # 3)) (1 # 3),

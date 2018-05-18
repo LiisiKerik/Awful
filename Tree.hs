@@ -31,7 +31,7 @@ module Tree where
     Int_expression_0 Integer |
     Match_expression_0 Expression_0 Matches_0 |
     Modular_expression_0 Modular |
-    Name_expression_0 String
+    Name_expression_0 String (Maybe Type_0) [Type_0]
       deriving Show
   data Form_0 = Form_0 Name [Type_0] deriving Show
   data Kind_0 = Kind_0 Location_0 Kind_branch_0 deriving (Eq, Show)
@@ -106,9 +106,9 @@ module Tree where
     Prelude.foldr
       (\x -> \y ->
         Application_expression_0
-          (Expression_0 l (Application_expression_0 (Expression_0 l (Name_expression_0 "Construct_List")) x))
+          (Expression_0 l (Application_expression_0 (Expression_0 l (Name_expression_0 "Construct_List" Nothing [])) x))
           (Expression_0 l y))
-      (Name_expression_0 "Empty_List")
+      (Name_expression_0 "Empty_List" Nothing [])
   parse :: Parser t -> (Location_0 -> Location_1) -> String -> Err t
   parse a b c =
     let
@@ -268,7 +268,7 @@ module Tree where
     (
       parse_char_expression <|>
       parse_int_expression <|>
-      Name_expression_0 "Empty_List" <$ parse_name_4 "List" <|>
+      Name_expression_0 "Empty_List" Nothing [] <$ parse_name_4 "List" <|>
       parse_name_expression)
   parse_elementary_type :: Parser Type_branch_0
   parse_elementary_type = parse_char_type <|> parse_int_type <|> parse_name_type <|> (int_to_nat_type_0 <&> parse_int')
@@ -394,7 +394,12 @@ module Tree where
   parse_name_4 :: String -> Parser ()
   parse_name_4 = parse_token <$> Name_token
   parse_name_expression :: Parser Expression_branch_0
-  parse_name_expression = Name_expression_0 <$> parse_name
+  parse_name_expression =
+    (
+      Name_expression_0 <$>
+      parse_name <*>
+      parse_optional' (Just <$> parse_brackets Left_curly_token parse_type Right_curly_token) <*>
+      parse_optional' (parse_brackets Left_square_token (parse_list 1 parse_type) Right_square_token))
   parse_name_kind :: Parser Kind_branch_0
   parse_name_kind = Name_kind_0 <$> parse_prom
   parse_name_pattern :: Parser Pattern_0
@@ -411,8 +416,8 @@ module Tree where
   parse_operator = parse_token <$> Operator_token
   parse_optional :: (Parser [t] -> Parser [t]) -> Parser t -> Parser [t]
   parse_optional a b = parse_optional' (a (parse_list 1 b))
-  parse_optional' :: Parser [t] -> Parser [t]
-  parse_optional' a = a <|> pure []
+  parse_optional' :: Alternative f => Parser (f t) -> Parser (f t)
+  parse_optional' a = a <|> pure empty
   parse_pattern_0 :: Parser Pattern_0
   parse_pattern_0 = parse_blank <|> parse_name_pattern
   parse_pattern_1 :: Parser Pattern_1

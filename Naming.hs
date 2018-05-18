@@ -33,7 +33,7 @@ module Naming where
     Int_expression_1 Integer |
     Match_expression_1 Expression_1 Matches_1 |
     Modular_expression_1 Modular |
-    Name_expression_1 String
+    Name_expression_1 String (Maybe Type_0) [Type_0]
       deriving Show
   data Expression_1 = Expression_1 Location_0 Expression_branch_1 deriving Show
   data Form_1 = Form_1 String [Type_0] deriving Show
@@ -200,7 +200,7 @@ module Naming where
       Int_expression_0 c -> Right (Int_expression_1 c)
       Match_expression_0 c d -> naming_expression g c b >>= \e -> Match_expression_1 e <$> naming_matches g d b
       Modular_expression_0 c -> Right (Modular_expression_1 c)
-      Name_expression_0 c -> Right (Name_expression_1 c)
+      Name_expression_0 c d e -> Right (Name_expression_1 c d e)
   naming_fields :: String -> [(Name, Type_0)] -> Locations -> Err (Locations, [(String, Type_0)])
   naming_fields = naming_arguments naming_name
   naming_form :: String -> Form_0 -> Locations -> Err (Locations, Form_1)

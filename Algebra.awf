@@ -82,10 +82,7 @@ Def Pow[T : Star]<Field T>(x : T, i : Int) : Maybe T =
 Def Pow'[T : Star]<Ring T>(x : T, i : Int) : T =
   Match i {
     0 -> Identity,
-    Default ->
-      (z ->
-        (Match Mod i 2 {Nothing -> Crash, Wrap j -> Match j {0 -> Id, 1 -> Multiply x, Default -> Crash}}) (Multiply z z))
-          (Pow' x (Unsafe (Div i 2)))}
+    Default -> Let {y = Pow' x (Div'{2} i), z = Multiply y y} In Match Convert i {0 # 2 -> z, 1 # 2 -> Multiply x z}}
 Instance Ring{Complex T}<Ring T>(
   Add = Add',
   Convert x = Complex (Convert x) Zero,

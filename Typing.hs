@@ -16,6 +16,7 @@ eta reduction warnings
 100% type safe mod function (first argument int, second argument modular, result modular of same size)
 unused type variable warnings
 unused local variable warnings
+eemaldada let ümbert looksulud. ei ole vajalikud!
 add something for easily changing fields of structs?
 internal: do something with old/new status tags. check where exactly they're necessary. get rid of them where they're useless
 change semantics of missing pattern-match variables from blank to lambda? (Left -> e is not Left _ -> e but Left x -> e x)
@@ -1907,7 +1908,7 @@ module Typing where
                     then Left ("Match expression over Modular " ++ show m2 ++ location (r a))
                     else
                       (
-                        type_expression v w r o f h d c (int_to_nat_type m2) c' (r7, m8) >>=
+                        type_expression v w r o f h d c (mod_type (int_to_nat_type m2)) c' (r7, m8) >>=
                         \(k, l, m, n, d') ->
                           (
                             type_matches_modular

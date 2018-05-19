@@ -5,6 +5,7 @@ expr op expr - op on binaarne operaator
 op expr - op on unaarne miinus
 -}
 {-# OPTIONS_GHC -Wall #-}
+{-# Language FlexibleInstances, OverlappingInstances, TypeSynonymInstances #-}
 module Tree where
   import Control.Applicative
   import Control.Monad
@@ -51,7 +52,11 @@ module Tree where
   data Name = Name Location_0 String deriving Show
   data Pattern_1 = Pattern_1 Location_0 Pattern_0 deriving Show
   data Pattern_0 = Blank_pattern | Name_pattern String deriving Show
+{-
   newtype Parser t = Parser {parser :: State -> Either Location_0 (t, State)}
+-}
+  type Parser = Parser' State (Either Location_0)
+  newtype Parser' s f t = Parser {parser :: s -> f (t, s)}
   data State = State Tokens Location_0 deriving Show
   data Tree_0 = Tree_0 [Data_0] [Class_0] [Def_0] deriving Show
   data Tree_1 = Tree_1 [Name] Tree_0 deriving Show
@@ -69,10 +74,20 @@ module Tree where
   instance Alternative Parser where
     Parser a <|> Parser b = Parser (\c -> left_bind (\d -> b (update_location c d)) (a c))
     empty = Parser (\(State _ l) -> Left l)
+  instance (Alternative f, Monad f) => Alternative (Parser' s f) where
+    Parser a <|> Parser b = Parser (\c -> a c <|> b c)
+    empty = Parser (\_ -> empty)
+{-
   instance Applicative Parser where
     Parser a <*> Parser b = Parser (a >=> \(c, d) -> first c <$> b d)
     pure x = Parser (\y -> Right (x, y))
   instance Functor Parser where
+    fmap a (Parser b) = Parser (\c -> first a <$> b c)
+-}
+  instance Monad f => Applicative (Parser' s f) where
+    Parser a <*> Parser b = Parser (a >=> \(c, d) -> first c <$> b d)
+    pure x = Parser (\y -> return (x, y))
+  instance Functor f => Functor (Parser' s f) where
     fmap a (Parser b) = Parser (\c -> first a <$> b c)
   instance Get_location Kind_0 where
     get_location (Kind_0 a _) = a
@@ -363,7 +378,7 @@ module Tree where
   parse_match_modular :: Parser Match_Modular_0
   parse_match_modular = parse_arrow' (Match_Modular_0 <&> parse_modular)
   parse_matches :: Parser Matches_0
-  parse_matches = parse_matches_algebraic <|> parse_matches_char <|> parse_matches_int
+  parse_matches = parse_matches_modular <|> parse_matches_algebraic <|> parse_matches_char <|> parse_matches_int
   parse_matches_algebraic :: Parser Matches_0
   parse_matches_algebraic = Matches_Algebraic_0 <$> parse_list 1 parse_match_algebraic <*> parse_default'
   parse_matches_char :: Parser Matches_0

@@ -335,10 +335,8 @@ module Tree where
   parse_let_expression =
     (
       mk_let <$
-      parse_token Let_token <*
-      parse_token Left_curly_token <*>
+      parse_token Let_token <*>
       parse_list 1 parse_eq' <*
-      parse_token Right_curly_token <*
       parse_token In_token <*>
       parse_expression')
   parse_kind :: Parser Kind_0

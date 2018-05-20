@@ -15,9 +15,9 @@ Branching Triangle[!Nat][T : Star](
 Struct Trivial
 Class Commutative{_ : Star}<Ring>
 Class Finite_Array{N : !Nat}<Ord_Array>(All_Array[T : Star]<Finite T> : List (Array N T))
-Class Foldable{F : Arrow Star Star}(Fold_right[T : Star, U : Star] : (T -> U -> U) -> U -> F T -> U)
+Class Foldable{F : Star -> Star}(Fold_right[T : Star, U : Star] : (T -> U -> U) -> U -> F T -> U)
 Class Functor_Array{N : !Nat}(Fmap_Array[T : Star, U : Star] : (T -> U) -> Array N T -> Array N U)
-Class Mat{F : Arrow !Nat (Arrow Star Star)}(
+Class Mat{F : !Nat -> Star -> Star}(
   Adj[N : !Nat, T : Star]<Commutative T> : F N T -> F N T,
   Adj_Det[N : !Nat, T : Star]<Commutative T> : F N T -> F N T * T,
   Characteristic[N : !Nat, T : Star]<Commutative T> : F N T -> Array (!Next N) T,
@@ -38,10 +38,10 @@ Instance Commutative{Logical}
 Instance Commutative{Pair T U}<Commutative T, Commutative U>
 Instance Commutative{Trivial}
 Def Div_left[T : Star]<Field T>(x : T, y : T) : Maybe T = Fmap (z -> Multiply z y) (Inverse x)
-Def Div_left'[F : Arrow Star Star, T : Star]<Functor F, Field T>(x : T, y : F T) : Maybe (F T) =
+Def Div_left'[F : Star -> Star, T : Star]<Functor F, Field T>(x : T, y : F T) : Maybe (F T) =
   Fmap (z -> Multiply_left z y) (Inverse x)
 Def Div_right[T : Star]<Field T>(x : T, y : T) : Maybe T = Fmap (Multiply x) (Inverse y)
-Def Div_right'[F : Arrow Star Star, T : Star]<Functor F, Field T>(x : F T, y : T) : Maybe (F T) =
+Def Div_right'[F : Star -> Star, T : Star]<Functor F, Field T>(x : F T, y : T) : Maybe (F T) =
   Fmap (Multiply_right x) (Inverse y)
 Instance Field{Complex T}<Commutative T, Field T>(
   Inverse x = Div_right' (Complex (Real x) (Negate (Imaginary x))) (Sum_squares x))
@@ -64,8 +64,8 @@ Instance Functor_Array{!Zr}(Fmap_Array _ _ = Empty_Array)
 Instance Functor_Array{!Next N}<Functor_Array N>(Fmap_Array f a = Construct_Array (f (Head a)) (Fmap f (Tail a)))
 Def Identity[T : Star]<Ring T> : T = Convert 1
 Def Minus[T : Star]<Ring T>(x : T, y : T) : T = Add x (Negate y)
-Def Multiply_left[T : Star, F : Arrow Star Star]<Functor F, Ring T>(x : T, y : F T) : F T = Fmap (Multiply x) y
-Def Multiply_right[F : Arrow Star Star, T : Star]<Functor F, Ring T>(x : F T, y : T) : F T = Fmap (z -> Multiply z y) x
+Def Multiply_left[T : Star, F : Star -> Star]<Functor F, Ring T>(x : T, y : F T) : F T = Fmap (Multiply x) y
+Def Multiply_right[F : Star -> Star, T : Star]<Functor F, Ring T>(x : F T, y : T) : F T = Fmap (z -> Multiply z y) x
 Instance Ord{Array N T}<Ord T, Ord_Array N>(Compare = Compare_Array)
 Instance Ord{Complex T}<Ord T>(Compare x y = Compare (Pair (Real x) (Imaginary x)) (Pair (Real y) (Imaginary y)))
 Instance Ord{Quaternion T}<Ord T>(
@@ -106,8 +106,8 @@ Instance Ring{Quaternion T}<Ring T>(
         (Add (Minus (Multiply (Qr x) (Qz y)) (Multiply (Qx x) (Qy y))) (Multiply (Qy x) (Qx y)))
         (Multiply (Qz x) (Qr y))),
   Negate = Negate')
-Def Sum[F : Arrow Star Star, T : Star]<Foldable F, Ring T> : F T -> T = Fold_right Add Zero
-Def Sum_squares[F : Arrow Star Star, T : Star]<Foldable F, Functor F, Ring T>(x : F T) : T = Sum (Fmap (y -> Pow' y 2) x)
+Def Sum[F : Star -> Star, T : Star]<Foldable F, Ring T> : F T -> T = Fold_right Add Zero
+Def Sum_squares[F : Star -> Star, T : Star]<Foldable F, Functor F, Ring T>(x : F T) : T = Sum (Fmap (y -> Pow' y 2) x)
 Instance Writeable{Array N T}<Writeable T, Writeable_Array N>(Write_Brackets = Write_Brackets_Array)
 Instance Writeable{Complex T}<Writeable T>(
   Write_Brackets x =

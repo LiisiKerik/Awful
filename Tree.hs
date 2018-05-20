@@ -170,15 +170,22 @@ module Tree where
   parse_arrow = parse_operator "->"
   parse_arrow' :: Parser (Expression_0 -> t) -> Parser t
   parse_arrow' p = p <* parse_arrow <*> parse_expression'
+  parse_arrow_kind :: Parser Kind_branch_0
+  parse_arrow_kind =
+    (
+      (\x -> \y -> Application_kind_0 (Kind_0 y (Application_kind_0 (Kind_0 y (Name_kind_0 "Arrow")) x))) <$>
+      (Kind_0 <&> (parse_round parse_arrow_kind <|> parse_application_kind <|> parse_name_kind)) <*>
+      parse_arrow_loc <*>
+      parse_kind)
   parse_arrow_loc :: Parser Location_0
   parse_arrow_loc = id <& parse_arrow
   parse_arrow_type :: Parser Type_branch_0
   parse_arrow_type =
     (
-      (\y -> \z -> Application_type_0 (Type_0 z (Application_type_0 (Type_0 z (Name_type_0 "Function" [])) y))) <$>
+      (\x -> \y -> Application_type_0 (Type_0 y (Application_type_0 (Type_0 y (Name_type_0 "Function" [])) x))) <$>
       (
-        parse_round (Type_0 <&> parse_arrow_type) <|>
-        Type_0 <&> (parse_star_type <|> parse_application_type <|> parse_elementary_type)) <*>
+        Type_0 <&>
+        (parse_round parse_arrow_type <|> parse_star_type <|> parse_application_type <|> parse_elementary_type)) <*>
       parse_arrow_loc <*>
       parse_type)
   parse_basic :: Parser Def_0
@@ -198,7 +205,7 @@ module Tree where
   parse_bracketed_expression :: Parser Expression_0
   parse_bracketed_expression = Expression_0 <&> (parse_elementary_expression <|> parse_round parse_composite_expression)
   parse_bracketed_kind :: Parser Kind_0
-  parse_bracketed_kind = Kind_0 <&> (parse_round parse_application_kind <|> parse_name_kind)
+  parse_bracketed_kind = Kind_0 <&> (parse_round (parse_arrow_kind <|> parse_application_kind) <|> parse_name_kind)
   parse_bracketed_type :: Parser Type_0
   parse_bracketed_type = Type_0 <&> (parse_round parse_composite_type <|> parse_elementary_type)
   parse_brackets :: Token_0 -> Parser t -> Token_0 -> Parser t
@@ -355,7 +362,7 @@ module Tree where
   parse_kind :: Parser Kind_0
   parse_kind = Kind_0 <&> parse_kind_branch
   parse_kind_branch :: Parser Kind_branch_0
-  parse_kind_branch = parse_application_kind <|> parse_name_kind
+  parse_kind_branch = parse_arrow_kind <|> parse_application_kind <|> parse_name_kind
   parse_kinds :: Parser [(Name, Kind_0)]
   parse_kinds = parse_arguments (\a -> parse_brackets Left_square_token a Right_square_token) parse_name' parse_kind
   parse_lift :: Parser ()
@@ -457,14 +464,12 @@ module Tree where
   parse_star_type :: Parser Type_branch_0
   parse_star_type =
     (
-      (\y -> \z -> Application_type_0 (Type_0 z (Application_type_0 (Type_0 z (Name_type_0 "Pair" [])) y))) <$>
+      (\x -> \y -> Application_type_0 (Type_0 y (Application_type_0 (Type_0 y (Name_type_0 "Pair" [])) x))) <$>
       (
-        parse_round (Type_0 <&> (parse_arrow_type <|> parse_star_type)) <|>
-        Type_0 <&> (parse_application_type <|> parse_elementary_type)) <*>
+        Type_0 <&>
+        (parse_round (parse_arrow_type <|> parse_star_type) <|> parse_application_type <|> parse_elementary_type)) <*>
       parse_star <*>
-      (
-        parse_round (Type_0 <&> parse_arrow_type) <|>
-        Type_0 <&> (parse_star_type <|> parse_application_type <|> parse_elementary_type)))
+      (Type_0 <&> (parse_round parse_arrow_type <|> parse_star_type <|> parse_application_type <|> parse_elementary_type)))
   parse_struct :: Parser Data_0
   parse_struct = parse_data' Struct_data_0 Struct_token (parse_arguments' parse_name')
   parse_token :: Token_0 -> Parser ()

@@ -1,20 +1,17 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 Algebraic Either[T : Star, U : Star](Left T, Right U)
 Algebraic Tree[T : Star](Empty_Tree, Construct_Tree T (Tree T) (Tree T))
-Class Alternative{F : Arrow Star Star}<Applicative>(
-  Cat[T : Star] : Function (F T) (Function (F T) (F T)),
-  Empty[T : Star] : F T)
+Class Alternative{F : Arrow Star Star}<Applicative>(Cat[T : Star] : F T -> F T -> F T, Empty[T : Star] : F T)
 Class Applicative{F : Arrow Star Star}<Functor>(
-  Apply[T : Star, U : Star] : Function (F (Function T U)) (Function (F T) (F U)),
-  Lift[T : Star] : Function T (F T))
+  Apply[T : Star, U : Star] : F (T -> U) -> F T -> F U,
+  Lift[T : Star] : T -> F T)
 Class Bifunctor{F : Arrow Star (Arrow Star Star)}(
-  Bimap[T : Star, U : Star, V : Star, W : Star] :
-    Function (Function T U) (Function (Function V W) (Function (F T V) (F U W))))
+  Bimap[T : Star, U : Star, V : Star, W : Star] : (T -> U) -> (V -> W) -> F T V -> F U W)
 Class Finite{T : Star}<Ord>(All : List T)
-Class Functor{F : Arrow Star Star}(Fmap[T : Star, U : Star] : Function (Function T U) (Function (F T) (F U)))
-Class Monad{F : Arrow Star Star}<Applicative>(Bind[T : Star, U : Star] : Function (F T) (Function (Function T (F U)) (F U)))
-Class Monad'{F : Arrow Star Star}<Monad>(Unsafe[T : Star] : Function (F T) T)
-Def Add'[F : Arrow Star Star, T : Star]<Applicative F, Ring T> : Function (F T) (Function (F T) (F T)) = Zip Add
+Class Functor{F : Arrow Star Star}(Fmap[T : Star, U : Star] : (T -> U) -> F T -> F U)
+Class Monad{F : Arrow Star Star}<Applicative>(Bind[T : Star, U : Star] : F T -> (T -> F U) -> F U)
+Class Monad'{F : Arrow Star Star}<Monad>(Unsafe[T : Star] : F T -> T)
+Def Add'[F : Arrow Star Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Add
 Instance Alternative{List}(
   Cat x y = Match x {Empty_List -> y, Construct_List z a -> Construct_List z (Cat a y)},
   Empty = List)
@@ -34,7 +31,7 @@ Def Equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> Tr
 Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing})
 Instance Field{Logical}(Inverse x = Match x {False -> Nothing, True -> Wrap True})
 Instance Field{Pair T U}<Field T, Field U>(Inverse x = Zip Pair (Inverse (First x)) (Inverse (Second x)))
-Def Filter[T : Star, F : Arrow Star Star]<Alternative F, Monad F>(f : Function T Logical, x : F T) : F T =
+Def Filter[T : Star, F : Arrow Star Star]<Alternative F, Monad F>(f : T -> Logical, x : F T) : F T =
   Bind x (y -> Match f y {False -> Empty, True -> Lift y})
 Instance Finite{Comparison}(All = List (LT,  EQ,  GT))
 Instance Finite{Either T U}<Finite T, Finite U>(All = Cat (Fmap Left All) (Fmap Right All))
@@ -56,9 +53,8 @@ Def Interleave[T : Star](x : List T, y : List (List T)) : List T =
   Match y {Empty_List -> List, Construct_List z a -> Cat z (Flatten (Fmap (Cat x) a))}
 Def Less[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> True, Default -> False}
 Def Less_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> False, Default -> True}
-Def Map_right[T : Star, U : Star, F : Arrow Star (Arrow Star Star), V : Star]<Bifunctor F> :
-  Function (Function T U) (Function (F V T) (F V U)) =
-    Bimap Id
+Def Map_right[T : Star, U : Star, F : Arrow Star (Arrow Star Star), V : Star]<Bifunctor F> : (T -> U) -> F V T -> F V U =
+  Bimap Id
 Def Max[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> y, Default -> x}
 Def Min[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> x, Default -> y}
 Def Mod'(x : Int, y : Int) : Int = Unsafe (Mod x y)
@@ -68,8 +64,8 @@ Instance Monad{List}(Bind x f = Match x {Empty_List -> List, Construct_List y z 
 Instance Monad{Maybe}(Bind x f = Match x {Nothing -> Nothing, Wrap y -> f y})
 Instance Monad'{Either _}(Unsafe x = Match x {Left _ -> Crash, Right y -> y})
 Instance Monad'{Maybe}(Unsafe x = Match x {Nothing -> Crash, Wrap y -> y})
-Def Multiply'[F : Arrow Star Star, T : Star]<Applicative F, Ring T> : Function (F T) (Function (F T) (F T)) = Zip Multiply
-Def Negate'[F : Arrow Star Star, T : Star]<Functor F, Ring T> : Function (F T) (F T) = Fmap Negate
+Def Multiply'[F : Arrow Star Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Multiply
+Def Negate'[F : Arrow Star Star, T : Star]<Functor F, Ring T> : F T -> F T = Fmap Negate
 Def Not(x : Logical) : Logical = Match x {False -> True, True -> False}
 Def Not_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> False, Default -> True}
 Instance Ord{Comparison}(
@@ -148,7 +144,6 @@ Instance Writeable{Tree T}<Writeable T>(
             (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "r", "e", "e"))
             (List (Brackets y, Brackets z, Brackets a)))
           True})
-Def Zip[F : Arrow Star Star, T : Star, U : Star, V : Star]<Applicative F>(f : Function T (Function U V), x : F T) :
-  Function (F U) (F V) =
-    Apply (Fmap f x)
+Def Zip[F : Arrow Star Star, T : Star, U : Star, V : Star]<Applicative F>(f : T -> U -> V, x : F T) : F U -> F V =
+  Apply (Fmap f x)
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

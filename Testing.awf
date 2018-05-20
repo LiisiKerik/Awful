@@ -1,9 +1,8 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 Load Standard.awf
-Def Test_0[T : Star]<Ord T>(x : T, y : T) : Maybe (Pair T T) = Match Equal x y {False -> Wrap (Pair y x), True -> Nothing}
-Def Test_1[T : Star, U : Star]<Ord U>(f : Function T U, x : List (Pair T U)) : List (Pair (Pair T U) U) =
+Def Test_0[T : Star]<Ord T>(x : T, y : T) : Maybe (T * T) = Match Equal x y {False -> Wrap (Pair y x), True -> Nothing}
+Def Test_1[T : Star, U : Star]<Ord U>(f : T -> U, x : List (T * U)) : List ((T * U) * U) =
   Filter (y -> Not_equal (Second (First y)) (Second y)) (Fmap (y -> Pair y (f (First y))) x)
-Def Test_2[T : Star, U : Star, V : Star]<Ord V>(f : Function T (Function U V)) :
-  Function (List (Pair (Pair T U) V)) (List (Pair (Pair (Pair T U) V) V)) =
-    Test_1 (x -> f (First x) (Second x))
+Def Test_2[T : Star, U : Star, V : Star]<Ord V>(f : T -> U -> V) : List ((T * U) * V) -> List (((T * U) * V) * V) =
+   Test_1 (x -> f (First x) (Second x))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

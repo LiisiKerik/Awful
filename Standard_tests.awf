@@ -1,7 +1,7 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 Load Standard.awf
 Load Testing.awf
-Def Add'_test : List (Pair (Pair (Pair (Maybe Int) (Maybe Int)) (Maybe Int)) (Maybe Int)) =
+Def Add'_test : List (((Maybe Int * Maybe Int) * Maybe Int) * Maybe Int) =
   Test_2
     Add'
     (List (
@@ -17,9 +17,8 @@ Def Add'_test : List (Pair (Pair (Pair (Maybe Int) (Maybe Int)) (Maybe Int)) (Ma
       Pair (Pair (Wrap 1) (Wrap -1)) (Wrap 0),
       Pair (Pair (Wrap 1) (Wrap 0)) (Wrap 1),
       Pair (Pair (Wrap 1) (Wrap 1)) (Wrap 2)))
-Def Brackets_Char_test : List (Pair (Pair Char (List Char)) (List Char)) =
-  Test_1 Write (Lift (Pair "!" (List (""", "!", """))))
-Def Cat_List_test : List (Pair (Pair (Pair (List Int) (List Int)) (List Int)) (List Int)) =
+Def Brackets_Char_test : List ((Char * List Char) * List Char) = Test_1 Write (Lift (Pair "!" (List (""", "!", """))))
+Def Cat_List_test : List (((List Int * List Int) * List Int) * List Int) =
   Test_2
     Cat
     (List (
@@ -27,7 +26,7 @@ Def Cat_List_test : List (Pair (Pair (Pair (List Int) (List Int)) (List Int)) (L
       Pair (Pair List (Lift 0)) (Lift 0),
       Pair (Pair (Lift 0) List) (Lift 0),
       Pair (Pair (Lift 0) (Lift 1)) (List (0, 1))))
-Def Cat_Maybe_test : List (Pair (Pair (Pair (Maybe Int) (Maybe Int)) (Maybe Int)) (Maybe Int)) =
+Def Cat_Maybe_test : List (((Maybe Int * Maybe Int) * Maybe Int) * Maybe Int) =
   Test_2
     Cat
     (List (
@@ -37,11 +36,9 @@ Def Cat_Maybe_test : List (Pair (Pair (Pair (Maybe Int) (Maybe Int)) (Maybe Int)
       Pair (Pair (Wrap 0) (Wrap 1)) (Wrap 0)))
 Def Empty_List_test : Maybe (Pair (List Int) (List Int)) = Test_0 Empty List
 Def Empty_Maybe_test : Maybe (Pair (Maybe Int) (Maybe Int)) = Test_0 Empty Nothing
-Def Inverse_Logical_test : List (Pair (Pair Logical (Maybe Logical)) (Maybe Logical)) =
-  Test_1
-    Inverse
-    (Construct_List (Pair False Nothing) (Construct_List (Pair True (Wrap True)) List))
-Def Write_Char_test : List (Pair (Pair Char (List Char)) (List Char)) =
+Def Inverse_Logical_test : List ((Logical * Maybe Logical) * Maybe Logical) =
+  Test_1 Inverse (Construct_List (Pair False Nothing) (Construct_List (Pair True (Wrap True)) List))
+Def Write_Char_test : List ((Char * List Char) * List Char) =
   Test_1
     Write
     (List (
@@ -50,7 +47,7 @@ Def Write_Char_test : List (Pair (Pair Char (List Char)) (List Char)) =
       Pair """ (List (""", """, """)),
       Pair "\" (List (""", "\", """)),
       Pair "n" (List (""", "n", """))))
-Def Write_Comparison_test : List (Pair (Pair Comparison (List Char)) (List Char)) =
+Def Write_Comparison_test : List ((Comparison * List Char) * List Char) =
   Test_1 Write (List (Pair LT (List ("L", "T")), Pair EQ (List ("E", "Q")), Pair GT (List ("G", "T"))))
-Def Write_Int_test : List (Pair (Pair Int (List Char)) (List Char)) = Test_1 Write (Lift (Pair 0 (Lift "0")))
+Def Write_Int_test : List ((Int * List Char) * List Char) = Test_1 Write (Lift (Pair 0 (Lift "0")))
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

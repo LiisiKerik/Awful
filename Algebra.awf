@@ -15,23 +15,19 @@ Branching Triangle[!Nat][T : Star](
 Struct Trivial
 Class Commutative{_ : Star}<Ring>
 Class Finite_Array{N : !Nat}<Ord_Array>(All_Array[T : Star]<Finite T> : List (Array N T))
-Class Foldable{F : Arrow Star Star}(
-  Fold_right[T : Star, U : Star] : Function (Function T (Function U U)) (Function U (Function (F T) U)))
-Class Functor_Array{N : !Nat}(Fmap_Array[T : Star, U : Star] : Function (Function T U) (Function (Array N T) (Array N U)))
+Class Foldable{F : Arrow Star Star}(Fold_right[T : Star, U : Star] : (T -> U -> U) -> U -> F T -> U)
+Class Functor_Array{N : !Nat}(Fmap_Array[T : Star, U : Star] : (T -> U) -> Array N T -> Array N U)
 Class Mat{F : Arrow !Nat (Arrow Star Star)}(
-  Adj[N : !Nat, T : Star]<Commutative T> : Function (F N T) (F N T),
-  Adj_Det[N : !Nat, T : Star]<Commutative T> : Function (F N T) (Pair (F N T) T),
-  Characteristic[N : !Nat, T : Star]<Commutative T> : Function (F N T) (Array (!Next N) T),
-  Det[N : !Nat, T : Star]<Commutative T> : Function (F N T) T,
-  Matrix_by_vector[N : !Nat, T : Star]<Ring T> : Function (F N T) (Function (Array N T) (Array N T)),
-  Vector_by_matrix[N : !Nat, T : Star]<Ring T> : Function (Array N T) (Function (F N T) (Array N T)))
-Class Ord_Array{N : !Nat}(Compare_Array[T : Star]<Ord T> : Function (Array N T) (Function (Array N T) Comparison))
-Class Writeable_Array{N : !Nat}(
-  Write_Brackets_Array[T : Star]<Writeable T> : Function (Array N T) (Pair (List Char) Logical))
-Class Writeable_Square{N : !Nat}(
-  Write_Brackets_Square[T : Star]<Writeable T> : Function (Square N T) (Pair (List Char) Logical))
-Class Writeable_Triangle{N : !Nat}(
-  Write_Brackets_Triangle[T : Star]<Writeable T> : Function (Triangle N T) (Pair (List Char) Logical))
+  Adj[N : !Nat, T : Star]<Commutative T> : F N T -> F N T,
+  Adj_Det[N : !Nat, T : Star]<Commutative T> : F N T -> F N T * T,
+  Characteristic[N : !Nat, T : Star]<Commutative T> : F N T -> Array (!Next N) T,
+  Det[N : !Nat, T : Star]<Commutative T> : F N T -> T,
+  Matrix_by_vector[N : !Nat, T : Star]<Ring T> : F N T -> Array N T -> Array N T,
+  Vector_by_matrix[N : !Nat, T : Star]<Ring T> : Array N T -> F N T -> Array N T)
+Class Ord_Array{N : !Nat}(Compare_Array[T : Star]<Ord T> : Array N T -> Array N T -> Comparison)
+Class Writeable_Array{N : !Nat}(Write_Brackets_Array[T : Star]<Writeable T> : Array N T -> List Char * Logical)
+Class Writeable_Square{N : !Nat}(Write_Brackets_Square[T : Star]<Writeable T> : Square N T -> List Char * Logical)
+Class Writeable_Triangle{N : !Nat}(Write_Brackets_Triangle[T : Star]<Writeable T> : Triangle N T -> List Char * Logical)
 Instance Applicative{Complex}(Apply x y = Complex (Real x (Real y)) (Imaginary x (Imaginary y)), Lift x = Complex x x)
 Instance Applicative{Quaternion}(
   Apply x y = Quaternion (Qr x (Qr y)) (Qx x (Qx y)) (Qy x (Qy y)) (Qz x (Qz y)),
@@ -110,7 +106,7 @@ Instance Ring{Quaternion T}<Ring T>(
         (Add (Minus (Multiply (Qr x) (Qz y)) (Multiply (Qx x) (Qy y))) (Multiply (Qy x) (Qx y)))
         (Multiply (Qz x) (Qr y))),
   Negate = Negate')
-Def Sum[F : Arrow Star Star, T : Star]<Foldable F, Ring T> : Function (F T) T = Fold_right Add Zero
+Def Sum[F : Arrow Star Star, T : Star]<Foldable F, Ring T> : F T -> T = Fold_right Add Zero
 Def Sum_squares[F : Arrow Star Star, T : Star]<Foldable F, Functor F, Ring T>(x : F T) : T = Sum (Fmap (y -> Pow' y 2) x)
 Instance Writeable{Array N T}<Writeable T, Writeable_Array N>(Write_Brackets = Write_Brackets_Array)
 Instance Writeable{Complex T}<Writeable T>(

@@ -8,17 +8,16 @@ Branching Tuple[!List Star](
   !Empty_List -> Empty_Tuple,
   !Construct_List T L -> Construct_Tuple(Head_Tuple : T, Tail_Tuple : Tuple L))
 Class Commutative_Tuple{L : !List Star}<Ring_Tuple>
-Class Field_Tuple{L : !List Star}<Ring_Tuple>(Inverse_Tuple : Function (Tuple L) (Maybe (Tuple L)))
+Class Field_Tuple{L : !List Star}<Ring_Tuple>(Inverse_Tuple : Tuple L -> Maybe (Tuple L))
 Class Finite_Tuple{L : !List Star}<Ord_Tuple>(All_Tuple : List (Tuple L))
-Class Ord_Tuple{L : !List Star}(Compare_Tuple : Function (Tuple L) (Function (Tuple L) Comparison))
+Class Ord_Tuple{L : !List Star}(Compare_Tuple : Tuple L -> Tuple L -> Comparison)
 Class Ring_Tuple{L : !List Star}(
-  Add_Tuple : Function (Tuple L) (Function (Tuple L) (Tuple L)),
-  Convert_Tuple : Function Int (Tuple L),
-  Multiply_Tuple : Function (Tuple L) (Function (Tuple L) (Tuple L)),
-  Negate_Tuple : Function (Tuple L) (Tuple L))
-Class Writeable_Array'{L : !List !Nat}(
-  Write_Brackets_Array'[T : Star]<Writeable T> : Function (Array' L T) (Pair (List Char) Logical))
-Class Writeable_Tuple{L : !List Star}(Write_Brackets_Tuple : Function (Tuple L) (Pair (List Char) Logical))
+  Add_Tuple : Tuple L -> Tuple L -> Tuple L,
+  Convert_Tuple : Int -> Tuple L,
+  Multiply_Tuple : Tuple L -> Tuple L -> Tuple L,
+  Negate_Tuple : Tuple L -> Tuple L)
+Class Writeable_Array'{L : !List !Nat}(Write_Brackets_Array'[T : Star]<Writeable T> : Array' L T -> List Char * Logical)
+Class Writeable_Tuple{L : !List Star}(Write_Brackets_Tuple : Tuple L -> List Char * Logical)
 Instance Commutative{Tuple L}<Commutative_Tuple L>
 Instance Commutative_Tuple{!Empty_List[Star]}
 Instance Commutative_Tuple{!Construct_List[Star] T L}<Commutative T, Commutative_Tuple L>

@@ -170,6 +170,17 @@ module Tree where
   parse_arrow = parse_operator "->"
   parse_arrow' :: Parser (Expression_0 -> t) -> Parser t
   parse_arrow' p = p <* parse_arrow <*> parse_expression'
+  parse_arrow_loc :: Parser Location_0
+  parse_arrow_loc = id <& parse_arrow
+  parse_arrow_type :: Parser Type_branch_0
+  parse_arrow_type =
+    (
+      (\y -> \z -> Application_type_0 (Type_0 z (Application_type_0 (Type_0 z (Name_type_0 "Function" [])) y))) <$>
+      (
+        parse_round (Type_0 <&> parse_arrow_type) <|>
+        Type_0 <&> (parse_star_type <|> parse_application_type <|> parse_elementary_type)) <*>
+      parse_arrow_loc <*>
+      parse_type)
   parse_basic :: Parser Def_0
   parse_basic =
     (
@@ -189,7 +200,7 @@ module Tree where
   parse_bracketed_kind :: Parser Kind_0
   parse_bracketed_kind = Kind_0 <&> (parse_round parse_application_kind <|> parse_name_kind)
   parse_bracketed_type :: Parser Type_0
-  parse_bracketed_type = Type_0 <&> (parse_round parse_application_type <|> parse_elementary_type)
+  parse_bracketed_type = Type_0 <&> (parse_round parse_composite_type <|> parse_elementary_type)
   parse_brackets :: Token_0 -> Parser t -> Token_0 -> Parser t
   parse_brackets a b c = parse_token a *> b <* parse_token c
   parse_brnch :: Parser Brnch_0
@@ -250,6 +261,8 @@ module Tree where
       parse_function <|>
       parse_match_expression <|>
       parse_let_expression)
+  parse_composite_type :: Parser Type_branch_0
+  parse_composite_type = parse_arrow_type <|> parse_star_type <|> parse_application_type
   parse_constraint :: Parser Constraint_0
   parse_constraint = Constraint_0 <$> parse_name' <*> parse_name'
   parse_constraints :: Parser [Constraint_0]
@@ -439,6 +452,19 @@ module Tree where
   parse_prom = ((:) '!' <$ parse_lift <*> parse_name <|> parse_name)
   parse_round :: Parser t -> Parser t
   parse_round a = parse_brackets Left_round_token a Right_round_token
+  parse_star :: Parser Location_0
+  parse_star = id <& parse_operator "*"
+  parse_star_type :: Parser Type_branch_0
+  parse_star_type =
+    (
+      (\y -> \z -> Application_type_0 (Type_0 z (Application_type_0 (Type_0 z (Name_type_0 "Pair" [])) y))) <$>
+      (
+        parse_round (Type_0 <&> (parse_arrow_type <|> parse_star_type)) <|>
+        Type_0 <&> (parse_application_type <|> parse_elementary_type)) <*>
+      parse_star <*>
+      (
+        parse_round (Type_0 <&> parse_arrow_type) <|>
+        Type_0 <&> (parse_star_type <|> parse_application_type <|> parse_elementary_type)))
   parse_struct :: Parser Data_0
   parse_struct = parse_data' Struct_data_0 Struct_token (parse_arguments' parse_name')
   parse_token :: Token_0 -> Parser ()
@@ -450,7 +476,7 @@ module Tree where
   parse_type :: Parser Type_0
   parse_type = Type_0 <&> parse_type_branch
   parse_type_branch :: Parser Type_branch_0
-  parse_type_branch = parse_application_type <|> parse_elementary_type
+  parse_type_branch = parse_composite_type <|> parse_elementary_type
   state_location :: State -> Location_0
   state_location (State (Tokens a b) _) =
     case a of

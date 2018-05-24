@@ -289,6 +289,12 @@ module Typing where
       [
         ("Comparison", Alg [] (Data.Map.fromList [("EQ", []), ("GT", []), ("LT", [])]) comparison_type),
         (
+          "Either",
+          Alg
+            [("T", star_kind), ("U", star_kind)]
+            (Data.Map.fromList [("Left", [ntype "T"]), ("Right", [ntype "U"])])
+            (either_type (ntype "T") (ntype "U"))),
+        (
           "List",
           Alg
             [("T", star_kind)]
@@ -440,8 +446,10 @@ module Typing where
         ("False", "Logical"),
         ("GT", "Comparison"),
         ("LT", "Comparison"),
+        ("Left", "Either"),
         ("Next", "Nat"),
         ("Nothing", "Maybe"),
+        ("Right", "Either"),
         ("True", "Logical"),
         ("Wrap", "Maybe"),
         ("Zr", "Nat")]
@@ -482,6 +490,7 @@ module Typing where
         ("First", Field_expression_2 "First"),
         ("GT", Algebraic_expression_2 "GT" []),
         ("LT", Algebraic_expression_2 "LT" []),
+        ("Left", Function_expression_2 (Name_pattern "x") (Algebraic_expression_2 "Left" [Name_expression_2 "x"])),
         ("Mod", Mod_0_expression_2),
         ("Multiply Int", Multiply_Int_0_expression_2),
         ("Negate Int", Negate_Int_expression_2),
@@ -495,11 +504,16 @@ module Typing where
               (Name_pattern "y")
               (Struct_expression_2
                 (Data.Map.fromList [("First", Name_expression_2 "x"), ("Second", Name_expression_2 "y")])))),
+        ("Right", Function_expression_2 (Name_pattern "x") (Algebraic_expression_2 "Right" [Name_expression_2 "x"])),
         ("Second", Field_expression_2 "Second"),
         ("True", Algebraic_expression_2 "True" []),
         ("Wrap", Function_expression_2 (Name_pattern "x") (Algebraic_expression_2 "Wrap" [Name_expression_2 "x"])),
         ("Write_Brackets Int", Write_Brackets_Int_expression_2),
         ("Zr", Algebraic_expression_2 "Zr" [])]
+  either_kind :: Kind_1 -> Kind_1 -> Kind_1
+  either_kind x = Application_kind_1 (Application_kind_1 (Name_kind_1 "!Either") x)
+  either_type :: Type_1 -> Type_1 -> Type_1
+  either_type x = Application_type_1 (Application_type_1 (Name_type_1 "Either" []) x)
   find_and_delete :: Ord t => Map t u -> t -> Maybe (u, Map t u)
   find_and_delete a b = (\c -> (c, Data.Map.delete b a)) <$> Data.Map.lookup b a
   function_type :: Type_1 -> Type_1 -> Type_1
@@ -546,6 +560,7 @@ module Typing where
       [
         ("!Char", Star_kind),
         ("!Comparison", Star_kind),
+        ("!Either", Arrow_kind Star_kind (Arrow_kind Star_kind Star_kind)),
         ("!Int", Star_kind),
         ("!List", Arrow_kind Star_kind Star_kind),
         ("!Logical", Star_kind),
@@ -609,6 +624,7 @@ module Typing where
         ("!False", Polykind [] logical_kind),
         ("!GT", Polykind [] comparison_kind),
         ("!LT", Polykind [] comparison_kind),
+        ("!Left", Polykind ["K", "L"] (arrow_kind (Name_kind_1 "K") (either_kind (Name_kind_1 "K") (Name_kind_1 "L")))),
         ("!Next", Polykind [] (arrow_kind nat_kind nat_kind)),
         ("!Nothing", Polykind ["K"] (maybe_kind (Name_kind_1 "K"))),
         (
@@ -616,11 +632,13 @@ module Typing where
           Polykind
             ["K", "L"]
             (arrow_kind (Name_kind_1 "K") (arrow_kind (Name_kind_1 "L") (pair_kind (Name_kind_1 "K") (Name_kind_1 "L"))))),
+        ("!Right", Polykind ["K", "L"] (arrow_kind (Name_kind_1 "L") (either_kind (Name_kind_1 "K") (Name_kind_1 "L")))),
         ("!True", Polykind [] logical_kind),
         ("!Wrap", Polykind ["K"] (arrow_kind (Name_kind_1 "K") (maybe_kind (Name_kind_1 "K")))),
         ("!Zr", Polykind [] nat_kind),
         ("Char", Polykind [] star_kind),
         ("Comparison", Polykind [] star_kind),
+        ("Either", Polykind [] (arrow_kind star_kind (arrow_kind star_kind star_kind))),
         ("Function", Polykind [] (arrow_kind star_kind (arrow_kind star_kind star_kind))),
         ("Int", Polykind [] star_kind),
         ("List", Polykind [] (arrow_kind star_kind star_kind)),
@@ -651,6 +669,7 @@ module Typing where
           "Div",
           "Div'",
           "EQ",
+          "Either",
           "Empty_List",
           "False",
           "Field",
@@ -660,6 +679,7 @@ module Typing where
           "Int",
           "Inverse",
           "LT",
+          "Left",
           "List",
           "Logical",
           "Maybe",
@@ -673,6 +693,7 @@ module Typing where
           "Nothing",
           "Ord",
           "Pair",
+          "Right",
           "Ring",
           "Second",
           "True",
@@ -753,6 +774,7 @@ module Typing where
     Data.Map.fromList
       [
         ("!Comparison", Prom_alg [] (Data.Map.fromList [("!EQ", []), ("!GT", []), ("!LT", [])])),
+        ("!Either", Prom_alg ["K", "L"] (Data.Map.fromList [("!Left", [Name_kind_1 "K"]), ("!Right", [Name_kind_1 "L"])])),
         (
           "!List",
           Prom_alg
@@ -785,7 +807,8 @@ module Typing where
   promotable' (Kind_0 _ a) = a == Name_kind_0 "Star"
   promotables :: Map' Bool
   promotables =
-    Data.Map.fromList ((\a -> (a, True)) <$> ["Char", "Comparison", "Int", "List", "Logical", "Maybe", "Nat", "Pair"])
+    Data.Map.fromList
+      ((\a -> (a, True)) <$> ["Char", "Comparison", "Either", "Int", "List", "Logical", "Maybe", "Nat", "Pair"])
   rem_old :: Map' (t, Status) -> Map' t
   rem_old a = fst <$> Data.Map.filter (\(_, b) -> b == New) a
   rem_old' :: Map' (Map' (t, Status)) -> Map' (Map' t)
@@ -2664,6 +2687,13 @@ module Typing where
             (Just (Constraint_1 "Field" "T"))
             [Constraint_1 "Field" "T", Constraint_1 "Ring" "T"]
             (function_type (ntype "T") (maybe_type (ntype "T")))),
+        (
+          "Left",
+          Basic_type_1
+            [("T", star_kind), ("U", star_kind)]
+            Nothing
+            []
+            (function_type (ntype "T") (either_type (ntype "T") (ntype "U")))),
         ("LT", Basic_type_1 [] Nothing [] comparison_type),
         ("Mod", Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type (maybe_type int_type)))),
         (
@@ -2689,6 +2719,13 @@ module Typing where
             Nothing
             []
             (function_type (ntype "T") (function_type (ntype "U") (pair_type (ntype "T") (ntype "U"))))),
+        (
+          "Right",
+          Basic_type_1
+            [("T", star_kind), ("U", star_kind)]
+            Nothing
+            []
+            (function_type (ntype "U") (either_type (ntype "T") (ntype "U")))),
         (
           "Second",
           Basic_type_1

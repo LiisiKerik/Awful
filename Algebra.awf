@@ -62,8 +62,6 @@ Instance Functor{Complex}(Fmap f x = Complex (f (Real x)) (f (Imaginary x)))
 Instance Functor{Quaternion}(Fmap f x = Quaternion (f (Qr x)) (f (Qx x)) (f (Qy x)) (f (Qz x)))
 Instance Functor_Array{!Zr}(Fmap_Array _ _ = Empty_Array)
 Instance Functor_Array{!Next N}<Functor_Array N>(Fmap_Array f a = Construct_Array (f (Head a)) (Fmap f (Tail a)))
-Def Identity[T : Star]<Ring T> : T = Convert 1
-Def Minus[T : Star]<Ring T>(x : T, y : T) : T = Add x (Negate y)
 Def Multiply_left[T : Star, F : Star -> Star]<Functor F, Ring T>(x : T, y : F T) : F T = Fmap (Multiply x) y
 Def Multiply_right[F : Star -> Star, T : Star]<Functor F, Ring T>(x : F T, y : T) : F T = Fmap (z -> Multiply z y) x
 Instance Ord{Array N T}<Ord T, Ord_Array N>(Compare = Compare_Array)
@@ -154,5 +152,4 @@ Instance Writeable_Triangle{!Next N}<Writeable_Array N, Writeable_Triangle N>(
         (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "r", "i", "a", "n", "g", "l", "e"))
         (List (Brackets (Fst_Triangle x), Brackets (Top_row_Triangle x), Brackets (Triangle' x))))
       True)
-Def Zero[T : Star]<Ring T> : T = Convert 0
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

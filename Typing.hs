@@ -213,19 +213,17 @@ module Typing where
               Tmatch_int f g -> Matches_Int_2 (h <$> f) (h g)
               Tmatch_Modular f g -> Matches_Modular_2 (h <$> f) (h <$> g))
         Modular_texpr d -> Modular_expression_2 d
-        Name_texpr_0 "Add" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
-          Add_Modular_0_expression_2 (nat_to_int d)
-        Name_texpr_0 "Convert" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
-          Convert_Modular_expression_2 (nat_to_int d)
-        Name_texpr_0 "Div'" "Nonzero" d -> Div'_expression_2 (nat_to_int d)
-        Name_texpr_0 "Inverse" "Field" (Application_type_1 (Name_type_1 "Modular" []) d) ->
-          Inverse_Modular_expression_2 (nat_to_int d)
-        Name_texpr_0 "Multiply" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
-          Multiply_Modular_0_expression_2 (nat_to_int d)
-        Name_texpr_0 "Negate" "Ring" (Application_type_1 (Name_type_1 "Modular" []) d) ->
-          Negate_Modular_expression_2 (nat_to_int d)
-        Name_texpr_0 "Write_Brackets" "Writeable" (Application_type_1 (Name_type_1 "Modular" []) d) ->
-          Write_Brackets_Modular_expression_2 (nat_to_int d)
+        Name_texpr_0 a "Nonzero" d ->
+          (case a of
+            "Add_Modular" -> Add_Modular_0_expression_2
+            "Convert_Modular" -> Convert_Modular_expression_2
+            "Div'" -> Div'_expression_2
+            "Inverse_Modular" -> Inverse_Modular_expression_2
+            "Multiply_Modular" -> Multiply_Modular_0_expression_2
+            "Negate_Modular" -> Negate_Modular_expression_2
+            "Write_Brackets_Modular" -> Write_Brackets_Modular_expression_2
+            _ -> undefined)
+              (nat_to_int d)
         Name_texpr_0 d e f ->
           let
             (g, i) = typestring f []
@@ -240,40 +238,36 @@ module Typing where
               (Name_expression_2 (d ++ " " ++ g))
         Name_texpr_1 d e -> addargs_2 b e (Name_expression_2 d)
   addargs_1 :: Map' ([String], Map' [(String, Nat)]) -> String -> String -> [Type_1] -> Expression_2 -> Expression_2
+  addargs_1 _ "Nonzero" "!Next" [c] d =
+    Prelude.foldl
+      (\e -> \f -> Application_expression_2 e (f (nat_to_int (Application_type_1 (ntype "!Next") c))))
+      d
+      [
+        Add_Modular_0_expression_2,
+        Convert_Modular_expression_2,
+        Div'_expression_2,
+        Inverse_Modular_expression_2,
+        Multiply_Modular_0_expression_2,
+        Negate_Modular_expression_2,
+        Write_Brackets_Modular_expression_2]
   addargs_1 c d e f g =
     let
       (h, i) = unsafe_lookup d c
     in
-      if e == "Modular" && elem d ["Field", "Ring", "Writeable"]
-        then
-          Prelude.foldl
-            (\j -> \k -> Application_expression_2 j (k (nat_to_int (head f))))
-            g
-            (case d of
-              "Field" -> [Inverse_Modular_expression_2]
-              "Ring" ->
-                [
-                  Add_Modular_0_expression_2,
-                  Convert_Modular_expression_2,
-                  Multiply_Modular_0_expression_2,
-                  Negate_Modular_expression_2]
-              "Writeable" -> [Write_Brackets_Modular_expression_2]
-              _ -> undefined)
-        else
-          Prelude.foldl
-            (\j -> \k ->
-              Application_expression_2
-                j
-                (addargs_2
-                  c
-                  (
-                    second (getarg f) <$>
-                    case Data.Map.lookup e i of
-                      Just l -> l
-                      Nothing -> [])
-                  (Name_expression_2 (k ++ " " ++ e))))
-            g
-            h
+      Prelude.foldl
+        (\j -> \k ->
+          Application_expression_2
+            j
+            (addargs_2
+              c
+              (
+                second (getarg f) <$>
+                case Data.Map.lookup e i of
+                  Just l -> l
+                  Nothing -> [])
+              (Name_expression_2 (k ++ " " ++ e))))
+        g
+        h
   addargs_2 :: Map' ([String], Map' [(String, Nat)]) -> [(String, Type_1)] -> Expression_2 -> Expression_2
   addargs_2 b d e =
     case d of
@@ -370,7 +364,31 @@ module Typing where
             ("T", star_kind)
             (Just "Ring")
             [Method_4 "Inverse" [] [] (function_type (ntype "T") (maybe_type (ntype "T")))]),
-        ("Nonzero", Class_4 ("N", nat_kind) Nothing [Method_4 "Div'" [] [] (function_type int_type int_type)]),
+        (
+          "Nonzero",
+          Class_4
+            ("N", nat_kind)
+            Nothing
+            [
+              Method_4
+                "Add_Modular"
+                []
+                []
+                (function_type (mod_type (ntype "N")) (function_type (mod_type (ntype "N")) (mod_type (ntype "N")))),
+              Method_4 "Convert_Modular" [] [] (function_type int_type (mod_type (ntype "N"))),
+              Method_4 "Div'" [] [] (function_type int_type int_type),
+              Method_4 "Inverse_Modular" [] [] (function_type (mod_type (ntype "N")) (maybe_type (mod_type (ntype "N")))),
+              Method_4
+                "Multiply_Modular"
+                []
+                []
+                (function_type (mod_type (ntype "N")) (function_type (mod_type (ntype "N")) (mod_type (ntype "N")))),
+              Method_4 "Negate_Modular" [] [] (function_type (mod_type (ntype "N")) (mod_type (ntype "N"))),
+              Method_4
+                "Write_Brackets_Modular"
+                []
+                []
+                (function_type (mod_type (ntype "N")) (pair_type (list_type char_type) logical_type))]),
         (
           "Ord",
           Class_4
@@ -472,6 +490,21 @@ module Typing where
     Data.Map.fromList
       [
         ("Add Int", Add_Int_0_expression_2),
+        (
+          "Add Modular",
+          Function_expression_2
+            (Name_pattern "x")
+            (Function_expression_2
+              Blank_pattern
+              (Function_expression_2
+                Blank_pattern
+                (Function_expression_2
+                  Blank_pattern
+                  (Function_expression_2
+                    Blank_pattern
+                    (Function_expression_2
+                      Blank_pattern
+                      (Function_expression_2 Blank_pattern (Name_expression_2 "x")))))))),
         ("Compare Char", Compare_Char_0_expression_2),
         ("Compare Int", Compare_Int_0_expression_2),
         (
@@ -483,6 +516,21 @@ module Typing where
               (Algebraic_expression_2 "Construct_List" [Name_expression_2 "x", Name_expression_2 "y"]))),
         ("Compare Modular", Compare_Modular_0_expression_2),
         ("Convert Int", Convert_Int_expression_2),
+        (
+          "Convert Modular",
+          Function_expression_2
+            Blank_pattern
+            (Function_expression_2
+              (Name_pattern "x")
+              (Function_expression_2
+                Blank_pattern
+                (Function_expression_2
+                  Blank_pattern
+                  (Function_expression_2
+                    Blank_pattern
+                    (Function_expression_2
+                      Blank_pattern
+                      (Function_expression_2 Blank_pattern (Name_expression_2 "x")))))))),
         ("Div", Div_0_expression_2),
         ("EQ", Algebraic_expression_2 "EQ" []),
         ("Empty_List", Algebraic_expression_2 "Empty_List" []),
@@ -493,7 +541,37 @@ module Typing where
         ("Left", Function_expression_2 (Name_pattern "x") (Algebraic_expression_2 "Left" [Name_expression_2 "x"])),
         ("Mod", Mod_0_expression_2),
         ("Multiply Int", Multiply_Int_0_expression_2),
+        (
+          "Multiply Modular",
+          Function_expression_2
+            Blank_pattern
+            (Function_expression_2
+              Blank_pattern
+              (Function_expression_2
+                Blank_pattern
+                (Function_expression_2
+                  Blank_pattern
+                  (Function_expression_2
+                    (Name_pattern "x")
+                    (Function_expression_2
+                      Blank_pattern
+                      (Function_expression_2 Blank_pattern (Name_expression_2 "x")))))))),
         ("Negate Int", Negate_Int_expression_2),
+        (
+          "Negate Modular",
+          Function_expression_2
+            Blank_pattern
+            (Function_expression_2
+              Blank_pattern
+              (Function_expression_2
+                Blank_pattern
+                (Function_expression_2
+                  Blank_pattern
+                  (Function_expression_2
+                    Blank_pattern
+                    (Function_expression_2
+                      (Name_pattern "x")
+                      (Function_expression_2 Blank_pattern (Name_expression_2 "x")))))))),
         ("Next", Function_expression_2 (Name_pattern "x") (Algebraic_expression_2 "Next" [Name_expression_2 "x"])),
         ("Nothing", Algebraic_expression_2 "Nothing" []),
         (
@@ -509,6 +587,21 @@ module Typing where
         ("True", Algebraic_expression_2 "True" []),
         ("Wrap", Function_expression_2 (Name_pattern "x") (Algebraic_expression_2 "Wrap" [Name_expression_2 "x"])),
         ("Write_Brackets Int", Write_Brackets_Int_expression_2),
+        (
+          "Write_Brackets Modular",
+          Function_expression_2
+            Blank_pattern
+            (Function_expression_2
+              Blank_pattern
+              (Function_expression_2
+                Blank_pattern
+                (Function_expression_2
+                  Blank_pattern
+                  (Function_expression_2
+                    Blank_pattern
+                    (Function_expression_2
+                      Blank_pattern
+                      (Function_expression_2 (Name_pattern "x") (Name_expression_2 "x")))))))),
         ("Zr", Algebraic_expression_2 "Zr" [])]
   either_kind :: Kind_1 -> Kind_1 -> Kind_1
   either_kind x = Application_kind_1 (Application_kind_1 (Name_kind_1 "!Either") x)
@@ -590,10 +683,10 @@ module Typing where
     Data.Map.fromList
       [
         ("Field", Data.Map.fromList [("Modular", [["Nonzero"]])]),
-        ("Nonzero", Data.Map.fromList [("!Next", [[]])]),
+        ("Nonzero", Data.Map.fromList []),
         ("Ord", Data.Map.fromList [("Char", []), ("Int", []), ("Modular", [[]])]),
         ("Ring", Data.Map.fromList [("Int", []), ("Modular", [["Nonzero"]])]),
-        ("Writeable", Data.Map.fromList [("Int", []), ("Modular", [[]])])]
+        ("Writeable", Data.Map.fromList [("Int", []), ("Modular", [["Nonzero"]])])]
   int_kind :: Kind_1
   int_kind = Name_kind_1 "!Int"
   int_to_nat_type :: Integer -> Type_1
@@ -660,11 +753,13 @@ module Typing where
         (\x -> (x, Language)) <$>
         [
           "Add",
+          "Add_Modular",
           "Char",
           "Compare",
           "Comparison",
           "Construct_List",
           "Convert",
+          "Convert_Modular",
           "Crash",
           "Div",
           "Div'",
@@ -678,6 +773,7 @@ module Typing where
           "GT",
           "Int",
           "Inverse",
+          "Inverse_Modular",
           "LT",
           "Left",
           "List",
@@ -686,8 +782,10 @@ module Typing where
           "Mod",
           "Modular",
           "Multiply",
+          "Multiply_Modular",
           "Nat",
           "Negate",
+          "Negate_Modular",
           "Next",
           "Nonzero",
           "Nothing",
@@ -699,6 +797,7 @@ module Typing where
           "True",
           "Wrap",
           "Write_Brackets",
+          "Write_Brackets_Modular",
           "Writeable",
           "Zr"])
   logical_kind :: Kind_1
@@ -748,6 +847,12 @@ module Typing where
       Name_type_1 "!Zr" [] -> 0
       Application_type_1 (Name_type_1 "!Next" []) y -> nat_to_int y + 1
       _ -> undefined
+  nat_to_int' :: Type_1 -> Bool
+  nat_to_int' x =
+    case x of
+      Name_type_1 "!Zr" [] -> True
+      Application_type_1 (Name_type_1 "!Next" []) y -> nat_to_int' y
+      _ -> False
   nat_type :: Type_1
   nat_type = ntype "Nat"
   next_type :: Type_1 -> Type_1
@@ -838,6 +943,8 @@ module Typing where
   slv a b h =
     case b of
       [] -> Right ()
+      ("Nonzero", Application_type_1 (Name_type_1 "!Next" []) c) : d ->
+        if nat_to_int' c then slv a d h else Left (h "Nonzero")
       (c, d) : e ->
         let
           i = h c
@@ -2640,6 +2747,13 @@ module Typing where
             [Constraint_1 "Ring" "T"]
             (function_type (ntype "T") (function_type (ntype "T") (ntype "T")))),
         (
+          "Add_Modular",
+          Basic_type_1
+            [("N", nat_kind)]
+            (Just (Constraint_1 "Nonzero" "N"))
+            [Constraint_1 "Nonzero" "N"]
+            (function_type (mod_type (ntype "N")) (function_type (mod_type (ntype "N")) (mod_type (ntype "N"))))),
+        (
           "Compare",
           Basic_type_1
             [("T", star_kind)]
@@ -2660,6 +2774,13 @@ module Typing where
             (Just (Constraint_1 "Ring" "T"))
             [Constraint_1 "Ring" "T"]
             (function_type int_type (ntype "T"))),
+        (
+          "Convert_Modular",
+          Basic_type_1
+            [("N", nat_kind)]
+            (Just (Constraint_1 "Nonzero" "N"))
+            [Constraint_1 "Nonzero" "N"]
+            (function_type int_type (mod_type (ntype "N")))),
         ("Crash", Basic_type_1 [("T", star_kind)] Nothing [] (ntype "T")),
         ("Div", Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type (maybe_type int_type)))),
         (
@@ -2688,6 +2809,13 @@ module Typing where
             [Constraint_1 "Field" "T", Constraint_1 "Ring" "T"]
             (function_type (ntype "T") (maybe_type (ntype "T")))),
         (
+          "Inverse_Modular",
+          Basic_type_1
+            [("N", nat_kind)]
+            (Just (Constraint_1 "Nonzero" "N"))
+            [Constraint_1 "Nonzero" "N"]
+            (function_type (mod_type (ntype "N")) (maybe_type (mod_type (ntype "N"))))),
+        (
           "Left",
           Basic_type_1
             [("T", star_kind), ("U", star_kind)]
@@ -2704,12 +2832,26 @@ module Typing where
             [Constraint_1 "Ring" "T"]
             (function_type (ntype "T") (function_type (ntype "T") (ntype "T")))),
         (
+          "Multiply_Modular",
+          Basic_type_1
+            [("N", nat_kind)]
+            (Just (Constraint_1 "Nonzero" "N"))
+            [Constraint_1 "Nonzero" "N"]
+            (function_type (mod_type (ntype "N")) (function_type (mod_type (ntype "N")) (mod_type (ntype "N"))))),
+        (
           "Negate",
           Basic_type_1
             [("T", star_kind)]
             (Just (Constraint_1 "Ring" "T"))
             [Constraint_1 "Ring" "T"]
             (function_type (ntype "T") (ntype "T"))),
+        (
+          "Negate_Modular",
+          Basic_type_1
+            [("N", nat_kind)]
+            (Just (Constraint_1 "Nonzero" "N"))
+            [Constraint_1 "Nonzero" "N"]
+            (function_type (mod_type (ntype "N")) (mod_type (ntype "N")))),
         ("Next", Basic_type_1 [] Nothing [] (function_type nat_type nat_type)),
         ("Nothing", Basic_type_1 [("T", star_kind)] Nothing [] (maybe_type (ntype "T"))),
         (
@@ -2742,6 +2884,13 @@ module Typing where
             (Just (Constraint_1 "Writeable" "T"))
             [Constraint_1 "Writeable" "T"]
             (function_type (ntype "T") (pair_type (list_type char_type) logical_type))),
+        (
+          "Write_Brackets_Modular",
+          Basic_type_1
+            [("N", nat_kind)]
+            (Just (Constraint_1 "Nonzero" "N"))
+            [Constraint_1 "Nonzero" "N"]
+            (function_type (mod_type (ntype "N")) (pair_type (list_type char_type) logical_type))),
         ("Zr", Basic_type_1 [] Nothing [] nat_type)]
   typestring :: Type_1 -> [Type_1] -> (String, [Type_1])
   typestring a d =

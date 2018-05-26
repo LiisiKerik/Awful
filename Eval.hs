@@ -237,7 +237,7 @@ module Eval where
         Application_expression_2 d e -> Application_expression_2 (f d) (f e)
         Function_expression_2 d e ->
           case d of
-            Blank_pattern -> b
+            Blank_pattern -> Function_expression_2 Blank_pattern (f e)
             Name_pattern g -> if g == a then b else Function_expression_2 d (f e)
         Match_expression_2 d e ->
           Match_expression_2

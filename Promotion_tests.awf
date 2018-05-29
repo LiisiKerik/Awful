@@ -1,7 +1,7 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+Load Promotion.awf
 Load Standard.awf
 Load Testing.awf
-Load Type_Level_Lists.awf
 Def Inverse_Tuple_Empty_List_test :
   List ((Tuple !Empty_List[Star] * Maybe (Tuple !Empty_List[Star])) * Maybe (Tuple !Empty_List[Star])) =
     Test_1 Inverse (Lift (Pair Empty_Tuple (Wrap Empty_Tuple)))

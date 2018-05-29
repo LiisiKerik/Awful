@@ -300,7 +300,7 @@ module Typing where
           Alg [("T", star_kind)] (Data.Map.fromList [("Nothing", []), ("Wrap", [ntype "T"])]) (maybe_type (ntype "T"))),
         ("Nat", Alg [] (Data.Map.fromList [("Next", [ntype "Nat"]), ("Zr", [])]) (ntype "Nat"))]
   arrow_kind :: Kind_1 -> Kind_1 -> Kind_1
-  arrow_kind a = Application_kind_1 (Application_kind_1 (Name_kind_1 "Arrow") a)
+  arrow_kind a = Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") a)
   chain_constraints :: Maybe String -> Map' Class_5 -> Map' (Map' [String]) -> String -> Map' (Map' [String])
   chain_constraints a b c e =
     case a of
@@ -333,7 +333,7 @@ module Typing where
     in
       case b of
         Application_type_1 d e -> check_kind j c a d >>= \f -> case f of
-          Application_kind_1 (Application_kind_1 (Name_kind_1 "Arrow") g) h ->
+          Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") g) h ->
             check_kind j c a e >>= \i -> if i == g then Right h else x
           _ -> x
         Char_type_1 _ -> Right char_kind
@@ -654,13 +654,13 @@ module Typing where
         ("!Char", Star_kind),
         ("!Comparison", Star_kind),
         ("!Either", Arrow_kind Star_kind (Arrow_kind Star_kind Star_kind)),
+        ("!Function", Arrow_kind Star_kind (Arrow_kind Star_kind Star_kind)),
         ("!Int", Star_kind),
         ("!List", Arrow_kind Star_kind Star_kind),
         ("!Logical", Star_kind),
         ("!Maybe", Arrow_kind Star_kind Star_kind),
         ("!Nat", Star_kind),
         ("!Pair", Arrow_kind Star_kind (Arrow_kind Star_kind Star_kind)),
-        ("Arrow", Arrow_kind Star_kind (Arrow_kind Star_kind Star_kind)),
         ("Star", Star_kind)]
   init_type_context :: File
   init_type_context =
@@ -913,7 +913,7 @@ module Typing where
   promotables :: Map' Bool
   promotables =
     Data.Map.fromList
-      ((\a -> (a, True)) <$> ["Char", "Comparison", "Either", "Int", "List", "Logical", "Maybe", "Nat", "Pair"])
+      ((\a -> (a, True)) <$> ["Char", "Comparison", "Either", "Function", "Int", "List", "Logical", "Maybe", "Nat", "Pair"])
   rem_old :: Map' (t, Status) -> Map' t
   rem_old a = fst <$> Data.Map.filter (\(_, b) -> b == New) a
   rem_old' :: Map' (Map' (t, Status)) -> Map' (Map' t)
@@ -1297,7 +1297,7 @@ module Typing where
       [] -> if a == g then Right ([], c, x, c0, c') else e
       h : d ->
         case a of
-          Application_kind_1 (Application_kind_1 (Name_kind_1 "Arrow") l) f ->
+          Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") l) f ->
             let
               i j k =
                 (
@@ -2692,7 +2692,7 @@ module Typing where
             type_type' l f d y >>=
             \(h, i) ->
               case i of
-                Application_kind_1 (Application_kind_1 (Name_kind_1 "Arrow") j) k ->
+                Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") j) k ->
                   if k == e then Application_type_1 h <$> type_type l g d y j else x
                 _ -> x)
         Char_type_0 b -> if e == char_kind then Right (Char_type_1 b) else x
@@ -2713,7 +2713,7 @@ module Typing where
           type_type' l e d y >>=
           \(g, h) ->
             case h of
-              Application_kind_1 (Application_kind_1 (Name_kind_1 "Arrow") i) j ->
+              Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") i) j ->
                 (\k -> (Application_type_1 g k, j)) <$> type_type l f d y i
               _ -> kind_err (l a))
       Char_type_0 e -> Right (Char_type_1 e, char_kind)

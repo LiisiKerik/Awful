@@ -173,7 +173,7 @@ module Tree where
   parse_arrow_kind :: Parser Kind_branch_0
   parse_arrow_kind =
     (
-      (\x -> \y -> Application_kind_0 (Kind_0 y (Application_kind_0 (Kind_0 y (Name_kind_0 "Arrow")) x))) <$>
+      (\x -> \y -> Application_kind_0 (Kind_0 y (Application_kind_0 (Kind_0 y (Name_kind_0 "!Function")) x))) <$>
       (Kind_0 <&> (parse_round parse_arrow_kind <|> parse_application_kind <|> parse_name_kind)) <*>
       parse_arrow_loc <*>
       parse_kind)

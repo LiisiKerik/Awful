@@ -3,6 +3,7 @@
 import Data.Bifunctor
 import Data.List
 import Data.Map
+import Data.Set
 import Eval
 import Naming
 import Standard
@@ -14,15 +15,28 @@ import Tree
 import Typing
 type Files = Map' File
 check ::
-  [String] ->
-  (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])) ->
-  Location' ->
-  String ->
-  IO
-    (Err
-      (
-        (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])),
-        File))
+  (
+    [String] ->
+    (
+      Files,
+      (Set String, Locations),
+      Map' Expression_2,
+      Map' Polykind,
+      Map' (Map' Location'),
+      Map' ([String], Map' [(String, Nat)])) ->
+    Location' ->
+    String ->
+    IO
+      (Err
+        (
+          (
+            Files,
+            (Set String, Locations),
+            Map' Expression_2,
+            Map' Polykind,
+            Map' (Map' Location'),
+            Map' ([String], Map' [(String, Nat)])),
+          File)))
 check b m' @ (f, _, _, _, _, _) j name_qc =
   case Data.Map.lookup name_qc f of
     Just a -> return (Right (m', a))
@@ -74,16 +88,29 @@ check_extensions a c =
     [] -> Right ([], a)
     d : e -> check_extension a >> first ((:) a) <$> check_extensions d e
 check_imports ::
-  [String] ->
   (
-    (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])),
-    File) ->
-  [(Location', String)] ->
-  IO
-    (Err
+    [String] ->
+    (
       (
-        (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])),
-        File))
+        Files,
+        (Set String, Locations),
+        Map' Expression_2,
+        Map' Polykind,
+        Map' (Map' Location'),
+        Map' ([String], Map' [(String, Nat)])),
+      File) ->
+    [(Location', String)] ->
+    IO
+      (Err
+        (
+          (
+            Files,
+            (Set String, Locations),
+            Map' Expression_2,
+            Map' Polykind,
+            Map' (Map' Location'),
+            Map' ([String], Map' [(String, Nat)])),
+          File)))
 check_imports a b @ (f, k) c =
   case c of
     [] -> return (Right b)
@@ -101,23 +128,30 @@ eval'' a b = do
     (
       c >>=
       \((_, e, f, j, _, y), File _ g h i w _ _ _ m _ _ z) -> tokenise_parse_naming_typing_eval e j (g, h, i) f b m y w z)
-init' :: (Files, Locations, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)]))
+init' ::
+  (
+    Files,
+    (Set String, Locations),
+    Map' Expression_2,
+    Map' Polykind,
+    Map' (Map' Location'),
+    Map' ([String], Map' [(String, Nat)]))
 init' =
   (
-    empty,
-    locations,
+    Data.Map.empty,
+    (Data.Set.singleton "Pair", locations),
     defs,
     kinds,
-    fromList
+    Data.Map.fromList
       [
-        ("Field", fromList [("Modular", Language)]),
-        ("Nonzero", fromList []),
-        ("Ord", fromList [("Char", Language), ("Int", Language), ("Modular", Language)]),
-        ("Ring", fromList [("Int", Language), ("Modular", Language)]),
-        ("Writeable", fromList [("Int", Language), ("Modular", Language)])],
-    fromList
+        ("Field", Data.Map.fromList [("Modular", Language)]),
+        ("Nonzero", Data.Map.fromList []),
+        ("Ord", Data.Map.fromList [("Char", Language), ("Int", Language), ("Modular", Language)]),
+        ("Ring", Data.Map.fromList [("Int", Language), ("Modular", Language)]),
+        ("Writeable", Data.Map.fromList [("Int", Language), ("Modular", Language)])],
+    Data.Map.fromList
       [
-        ("Field", (["Inverse"], fromList [("Modular", [("Nonzero", Zr)])])),
+        ("Field", (["Inverse"], Data.Map.fromList [("Modular", [("Nonzero", Zr)])])),
         (
           "Nonzero",
           (
@@ -129,10 +163,12 @@ init' =
               "Multiply_Modular",
               "Negate_Modular",
               "Write_Brackets_Modular"],
-            fromList [])),
-        ("Ord", (["Compare"], fromList [("Char", []), ("Int", []), ("Modular", [])])),
-        ("Ring", (["Add", "Convert", "Multiply", "Negate"], fromList [("Int", []), ("Modular", [("Nonzero", Zr)])])),
-        ("Writeable", (["Write_Brackets"], fromList [("Int", []), ("Modular", [("Nonzero", Zr)])]))])
+            Data.Map.fromList [])),
+        ("Ord", (["Compare"], Data.Map.fromList [("Char", []), ("Int", []), ("Modular", [])])),
+        (
+          "Ring",
+          (["Add", "Convert", "Multiply", "Negate"], Data.Map.fromList [("Int", []), ("Modular", [("Nonzero", Zr)])])),
+        ("Writeable", (["Write_Brackets"], Data.Map.fromList [("Int", []), ("Modular", [("Nonzero", Zr)])]))])
 main :: IO ()
 main = do
   args <- getArgs

@@ -1,6 +1,7 @@
 -----------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
 module Eval where
+  import Data.Set
   import Data.Map
   import Naming
   import Tokenise
@@ -213,7 +214,7 @@ module Eval where
   nothing_algebraic :: Expression_2
   nothing_algebraic = Algebraic_expression_2 "Nothing" []
   pair_expression :: Expression_2 -> Expression_2 -> Expression_2
-  pair_expression x y = Struct_expression_2 (fromList [("First", x), ("Second", y)])
+  pair_expression x y = Struct_expression_2 (Data.Map.fromList [("First", x), ("Second", y)])
   subst_algebraic :: String -> Expression_2 -> Match_Algebraic_2 -> Match_Algebraic_2
   subst_algebraic a b (Match_Algebraic_2 c d) = Match_Algebraic_2 c (if subst_help a c then d else subst_expr a d b)
   subst_expr :: String -> Expression_2 -> Expression_2 -> Expression_2
@@ -259,7 +260,7 @@ module Eval where
       [] -> c
       (d, e) : f -> subst_pats f b (subst_pat' e (unsafe_lookup d b) c)
   tokenise_parse_naming_typing_eval ::
-    Locations ->
+    (Set String, Locations) ->
     Map' Polykind ->
     (Map' Alg, Map' String, Map' Type_2) ->
     Map' Expression_2 ->

@@ -817,10 +817,24 @@ module Typing where
   mod_type :: Type_1 -> Type_1
   mod_type = Application_type_1 (Name_type_1 "Modular" [])
   naming_typing ::
-    String ->
-    Tree_2 ->
-    (Locations, File, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])) ->
-    Err (Locations, File, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)]))
+    (
+      String ->
+      Tree_2 ->
+      (
+        (Set String, Locations),
+        File,
+        Map' Expression_2,
+        Map' Polykind,
+        Map' (Map' Location'),
+        Map' ([String], Map' [(String, Nat)])) ->
+      Err
+        (
+          (Set String, Locations),
+          File,
+          Map' Expression_2,
+          Map' Polykind,
+          Map' (Map' Location'),
+          Map' ([String], Map' [(String, Nat)])))
   naming_typing f a (b, c, g, j, m, w) =
     naming f a b >>= \(d, e) -> (\(h, i, k, n, u) -> (d, h, i, k, n, u)) <$> typing f e (c, g, j, m, w)
   nat_kind :: Kind_1

@@ -61,6 +61,7 @@ eeldusel, et käsitleme ainult ascii märke, on match märkide peal lõplik ja d
 operaatorid struktuuride patternmatchides
 teha midagi et kõrvaldada parserist aegunud keelelaienduse hoiatus
 impordid kohustuslikult õiges järjekorras?
+semantics of "Pair -> f" should be "Pair x y -> f x y"
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")

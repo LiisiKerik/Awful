@@ -491,7 +491,7 @@ module Tree where
           parse_star_type <|>
           parse_application_type <|>
           parse_elementary_type)) <*>
-      parse_star <*>
+      (id <& parse_operator "+") <*>
       (
         Type_0 <&>
         (

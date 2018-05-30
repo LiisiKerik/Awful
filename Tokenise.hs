@@ -30,6 +30,7 @@ module Tokenise where
   data Location_1 = Location_1 String Location_0 deriving Show
   data Token_0 =
     Algebraic_token |
+    Blank_token |
     Branching_token |
     Case_token |
     Char_token Char |
@@ -269,6 +270,7 @@ module Tokenise where
   word_token :: String -> Token_0
   word_token a =
     case a of
+      "_" -> Blank_token
       "Algebraic" -> Algebraic_token
       "Branching" -> Branching_token
       "Case" -> Case_token

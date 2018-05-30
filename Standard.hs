@@ -16,9 +16,9 @@ module Standard where
   standard_0 (Tree_1 a b) = Tree_3 a (standard_1 b)
   standard_1 :: Tree_0 -> Tree_2
   standard_1 (Tree_0 a b c) = Tree_2 a b (standard_defs c)
-  standard_argument :: (Pattern_1, Type_0) -> (Type_0, Expression_0) -> (Type_0, Expression_0)
+  standard_argument :: (Pat, Type_0) -> (Type_0, Expression_0) -> (Type_0, Expression_0)
   standard_argument (a, b) = bimap (standard_type b) (standard_pattern a)
-  standard_arguments :: (Type_0, Expression_0) -> [(Pattern_1, Type_0)] -> (Type_0, Expression_0)
+  standard_arguments :: (Type_0, Expression_0) -> [(Pat, Type_0)] -> (Type_0, Expression_0)
   standard_arguments = foldr standard_argument
   standard_def :: Def_0 -> Def_1
   standard_def a =
@@ -27,9 +27,9 @@ module Standard where
       Instance_def_0 b c d h f g e -> Instance_1 b c d h f g (second (uncurry standard_patterns) <$> e)
   standard_defs :: [Def_0] -> [Def_1]
   standard_defs = (<$>) standard_def
-  standard_pattern :: Pattern_1 -> Expression_0 -> Expression_0
+  standard_pattern :: Pat -> Expression_0 -> Expression_0
   standard_pattern a b = Expression_0 (get_location a) (Function_expression_0 a b)
-  standard_patterns :: [Pattern_1] -> Expression_0 -> Expression_0
+  standard_patterns :: [Pat] -> Expression_0 -> Expression_0
   standard_patterns a b = foldr standard_pattern b a
   standard_type :: Type_0 -> Type_0 -> Type_0
   standard_type a b =

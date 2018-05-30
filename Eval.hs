@@ -95,12 +95,7 @@ module Eval where
                     case j of
                       Struct_expression_2 l -> Just (unsafe_lookup k l)
                       _ -> undefined
-                  Function_expression_2 k l ->
-                    eval'
-                      a
-                      (case k of
-                        Blank_pattern -> l
-                        Name_pattern n -> subst_expr n l j)
+                  Function_expression_2 k l -> eval' a (subst_pat' k j l)
                   Inverse_Modular_expression_2 k ->
                     case j of
                       Modular_expression_2 l ->
@@ -199,7 +194,7 @@ module Eval where
                     _ -> undefined))
       Name_expression_2 d -> Data.Map.lookup d a >>= eval' a
       _ -> Just c
-  eval_match :: [Pattern_0] -> [Expression_2] -> Expression_2 -> Expression_2
+  eval_match :: [Pat_1] -> [Expression_2] -> Expression_2 -> Expression_2
   eval_match a b c =
     case a of
       [] ->
@@ -209,13 +204,7 @@ module Eval where
       d : e ->
         case b of
           [] -> undefined
-          f : g ->
-            eval_match
-              e
-              g
-              (case d of
-                Blank_pattern -> c
-                Name_pattern h -> subst_expr h c f)
+          f : g -> eval_match e g (subst_pat' d f c)
   list_expression :: String -> Expression_2
   list_expression =
     Prelude.foldr
@@ -226,7 +215,7 @@ module Eval where
   pair_expression :: Expression_2 -> Expression_2 -> Expression_2
   pair_expression x y = Struct_expression_2 (fromList [("First", x), ("Second", y)])
   subst_algebraic :: String -> Expression_2 -> Match_Algebraic_2 -> Match_Algebraic_2
-  subst_algebraic a b (Match_Algebraic_2 c d) = Match_Algebraic_2 c (if subst_help c a then d else subst_expr a d b)
+  subst_algebraic a b (Match_Algebraic_2 c d) = Match_Algebraic_2 c (if subst_help a c then d else subst_expr a d b)
   subst_expr :: String -> Expression_2 -> Expression_2 -> Expression_2
   subst_expr a b c =
     let
@@ -235,10 +224,7 @@ module Eval where
       case b of
         Algebraic_expression_2 d e -> Algebraic_expression_2 d (f <$> e)
         Application_expression_2 d e -> Application_expression_2 (f d) (f e)
-        Function_expression_2 d e ->
-          case d of
-            Blank_pattern -> Function_expression_2 Blank_pattern (f e)
-            Name_pattern g -> if g == a then b else Function_expression_2 d (f e)
+        Function_expression_2 d e -> Function_expression_2 d (if subst_pat a d then e else f e)
         Match_expression_2 d e ->
           Match_expression_2
             (f d)
@@ -250,17 +236,28 @@ module Eval where
         Name_expression_2 d -> if d == a then c else b
         Struct_expression_2 d -> Struct_expression_2 (f <$> d)
         _ -> b
-  subst_help :: [Pattern_0] -> String -> Bool
-  subst_help a b =
-    case a of 
-      [] -> False
-      c : d ->
-        let
-          f = subst_help d b
-        in
-          case c of
-            Blank_pattern -> f
-            Name_pattern e -> e == b || f
+  subst_help :: String -> [Pat_1] -> Bool
+  subst_help a b = or (subst_pat a <$> b)
+  subst_pat :: String -> Pat_1 -> Bool
+  subst_pat a b =
+    case b of
+      Application_pat_1 c -> subst_help a (snd <$> c)
+      Blank_pat_1 -> False
+      Name_pat_1 c -> c == a
+  subst_pat' :: Pat_1 -> Expression_2 -> Expression_2 -> Expression_2
+  subst_pat' a b c =
+    case a of
+      Application_pat_1 d ->
+        case b of
+          Struct_expression_2 e -> subst_pats d e c
+          _ -> undefined
+      Blank_pat_1 -> c
+      Name_pat_1 d -> subst_expr d c b
+  subst_pats :: [(String, Pat_1)] -> Map' Expression_2 -> Expression_2 -> Expression_2
+  subst_pats a b c =
+    case a of
+      [] -> c
+      (d, e) : f -> subst_pats f b (subst_pat' e (unsafe_lookup d b) c)
   tokenise_parse_naming_typing_eval ::
     Locations ->
     Map' Polykind ->
@@ -270,9 +267,10 @@ module Eval where
     Map' (Map' [[String]]) ->
     Map' ([String], Map' [(String, Nat)]) ->
     Map' Kind ->
+    Map' Strct ->
     Err String
-  tokenise_parse_naming_typing_eval c f (g, h, i) l b u v w =
-    parse_expression b >>= \e -> naming_expression "input" e c >>= \j -> eval l <$> type_expr' (f, g, h, i, w) j u v
+  tokenise_parse_naming_typing_eval c f (g, h, i) l b u v w a =
+    parse_expression b >>= \e -> naming_expression "input" e c >>= \j -> eval l <$> type_expr' (f, g, h, i, w) j u v a
   tostr :: Expression_2 -> String
   tostr x =
     case x of

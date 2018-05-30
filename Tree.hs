@@ -20,15 +20,16 @@ module Tree where
   data Data_branch_0 = Algebraic_data_0 [Form_0] | Struct_data_0 [(Name, Type_0)]
     deriving Show
   data Def_0 =
-    Basic_def_0 Name [(Name, Kind_0)] [Constraint_0] [(Pattern_1, Type_0)] Type_0 Expression_0 |
-    Instance_def_0 Location_0 Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, ([Pattern_1], Expression_0))]
+    Basic_def_0 Name [(Name, Kind_0)] [Constraint_0] [(Pat, Type_0)] Type_0 Expression_0 |
+    Instance_def_0 Location_0 Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, ([Pat], Expression_0))]
       deriving Show
-  data Eqq = Eqq Name [Pattern_1] Expression_0 deriving Show
+-- TODO: siin peaks saama teha ka seda: Let Pair x y = ... In ...
+  data Eqq = Eqq Name [Pat] Expression_0 deriving Show
   data Expression_0 = Expression_0 Location_0 Expression_branch_0 deriving Show
   data Expression_branch_0 =
     Application_expression_0 Expression_0 Expression_0 |
     Char_expression_0 Char |
-    Function_expression_0 Pattern_1 Expression_0 |
+    Function_expression_0 Pat Expression_0 |
     Int_expression_0 Integer |
     Match_expression_0 Expression_0 Matches_0 |
     Modular_expression_0 Modular |
@@ -37,7 +38,7 @@ module Tree where
   data Form_0 = Form_0 Name [Type_0] deriving Show
   data Kind_0 = Kind_0 Location_0 Kind_branch_0 deriving (Eq, Show)
   data Kind_branch_0 = Application_kind_0 Kind_0 Kind_0 | Name_kind_0 String deriving (Eq, Show)
-  data Match_Algebraic_0 = Match_Algebraic_0 Name [Pattern_1] Expression_0 deriving Show
+  data Match_Algebraic_0 = Match_Algebraic_0 Name [Pat] Expression_0 deriving Show
   data Match_char_0 = Match_char_0 Location_0 Char Expression_0 deriving Show
   data Match_Int_0 = Match_Int_0 Location_0 Integer Expression_0 deriving Show
   data Match_Modular_0 = Match_Modular_0 Location_0 Modular Expression_0 deriving Show
@@ -50,6 +51,8 @@ module Tree where
   data Method = Method Name [(Name, Kind_0)] [Constraint_0] Type_0 deriving Show
   data Modular = Modular Integer Integer deriving Show
   data Name = Name Location_0 String deriving Show
+  data Pat = Pat Location_0 Pat_branch deriving Show
+  data Pat_branch = Application_pat String [Pat] | Blank_pat | Name_pat String deriving Show
   data Pattern_1 = Pattern_1 Location_0 Pattern_0 deriving Show
   data Pattern_0 = Blank_pattern | Name_pattern String deriving Show
 {-
@@ -91,6 +94,8 @@ module Tree where
     fmap a (Parser b) = Parser (\c -> first a <$> b c)
   instance Get_location Kind_0 where
     get_location (Kind_0 a _) = a
+  instance Get_location Pat where
+    get_location (Pat a _) = a
   instance Get_location Pattern_1 where
     get_location (Pattern_1 a _) = a
   instance Get_location Type_0 where
@@ -114,8 +119,8 @@ module Tree where
     Expression_0
       l
       (Application_expression_0
-        (Expression_0 l (Function_expression_0 (Pattern_1 l (Name_pattern x)) w))
-        (Prelude.foldr (\(Pattern_1 m a) -> \b -> Expression_0 m (Function_expression_0 (Pattern_1 m a) b)) z y))
+        (Expression_0 l (Function_expression_0 (Pat l (Name_pat x)) w))
+        (Prelude.foldr (\(Pat m a) -> \b -> Expression_0 m (Function_expression_0 (Pat m a) b)) z y))
   mk_list :: Location_0 -> [Expression_0] -> Expression_branch_0
   mk_list l =
     Prelude.foldr
@@ -152,6 +157,9 @@ module Tree where
       (\x -> foldl (Application_kind_0 <$> Kind_0 x)) <&>
       (Application_kind_0 <$> parse_bracketed_kind <*> parse_bracketed_kind) <*>
       many parse_bracketed_kind)
+  parse_application_pat :: Parser Pat
+  parse_application_pat =
+    (\a -> \x -> \y -> \z -> Pat a (Application_pat x (y : z))) <&> parse_name <*> parse_brack_pat <*> many parse_brack_pat
   parse_application_type :: Parser Type_branch_0
   parse_application_type =
     (
@@ -195,13 +203,17 @@ module Tree where
       parse_name'' Def_token <*>
       parse_kinds <*>
       parse_constraints <*>
-      parse_arguments' parse_pattern_1 <*
+      parse_arguments' parse_pat <*
       parse_colon <*>
       parse_type <*
       parse_eq <*>
       parse_expression')
   parse_blank :: Parser Pattern_0
-  parse_blank = Blank_pattern <$ parse_name_4 "_"
+  parse_blank = Blank_pattern <$ parse_token Blank_token
+  parse_blank_pat :: Parser Pat
+  parse_blank_pat = (\x -> Pat x Blank_pat) <& parse_token Blank_token
+  parse_brack_pat :: Parser Pat
+  parse_brack_pat = parse_round parse_application_pat <|> parse_elementary_pat
   parse_bracketed_expression :: Parser Expression_0
   parse_bracketed_expression = Expression_0 <&> (parse_elementary_expression <|> parse_round parse_composite_expression)
   parse_bracketed_kind :: Parser Kind_0
@@ -251,7 +263,7 @@ module Tree where
       Class_0 <$>
       parse_name'' Class_token <*
       parse_token Left_curly_token <*>
-      ((,) <$> parse_name' <* parse_colon <*> parse_kind) <*
+      ((,) <$> parse_pattern' <* parse_colon <*> parse_kind) <*
       parse_token Right_curly_token <*>
       (Just <$ parse_operator "<" <*> parse_name' <* parse_operator ">" <|> pure Nothing) <*>
       parse_optional parse_round parse_method)
@@ -305,12 +317,14 @@ module Tree where
       parse_int_expression <|>
       Name_expression_0 "Empty_List" Nothing [] <$ parse_name_4 "List" <|>
       parse_name_expression)
+  parse_elementary_pat :: Parser Pat
+  parse_elementary_pat = parse_blank_pat <|> parse_name_pat
   parse_elementary_type :: Parser Type_branch_0
   parse_elementary_type = parse_char_type <|> parse_int_type <|> parse_name_type <|> (int_to_nat_type_0 <&> parse_int')
   parse_eq :: Parser ()
   parse_eq = parse_operator "="
   parse_eq' :: Parser Eqq
-  parse_eq' = Eqq <$> parse_name' <*> many parse_pattern_1 <* parse_eq <*> parse_expression'
+  parse_eq' = Eqq <$> parse_name' <*> many parse_brack_pat <* parse_eq <*> parse_expression'
   parse_error :: (Location_0 -> Location_1) -> Location_0 -> Err t
   parse_error a b = Left ("Parse error" ++ location' (a b))
   parse_expression :: String -> Err Expression_0
@@ -322,7 +336,7 @@ module Tree where
   parse_form :: Parser Form_0
   parse_form = Form_0 <$> parse_name' <*> many parse_bracketed_type
   parse_function :: Parser Expression_branch_0
-  parse_function = parse_arrow' (Function_expression_0 <$> parse_pattern_1)
+  parse_function = parse_arrow' (Function_expression_0 <$> parse_pat)
   parse_instance :: Parser Def_0
   parse_instance =
     (
@@ -337,7 +351,7 @@ module Tree where
       parse_constraints <*>
       parse_optional
         parse_round
-        ((\x -> \y -> \z -> (x, (y, z))) <$> parse_name' <*> many parse_pattern_1 <* parse_eq <*> parse_expression'))
+        ((\x -> \y -> \z -> (x, (y, z))) <$> parse_name' <*> many parse_brack_pat <* parse_eq <*> parse_expression'))
   parse_int :: Parser Integer
   parse_int = (negate <$ parse_operator "-" <|> pure id) <*> parse_int'
   parse_int' :: Parser Integer
@@ -379,7 +393,7 @@ module Tree where
   parse_location :: Parser Location_0
   parse_location = Parser (\a -> Right (state_location a, a))
   parse_match_algebraic :: Parser Match_Algebraic_0
-  parse_match_algebraic = parse_arrow' (Match_Algebraic_0 <$> parse_name' <*> many parse_pattern_1)
+  parse_match_algebraic = parse_arrow' (Match_Algebraic_0 <$> parse_name' <*> many parse_brack_pat)
   parse_match_char :: Parser Match_char_0
   parse_match_char = parse_arrow' (Match_char_0 <&> parse_char)
   parse_match_expression :: Parser Expression_branch_0
@@ -435,6 +449,8 @@ module Tree where
       parse_optional' (parse_brackets Left_square_token (parse_list 1 parse_type) Right_square_token))
   parse_name_kind :: Parser Kind_branch_0
   parse_name_kind = Name_kind_0 <$> parse_prom
+  parse_name_pat :: Parser Pat
+  parse_name_pat = (\x -> \y -> Pat x (Name_pat y)) <&> parse_name
   parse_name_pattern :: Parser Pattern_0
   parse_name_pattern = Name_pattern <$> parse_name
   parse_name_type :: Parser Type_branch_0
@@ -451,10 +467,14 @@ module Tree where
   parse_optional a b = parse_optional' (a (parse_list 1 b))
   parse_optional' :: Alternative f => Parser (f t) -> Parser (f t)
   parse_optional' a = a <|> pure empty
+  parse_pat :: Parser Pat
+  parse_pat = parse_application_pat <|> parse_elementary_pat
   parse_pattern_0 :: Parser Pattern_0
   parse_pattern_0 = parse_blank <|> parse_name_pattern
   parse_pattern_1 :: Parser Pattern_1
   parse_pattern_1 = Pattern_1 <&> parse_pattern_0
+  parse_pattern' :: Parser Name
+  parse_pattern' = Name <&> ("_" <$ parse_token Blank_token <|> parse_name)
   parse_prom :: Parser String
   parse_prom = ((:) '!' <$ parse_lift <*> parse_name <|> parse_name)
   parse_round :: Parser t -> Parser t

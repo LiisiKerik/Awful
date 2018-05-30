@@ -1,23 +1,15 @@
 {-
-let expression (sequential? or more powerful, like in Haskell?)
 protection against duplicate file loading - what happens now? if crashes - fix, give a nice error/warning. if nothing - warn?
 tests
 type synonyms?
-anda viga selle kohta, kui koodifailis kohatakse mitte-ASCII tähemärki. või handle'ida neid viisakalt ja mittebugiselt...
 operators
-type operators (minimally for functions, either, pair).
-abstract methods
-topelt-esindajate kontroll nimekontrolliga kokku?
-move duplicate instance control into Naming module?
-if-elif-else?
+topelt-esindajate kontroll nimekontrolliga kokku? move duplicate instance control into Naming module?
+matchimine võrdusega (sobiks mitte algebraliste andmetüüpide jaoks)
 Keelata kasutajal -0 kirjutada
-chars: escape, newline, quote. non-ascii chars
-unused type variable warnings
-unused local variable warnings
 internal: do something with old/new status tags. check where exactly they're necessary. get rid of them where they're useless
 change semantics of missing pattern-match variables from blank to lambda? (Left -> e is not Left _ -> e but Left x -> e x)
 internal: make the system of specifying built-in algebraic data types and things better and safer
-Allow hiding things to functions outside module - so that helper functions are not exported from the module
+Allow hiding things to functions outside module - so that helper functions are not exported from the module?
 normalising constructors for some data types (polynomial, fraction) which assume a certain normal form of fields?
 allow to hide (prevent exporting) constructors and field accessors which can potentially have bad behavior
 internal: remove locations from expressions except from lowest-level things where some checks are necessary (name)?
@@ -25,11 +17,9 @@ switch expression that is less strict and more flexible than match?
 some limited pattern matching in function arguments (and maybe also variables introduced through algebraic matching?)
 syntactic sugar for lists, vectors, matrices... allow writing (tiny, limited to expression parsing) language extensions?
 fix the show-read issue; give a specific error for that (different errors for unresolved type variable and missing constr)
-basic IO operations (output to console, read file, write file, append to file)
 boolean function library
 implement map and set (AVL trees?)
 different ways of folding lists, vectors, sets, maps etc
-gather naming and type errors and give a list instead of returning only the first one?
 module system related functions into a separate file?
 more detailed type errors (write which two types clashed)
 type clash location?
@@ -39,9 +29,7 @@ make command line arguments nicer
 check for free type variables after typechecking an expression. throw an error (they are a problem with type classes!)
 remove promotion of primitives? it seems that without GADT-s they are pointless?
 mis juhtub kui esimeses moodulis on kusagil tüübimuutuja T ja järgmises moodulis sama nimega globaalne tüüp?
-mis juhtub sellisel juhul: Class Foo{T : Star}(foo<Ring T> : T = Zero)
 liigirakendamise eemaldamine liigituletuse kasuks (igal pool? teatud piiratud juhtudel?)
-kas tüübirakendamist on kusagil vaja?
 võimaldada suvalise arvu konstruktoritega algebralisi andmetüüpe. (LISAKS struktide allesjätmisele?)
 todo: make a function writing operator/function. For printing stuff like "Complex (Fraction 0 1) (Fraction 1 1)"
 checki abil võiks saada tüübikontrollida korraga mitut moodulit, andes ette nimekirja
@@ -49,8 +37,9 @@ eeldusel, et käsitleme ainult ascii märke, on match märkide peal lõplik ja d
 ühildada Standard ja parser? või vastupidi, süntaktiline suhkur (listide sün.suhk.) standard moodulisse?
 operaatorid struktuuride patternmatchides
 teha midagi et kõrvaldada parserist aegunud keelelaienduse hoiatus
-impordid kohustuslikult õiges järjekorras?
 semantics of "Pair -> f" should be "Pair x y -> f x y"
+if-elif-else? multiple conditional: If {bool1 -> ..., ..., booln -> ..., Default -> ...}
+fix the WTF with newline (look at Tokenise file, word_token function. wtf is going on?)
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")
@@ -117,6 +106,7 @@ module Typing where
     Div'_expression_2 Integer |
     Field_expression_2 String |
     Function_expression_2 Pat_1 Expression_2 |
+    If_expression_2 [(Expression_2, Expression_2)] Expression_2 |
     Int_expression_2 Integer |
     Inverse_Modular_expression_2 Integer |
     Match_expression_2 Expression_2 Matches_2 |
@@ -176,6 +166,7 @@ module Typing where
     Application_texpr Typedexpr Typedexpr |
     Char_texpr Char |
     Function_texpr Pat_1 Typedexpr |
+    If_texpr [(Typedexpr, Typedexpr)] Typedexpr |
     Int_texpr Integer |
     Match_texpr Typedexpr Typedmatches |
     Modular_texpr Integer |
@@ -198,6 +189,7 @@ module Typing where
         Application_texpr d e -> Application_expression_2 (h d) (h e)
         Char_texpr d -> Char_expression_2 d
         Function_texpr d e -> Function_expression_2 d (h e)
+        If_texpr a d -> If_expression_2 (bimap h h <$> a) (h d)
         Int_texpr d -> Int_expression_2 d
         Match_texpr d e ->
           Match_expression_2
@@ -1988,6 +1980,13 @@ module Typing where
                   c'
                   (r7, m8)
                   z8))
+        If_expression_1 x4 ->
+          case x4 of
+            [] -> undefined
+            c : g ->
+              (
+                (\(b2, a4, c2, d2, e2, f2) -> (If_texpr b2 a4, c2, d2, e2, f2)) <$>
+                type_if v w r o f h d e c' (r7, m8) z8 c g a)
         Int_expression_1 c -> Right (Int_texpr c, f, (e, int_type) : h, o, c')
         Match_expression_1 c g ->
           case g of
@@ -2208,6 +2207,50 @@ module Typing where
     case a of
       [] -> Right []
       c : d -> type_form f c b g >>= \e -> (:) e <$> type_forms f d b g
+  type_if ::
+    (
+      Map' Alg ->
+      Map' String ->
+      (Location_0 -> Location_1) ->
+      Integer ->
+      Map' (Either Polykind Kind_1) ->
+      [(Type_1, Type_1)] ->
+      Map' Type_2 ->
+      Type_1 ->
+      [(String, Type_1)] ->
+      (Map' Polykind, Map' Kind) ->
+      Map' Strct ->
+      (Expression_1, Expression_1) ->
+      [(Expression_1, Expression_1)] ->
+      Location_0 ->
+      Err
+        (
+          [(Typedexpr, Typedexpr)],
+          Typedexpr,
+          Map' (Either Polykind Kind_1),
+          [(Type_1, Type_1)],
+          Integer,
+          [(String, Type_1)]))
+  type_if a b c d e f g h i j k (Expression_1 l o, m) n i' =
+    case n of
+      [] ->
+        case o of
+          Name_expression_1 "True" Nothing [] ->
+            (\(p, q, r, s, t) -> ([], p, q, r, s, t)) <$> type_expression a b c d e f g m h i j k
+          _ -> Left ("Missing True case in If" ++ location' (c i'))
+      u : v ->
+        case o of
+          Name_expression_1 "True" Nothing [] -> Left ("Early True case in If" ++ location' (c l))
+          _ ->
+            (
+              type_expression a b c d e f g (Expression_1 l o) logical_type i j k >>=
+              \(p, q, r, s, t) ->
+                (
+                  type_expression a b c s q r g m h t j k >>=
+                  \(w, x, y, a', b') ->
+                    (
+                      (\(c', d', e', f', g', h') -> ((p, w) : c', d', e', f', g', h')) <$>
+                      type_if a b c a' x y g h b' j k u v i')))
   type_inh :: String -> [String] -> Maybe String -> Map' String -> Either String ()
   type_inh a b c d =
     case c of

@@ -39,6 +39,7 @@ module Tokenise where
     Def_token |
     Default_token |
     Hash_token |
+    If_token |
     In_token |
     Instance_token |
     Int_token Integer |
@@ -277,6 +278,7 @@ module Tokenise where
       "Class" -> Class_token
       "Def" -> Def_token
       "Default" -> Default_token
+      "If" -> If_token
       "In" -> In_token
       "Instance" -> Instance_token
       "Let" -> Let_token

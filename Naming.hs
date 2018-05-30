@@ -30,6 +30,7 @@ module Naming where
     Application_expression_1 Expression_1 Expression_1 |
     Char_expression_1 Char |
     Function_expression_1 Pat Expression_1 |
+    If_expression_1 [(Expression_1, Expression_1)] |
     Int_expression_1 Integer |
     Match_expression_1 Expression_1 Matches_1 |
     Modular_expression_1 Modular |
@@ -198,6 +199,7 @@ module Naming where
         naming_expression g c b >>= \e -> Application_expression_1 e <$> naming_expression g d b
       Char_expression_0 c -> Right (Char_expression_1 c)
       Function_expression_0 c d -> naming_pat g c b >>= \e -> Function_expression_1 c <$> naming_expression g d e
+      If_expression_0 c -> If_expression_1 <$> naming_ifs g b c
       Int_expression_0 c -> Right (Int_expression_1 c)
       Match_expression_0 c d -> naming_expression g c b >>= \e -> Match_expression_1 e <$> naming_matches g d b
       Modular_expression_0 c -> Right (Modular_expression_1 c)
@@ -208,6 +210,11 @@ module Naming where
   naming_form d (Form_0 a b) c = second (flip Form_1 b) <$> naming_name d a c
   naming_forms :: String -> [Form_0] -> Locations -> Err (Locations, [Form_1])
   naming_forms = naming_list naming_form
+  naming_ifs :: String -> Locations -> [(Expression_0, Expression_0)] -> Err [(Expression_1, Expression_1)]
+  naming_ifs a b c =
+    case c of
+      [] -> Right []
+      (d, e) : f -> naming_expression a d b >>= \g -> naming_expression a e b >>= \h -> (:) (g, h) <$> naming_ifs a b f
   naming_list :: (String -> t -> u -> Err (u, v)) -> String -> [t] -> u -> Err (u, [v])
   naming_list a h b c =
     case b of

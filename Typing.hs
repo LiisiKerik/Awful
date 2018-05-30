@@ -12,12 +12,8 @@ move duplicate instance control into Naming module?
 if-elif-else?
 Keelata kasutajal -0 kirjutada
 chars: escape, newline, quote. non-ascii chars
-eta reduction warnings
-100% type safe mod function (first argument int, second argument modular, result modular of same size)
 unused type variable warnings
 unused local variable warnings
-eemaldada let ümbert looksulud. ei ole vajalikud!
-add something for easily changing fields of structs?
 internal: do something with old/new status tags. check where exactly they're necessary. get rid of them where they're useless
 change semantics of missing pattern-match variables from blank to lambda? (Left -> e is not Left _ -> e but Left x -> e x)
 internal: make the system of specifying built-in algebraic data types and things better and safer
@@ -30,16 +26,10 @@ some limited pattern matching in function arguments (and maybe also variables in
 syntactic sugar for lists, vectors, matrices... allow writing (tiny, limited to expression parsing) language extensions?
 fix the show-read issue; give a specific error for that (different errors for unresolved type variable and missing constr)
 basic IO operations (output to console, read file, write file, append to file)
-finite n
-is it necessary to keep modular types after typechecking? probably not. clean up.
 boolean function library
 implement map and set (AVL trees?)
 different ways of folding lists, vectors, sets, maps etc
 gather naming and type errors and give a list instead of returning only the first one?
-make promotion for built-in ADT-s automatic
-modify parser: make promotion of ints and chars to type level explicit (with !)
-simplify hyperkind system because there's no need to keep anything but the number of arguments
-modify flexible type variable name generation. use just numbers for everything? ("T0" - maybe name conflict with userdefined)
 module system related functions into a separate file?
 more detailed type errors (write which two types clashed)
 type clash location?
@@ -54,7 +44,6 @@ liigirakendamise eemaldamine liigituletuse kasuks (igal pool? teatud piiratud ju
 kas tüübirakendamist on kusagil vaja?
 võimaldada suvalise arvu konstruktoritega algebralisi andmetüüpe. (LISAKS struktide allesjätmisele?)
 todo: make a function writing operator/function. For printing stuff like "Complex (Fraction 0 1) (Fraction 1 1)"
-olukordades, kus blanki ei eeldata, võib üksik alakriips käituda muutujanimena. likvideerida see jama!
 checki abil võiks saada tüübikontrollida korraga mitut moodulit, andes ette nimekirja
 eeldusel, et käsitleme ainult ascii märke, on match märkide peal lõplik ja default ei ole tingimata vajalik, nagu modulariga
 ühildada Standard ja parser? või vastupidi, süntaktiline suhkur (listide sün.suhk.) standard moodulisse?
@@ -161,7 +150,7 @@ module Typing where
       (Map' Strct)
         deriving Show
   data Form_2 = Form_2 String [Type_1] deriving Show
-  data Kind = Arrow_kind Kind Kind | Star_kind deriving (Eq, Show)
+  data Kind = Arrow_kind Kind | Star_kind deriving (Eq, Show)
   data Kind_1 = Application_kind_1 Kind_1 Kind_1 | Name_kind_1 String deriving (Eq, Show)
   data Match_Algebraic_2 = Match_Algebraic_2 [Pat_1] Expression_2 deriving Show
   data Matches_2 =
@@ -654,14 +643,14 @@ module Typing where
       [
         ("!Char", Star_kind),
         ("!Comparison", Star_kind),
-        ("!Either", Arrow_kind Star_kind (Arrow_kind Star_kind Star_kind)),
-        ("!Function", Arrow_kind Star_kind (Arrow_kind Star_kind Star_kind)),
+        ("!Either", Arrow_kind (Arrow_kind Star_kind)),
+        ("!Function", Arrow_kind (Arrow_kind Star_kind)),
         ("!Int", Star_kind),
-        ("!List", Arrow_kind Star_kind Star_kind),
+        ("!List", Arrow_kind Star_kind),
         ("!Logical", Star_kind),
-        ("!Maybe", Arrow_kind Star_kind Star_kind),
+        ("!Maybe", Arrow_kind Star_kind),
         ("!Nat", Star_kind),
-        ("!Pair", Arrow_kind Star_kind (Arrow_kind Star_kind Star_kind)),
+        ("!Pair", Arrow_kind (Arrow_kind Star_kind)),
         ("Star", Star_kind)]
   init_type_context :: File
   init_type_context =
@@ -2251,7 +2240,7 @@ module Typing where
           type_kind_6 a b e >>=
           \(g, h) ->
             case h of
-              Arrow_kind i j -> (\k -> (Application_kind_1 g k, j)) <$> type_kind_7 a b i f
+              Arrow_kind j -> (\k -> (Application_kind_1 g k, j)) <$> type_kind_7 a b Star_kind f
               Star_kind -> kind_err (a c))
       Name_kind_0 e -> und_err e b "kind" (a c) (\f -> Right (Name_kind_1 e, f))
   type_kind_7 :: (Location_0 -> Location_1) -> Map' Kind -> Kind -> Kind_0 -> Err Kind_1
@@ -2262,7 +2251,7 @@ module Typing where
           type_kind_6 a b f >>=
           \(h, i) ->
             case i of
-              Arrow_kind j k -> if k == c then Application_kind_1 h <$> type_kind_7 a b j g else kind_err (a d)
+              Arrow_kind k -> if k == c then Application_kind_1 h <$> type_kind_7 a b Star_kind g else kind_err (a d)
               Star_kind -> kind_err (a d))
       Name_kind_0 f -> und_err f b "kind" (a d) (\g -> if g == c then Right (Name_kind_1 f) else kind_err (a d))
   type_kinds :: [(String, Kind_1)] -> Map' Polykind -> Map' Polykind
@@ -2704,7 +2693,7 @@ module Typing where
               Just
                 (
                   (
-                    ins_new ('!' : a) (Prelude.foldr Arrow_kind Star_kind (return Star_kind <$> b)) o,
+                    ins_new ('!' : a) (Prelude.foldr (return Arrow_kind) Star_kind b) o,
                     ins_new a y i,
                     l,
                     m,

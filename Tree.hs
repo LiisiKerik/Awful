@@ -276,8 +276,8 @@ module Tree where
     (
       parse_mod_expr <|>
       parse_list_expr <|>
-      parse_application_expression <|>
       parse_function <|>
+      parse_application_expression <|>
       parse_match_expression <|>
       parse_let_expression)
   parse_composite_type :: Parser Type_branch_0

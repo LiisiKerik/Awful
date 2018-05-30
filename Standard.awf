@@ -29,16 +29,16 @@ Instance Braided{Either}(
   Bimap f g x = Match x {Left y -> Left (f y), Right y -> Right (g y)},
   Commute x = Match x {Left y -> Right y, Right y -> Left y})
 Instance Braided{Pair}(
-  Associate x = Pair (First (First x)) (Pair (Second (First x)) (Second x)),
-  Bimap f g x = Pair (f (First x)) (g (Second x)),
-  Commute x = Pair (Second x) (First x))
+  Associate (Pair (Pair x y) z) = Pair x (Pair y z),
+  Bimap f g (Pair x y) = Pair (f x) (g y),
+  Commute (Pair x y) = Pair y x)
 Def Brackets[T : Star]<Writeable T>(x : T) : List Char =
   Let y = Write_Brackets x In Match Second y {False -> First y, True -> Cat (Lift "(") (Cat (First y) (Lift ")"))}
 Def Convert'[F : Star -> Star, T : Star]<Applicative F, Ring T>(x : Int) : F T = Lift (Convert x)
 Def Equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> True, Default -> False}
 Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing})
 Instance Field{Logical}(Inverse x = Match x {False -> Nothing, True -> Wrap True})
-Instance Field{Pair T U}<Field T, Field U>(Inverse x = Zip Pair (Inverse (First x)) (Inverse (Second x)))
+Instance Field{Pair T U}<Field T, Field U>(Inverse (Pair x y) = Zip Pair (Inverse x) (Inverse y))
 Def Filter[T : Star, F : Star -> Star]<Alternative F, Monad F>(f : T -> Logical, x : F T) : F T =
   Bind x (y -> Match f y {False -> Empty, True -> Lift y})
 Instance Finite{Comparison}(All = List (LT,  EQ,  GT))
@@ -104,7 +104,7 @@ Instance Ord{Maybe T}<Ord T>(
   Compare x y =
     Match x {Nothing -> Match y {Nothing -> EQ, Wrap -> LT}, Wrap z -> Match y {Nothing -> GT, Wrap w -> Compare z w}})
 Instance Ord{Pair T U}<Ord T, Ord U>(
-  Compare x y = Match Compare (First x) (First y) {LT -> LT, EQ -> Compare (Second x) (Second y), GT -> GT})
+  Compare (Pair x y) (Pair z a) = Match Compare x z {LT -> LT, EQ -> Compare y a, GT -> GT})
 Instance Ord{Tree T}<Ord T>(
   Compare x y =
     Match x {
@@ -113,10 +113,10 @@ Instance Ord{Tree T}<Ord T>(
         Match y {Empty_Tree -> GT, Construct_Tree c d e -> Compare (Pair z (Pair a b)) (Pair c (Pair d e))}})
 Instance Ring{Logical}(Add = Not_equal, Convert x = Equal (Mod' x 2) 1, Multiply = Min, Negate = Id)
 Instance Ring{Pair T U}<Ring T, Ring U>(
-  Add x y = Pair (Add (First x) (First y)) (Add (Second x) (Second y)),
+  Add (Pair x y) (Pair z a) = Pair (Add x z) (Add y a),
   Convert x = Pair (Convert x) (Convert x),
-  Multiply x y = Pair (Multiply (First x) (First y)) (Multiply (Second x) (Second y)),
-  Negate x = Pair (Negate (First x)) (Negate (Second x)))
+  Multiply (Pair x y) (Pair z a) = Pair (Multiply x z) (Multiply y a),
+  Negate (Pair x y) = Pair (Negate x) (Negate y))
 Def Write[T : Star]<Writeable T>(x : T) : List Char = First (Write_Brackets x)
 Def Write'(x : List Char, y : List (List Char)) : List Char = Interleave (Lift " ") (Construct_List x y)
 Instance Writeable{Char}(
@@ -146,7 +146,7 @@ Instance Writeable{Maybe T}<Writeable T>(
       Nothing -> Pair (List ("N", "o", "t", "h", "i", "n", "g")) False,
       Wrap y -> Pair (Cat (List ("W", "r", "a", "p", " ")) (Brackets y)) True})
 Instance Writeable{Pair T U}<Writeable T, Writeable U>(
-  Write_Brackets x = Pair (Write' (List ("P", "a", "i", "r")) (List (Brackets (First x), Brackets (Second x)))) True)
+  Write_Brackets (Pair x y) = Pair (Write' (List ("P", "a", "i", "r")) (List (Brackets x, Brackets y))) True)
 Instance Writeable{Tree T}<Writeable T>(
   Write_Brackets x =
     Match x {

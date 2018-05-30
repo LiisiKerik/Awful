@@ -28,9 +28,9 @@ Class Ord_Array{N : !Nat}(Compare_Array[T : Star]<Ord T> : Array N T -> Array N 
 Class Writeable_Array{N : !Nat}(Write_Brackets_Array[T : Star]<Writeable T> : Array N T -> List Char * Logical)
 Class Writeable_Square{N : !Nat}(Write_Brackets_Square[T : Star]<Writeable T> : Square N T -> List Char * Logical)
 Class Writeable_Triangle{N : !Nat}(Write_Brackets_Triangle[T : Star]<Writeable T> : Triangle N T -> List Char * Logical)
-Instance Applicative{Complex}(Apply x y = Complex (Real x (Real y)) (Imaginary x (Imaginary y)), Lift x = Complex x x)
+Instance Applicative{Complex}(Apply (Complex f g) (Complex x y) = Complex (f x) (g y), Lift x = Complex x x)
 Instance Applicative{Quaternion}(
-  Apply x y = Quaternion (Qr x (Qr y)) (Qx x (Qx y)) (Qy x (Qy y)) (Qz x (Qz y)),
+  Apply (Quaternion f g h i) (Quaternion x y z a) = Quaternion (f x) (g y) (h z) (i a),
   Lift x = Quaternion x x x x)
 Instance Commutative{Complex T}<Commutative T>
 Instance Commutative{Int}
@@ -44,30 +44,29 @@ Def Div_right[T : Star]<Field T>(x : T, y : T) : Maybe T = Fmap (Multiply x) (In
 Def Div_right'[F : Star -> Star, T : Star]<Functor F, Field T>(x : F T, y : T) : Maybe (F T) =
   Fmap (Multiply_right x) (Inverse y)
 Instance Field{Complex T}<Commutative T, Field T>(
-  Inverse x = Div_right' (Complex (Real x) (Negate (Imaginary x))) (Sum_squares x))
+  Inverse (Complex x y) = Div_right' (Complex x (Negate y)) (Sum_squares (List (x, y))))
 Instance Field{Quaternion T}<Commutative T, Field T>(
-  Inverse x = Div_right' (Quaternion (Qr x) (Negate (Qx x)) (Negate (Qy x)) (Negate (Qz x))) (Sum_squares x))
+  Inverse (Quaternion x y z a) =
+    Div_right' (Quaternion x (Negate y) (Negate z) (Negate a)) (Sum_squares (List (x, y, z, a))))
 Instance Field{Trivial}(Inverse = Wrap)
 Instance Finite{Array N T}<Finite T, Finite_Array N>(All = All_Array)
 Instance Finite{Trivial}(All = Lift Trivial)
 Instance Finite_Array{!Zr}(All_Array = Lift Empty_Array)
 Instance Finite_Array{!Next N}<Finite_Array N>(All_Array = Zip Construct_Array All All)
-Instance Foldable{Complex}(Fold_right f x y = f (Real y) (f (Imaginary y) x))
 Instance Foldable{Either T}(Fold_right f x y = Match y {Left _ -> x, Right z -> f z x})
 Instance Foldable{List}(Fold_right f x y = Match y {Empty_List -> x, Construct_List z a -> f z (Fold_right f x a)})
 Instance Foldable{Maybe}(Fold_right f x y = Match y {Nothing -> x, Wrap z -> f z x})
-Instance Foldable{Quaternion}(Fold_right f x y = f (Qr y) (f (Qx y) (f (Qy y) (f (Qz y) x))))
 Instance Functor{Array N}<Functor_Array N>(Fmap = Fmap_Array)
-Instance Functor{Complex}(Fmap f x = Complex (f (Real x)) (f (Imaginary x)))
-Instance Functor{Quaternion}(Fmap f x = Quaternion (f (Qr x)) (f (Qx x)) (f (Qy x)) (f (Qz x)))
+Instance Functor{Complex}(Fmap f (Complex x y) = Complex (f x) (f y))
+Instance Functor{Quaternion}(Fmap f (Quaternion x y z a) = Quaternion (f x) (f y) (f z) (f a))
 Instance Functor_Array{!Zr}(Fmap_Array _ _ = Empty_Array)
 Instance Functor_Array{!Next N}<Functor_Array N>(Fmap_Array f a = Construct_Array (f (Head a)) (Fmap f (Tail a)))
 Def Multiply_left[T : Star, F : Star -> Star]<Functor F, Ring T>(x : T, y : F T) : F T = Fmap (Multiply x) y
 Def Multiply_right[F : Star -> Star, T : Star]<Functor F, Ring T>(x : F T, y : T) : F T = Fmap (z -> Multiply z y) x
 Instance Ord{Array N T}<Ord T, Ord_Array N>(Compare = Compare_Array)
-Instance Ord{Complex T}<Ord T>(Compare x y = Compare (Pair (Real x) (Imaginary x)) (Pair (Real y) (Imaginary y)))
+Instance Ord{Complex T}<Ord T>(Compare (Complex x y) (Complex z a) = Compare (Pair x y) (Pair z a))
 Instance Ord{Quaternion T}<Ord T>(
-  Compare x y = Compare (Pair (Qr x) (Pair (Qx x) (Pair (Qy x) (Qz x)))) (Pair (Qr y) (Pair (Qx y) (Pair (Qy y) (Qz y)))))
+  Compare (Quaternion x y z a) (Quaternion b c d e) = Compare (Pair x (Pair y (Pair z a))) (Pair b (Pair c (Pair d e))))
 Instance Ord{Trivial}(Compare _ _ = EQ)
 Instance Ord_Array{!Zr}(Compare_Array _ _ = EQ)
 Instance Ord_Array{!Next N}<Ord_Array N>(Compare_Array x y = Compare (Pair (Head x) (Tail x)) (Pair (Head y) (Tail y)))
@@ -80,49 +79,38 @@ Def Pow'[T : Star]<Ring T>(x : T, i : Int) : T =
 Instance Ring{Complex T}<Ring T>(
   Add = Add',
   Convert x = Complex (Convert x) Zero,
-  Multiply x y =
-    Complex
-      (Minus (Multiply (Real x) (Real y)) (Multiply (Imaginary x) (Imaginary y)))
-      (Add (Multiply (Real x) (Imaginary y)) (Multiply (Imaginary x) (Real y))),
+  Multiply (Complex x y) (Complex z a) = Complex (Minus (Multiply x z) (Multiply y a)) (Add (Multiply x a) (Multiply y z)),
   Negate = Negate')
 Instance Ring{Trivial}(Add _ = Id, Convert _ = Trivial, Multiply _ = Id, Negate = Id)
 Instance Ring{Quaternion T}<Ring T>(
   Add = Add',
   Convert x = Quaternion (Convert x) Zero Zero Zero,
-  Multiply x y =
+  Multiply (Quaternion x y z a) (Quaternion b c d e) =
     Quaternion
-      (Minus
-        (Minus (Minus (Multiply (Qr x) (Qr y)) (Multiply (Qx x) (Qx y))) (Multiply (Qy x) (Qy y)))
-        (Multiply (Qz x) (Qz y)))
-      (Add
-        (Minus (Add (Multiply (Qr x) (Qx y)) (Multiply (Qx x) (Qr y))) (Multiply (Qy x) (Qz y)))
-        (Multiply (Qz x) (Qy y)))
-      (Minus
-        (Add (Add (Multiply (Qr x) (Qy y)) (Multiply (Qx x) (Qz y))) (Multiply (Qy x) (Qr y)))
-        (Multiply (Qz x) (Qx y)))
-      (Add
-        (Add (Minus (Multiply (Qr x) (Qz y)) (Multiply (Qx x) (Qy y))) (Multiply (Qy x) (Qx y)))
-        (Multiply (Qz x) (Qr y))),
+      (Minus (Minus (Minus (Multiply x b) (Multiply y c)) (Multiply z d)) (Multiply a e))
+      (Add (Minus (Add (Multiply x c) (Multiply y b)) (Multiply z e)) (Multiply a d))
+      (Minus (Add (Add (Multiply x d) (Multiply y e)) (Multiply z b)) (Multiply a c))
+      (Add (Add (Minus (Multiply x e) (Multiply y d)) (Multiply z c)) (Multiply a b)),
   Negate = Negate')
 Def Sum[F : Star -> Star, T : Star]<Foldable F, Ring T> : F T -> T = Fold_right Add Zero
 Def Sum_squares[F : Star -> Star, T : Star]<Foldable F, Functor F, Ring T>(x : F T) : T = Sum (Fmap (y -> Pow' y 2) x)
 Instance Writeable{Array N T}<Writeable T, Writeable_Array N>(Write_Brackets = Write_Brackets_Array)
 Instance Writeable{Complex T}<Writeable T>(
-  Write_Brackets x =
-    Pair (Write' (List ("C", "o", "m", "p", "l", "e", "x")) (List (Brackets (Real x), Brackets (Imaginary x)))) True)
+  Write_Brackets (Complex x y) =
+    Pair (Write' (List ("C", "o", "m", "p", "l", "e", "x")) (List (Brackets x, Brackets y))) True)
 Instance Writeable{Fraction}(
-  Write_Brackets x =
-    Pair (Write' (List ("F", "r", "a", "c", "t", "i", "o", "n")) (List (Brackets (Num x), Brackets (Den x)))) True)
+  Write_Brackets (Fraction x y) =
+    Pair (Write' (List ("F", "r", "a", "c", "t", "i", "o", "n")) (List (Brackets x, Brackets y))) True)
 Instance Writeable{Quaternion T}<Writeable T>(
-  Write_Brackets x =
+  Write_Brackets (Quaternion x y z a) =
     Pair
       (Write'
         (List ("Q", "u", "a", "t", "e", "r", "n", "i", "o", "n"))
-        (List (Brackets (Qr x), Brackets (Qx x), Brackets (Qy x), Brackets (Qz x))))
+        (List (Brackets x, Brackets y, Brackets z, Brackets a)))
       True)
 Instance Writeable{Square N T}<Writeable T, Writeable_Square N>(Write_Brackets = Write_Brackets_Square)
 Instance Writeable{Toeplitz N T}<Writeable T, Writeable_Array N>(
-  Write_Brackets x = Pair (Cat (List ("T", "o", "e", "p", "l", "i", "t", "z", " ")) (Brackets (Toeplitz' x))) True)
+  Write_Brackets (Toeplitz x) = Pair (Cat (List ("T", "o", "e", "p", "l", "i", "t", "z", " ")) (Brackets x)) True)
 Instance Writeable{Triangle N T}<Writeable T, Writeable_Triangle N>(Write_Brackets = Write_Brackets_Triangle)
 Instance Writeable{Trivial}(Write_Brackets _ = Pair (List ("T", "r", "i", "v", "i", "a", "l")) False)
 Instance Writeable_Array{!Zr}(

@@ -30,7 +30,6 @@ module Tree where
     Application_expression_0 Expression_0 Expression_0 |
     Char_expression_0 Char |
     Function_expression_0 Pat Expression_0 |
-    If_expression_0 [(Expression_0, Expression_0)] |
     Int_expression_0 Integer |
     Match_expression_0 Expression_0 Matches_0 |
     Modular_expression_0 Modular |
@@ -280,7 +279,6 @@ module Tree where
   parse_composite_expression :: Parser Expression_branch_0
   parse_composite_expression =
     (
-      parse_if_expr <|>
       parse_mod_expr <|>
       parse_list_expr <|>
       parse_function <|>
@@ -344,14 +342,6 @@ module Tree where
   parse_form = Form_0 <$> parse_name' <*> many parse_bracketed_type
   parse_function :: Parser Expression_branch_0
   parse_function = parse_arrow' (Function_expression_0 <$> parse_pat)
-  parse_if_expr :: Parser Expression_branch_0
-  parse_if_expr =
-    (
-      If_expression_0 <$
-      parse_token If_token <*
-      parse_token Left_curly_token <*>
-      parse_list 2 (parse_arrow' ((,) <$> parse_expression')) <*
-      parse_token Right_curly_token)
   parse_instance :: Parser Def_0
   parse_instance =
     (

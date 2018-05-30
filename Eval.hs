@@ -151,7 +151,6 @@ module Eval where
                         Just (pair_expression (list_expression (show_mod (Modular k l))) (Algebraic_expression_2 "True" []))
                       _ -> undefined
                   _ -> undefined))
-      If_expression_2 b d -> eval_if a b d
       Match_expression_2 d e ->
         (
           eval' a d >>=
@@ -195,18 +194,6 @@ module Eval where
                     _ -> undefined))
       Name_expression_2 d -> Data.Map.lookup d a >>= eval' a
       _ -> Just c
-  eval_if :: Map' Expression_2 -> [(Expression_2, Expression_2)] -> Expression_2 -> Maybe Expression_2
-  eval_if a b c =
-    case b of
-      [] -> Just c
-      (d, e) : f ->
-        (
-          eval' a d >>=
-          \g ->
-            case g of
-              Algebraic_expression_2 "False" [] -> eval_if a f c
-              Algebraic_expression_2 "True" [] -> eval' a e
-              _ -> undefined)
   eval_match :: [Pat_1] -> [Expression_2] -> Expression_2 -> Expression_2
   eval_match a b c =
     case a of

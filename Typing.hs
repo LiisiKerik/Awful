@@ -38,7 +38,6 @@ eeldusel, et käsitleme ainult ascii märke, on match märkide peal lõplik ja d
 operaatorid struktuuride patternmatchides
 teha midagi et kõrvaldada parserist aegunud keelelaienduse hoiatus
 semantics of "Pair -> f" should be "Pair x y -> f x y"
-if-elif-else? multiple conditional: If {bool1 -> ..., ..., booln -> ..., Default -> ...}
 fix the WTF with newline (look at Tokenise file, word_token function. wtf is going on?)
 -}
 {-
@@ -106,7 +105,6 @@ module Typing where
     Div'_expression_2 Integer |
     Field_expression_2 String |
     Function_expression_2 Pat_1 Expression_2 |
-    If_expression_2 [(Expression_2, Expression_2)] Expression_2 |
     Int_expression_2 Integer |
     Inverse_Modular_expression_2 Integer |
     Match_expression_2 Expression_2 Matches_2 |
@@ -166,7 +164,6 @@ module Typing where
     Application_texpr Typedexpr Typedexpr |
     Char_texpr Char |
     Function_texpr Pat_1 Typedexpr |
-    If_texpr [(Typedexpr, Typedexpr)] Typedexpr |
     Int_texpr Integer |
     Match_texpr Typedexpr Typedmatches |
     Modular_texpr Integer |
@@ -189,7 +186,6 @@ module Typing where
         Application_texpr d e -> Application_expression_2 (h d) (h e)
         Char_texpr d -> Char_expression_2 d
         Function_texpr d e -> Function_expression_2 d (h e)
-        If_texpr a d -> If_expression_2 (bimap h h <$> a) (h d)
         Int_texpr d -> Int_expression_2 d
         Match_texpr d e ->
           Match_expression_2
@@ -1980,13 +1976,6 @@ module Typing where
                   c'
                   (r7, m8)
                   z8))
-        If_expression_1 x4 ->
-          case x4 of
-            [] -> undefined
-            c : g ->
-              (
-                (\(b2, a4, c2, d2, e2, f2) -> (If_texpr b2 a4, c2, d2, e2, f2)) <$>
-                type_if v w r o f h d e c' (r7, m8) z8 c g a)
         Int_expression_1 c -> Right (Int_texpr c, f, (e, int_type) : h, o, c')
         Match_expression_1 c g ->
           case g of
@@ -2207,50 +2196,6 @@ module Typing where
     case a of
       [] -> Right []
       c : d -> type_form f c b g >>= \e -> (:) e <$> type_forms f d b g
-  type_if ::
-    (
-      Map' Alg ->
-      Map' String ->
-      (Location_0 -> Location_1) ->
-      Integer ->
-      Map' (Either Polykind Kind_1) ->
-      [(Type_1, Type_1)] ->
-      Map' Type_2 ->
-      Type_1 ->
-      [(String, Type_1)] ->
-      (Map' Polykind, Map' Kind) ->
-      Map' Strct ->
-      (Expression_1, Expression_1) ->
-      [(Expression_1, Expression_1)] ->
-      Location_0 ->
-      Err
-        (
-          [(Typedexpr, Typedexpr)],
-          Typedexpr,
-          Map' (Either Polykind Kind_1),
-          [(Type_1, Type_1)],
-          Integer,
-          [(String, Type_1)]))
-  type_if a b c d e f g h i j k (Expression_1 l o, m) n i' =
-    case n of
-      [] ->
-        case o of
-          Name_expression_1 "True" Nothing [] ->
-            (\(p, q, r, s, t) -> ([], p, q, r, s, t)) <$> type_expression a b c d e f g m h i j k
-          _ -> Left ("Missing True case in If" ++ location' (c i'))
-      u : v ->
-        case o of
-          Name_expression_1 "True" Nothing [] -> Left ("Early True case in If" ++ location' (c l))
-          _ ->
-            (
-              type_expression a b c d e f g (Expression_1 l o) logical_type i j k >>=
-              \(p, q, r, s, t) ->
-                (
-                  type_expression a b c s q r g m h t j k >>=
-                  \(w, x, y, a', b') ->
-                    (
-                      (\(c', d', e', f', g', h') -> ((p, w) : c', d', e', f', g', h')) <$>
-                      type_if a b c a' x y g h b' j k u v i')))
   type_inh :: String -> [String] -> Maybe String -> Map' String -> Either String ()
   type_inh a b c d =
     case c of

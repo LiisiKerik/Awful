@@ -1764,17 +1764,7 @@ module Typing where
         in
           (
             (\t -> Data.Map.insert e (Prelude.foldr (\x' -> Function_expression_2 (Name_pat_1 x')) t y') c) <$>
-            type_expr
-              ("definition " ++ e ++ location' (j r))
-              h
-              j
-              (return False <$> f3, d, l, k)
-              i
-              (type_constraints_1 x m u0)
-              0
-              t'
-              (f3, v2)
-              w3)
+            type_expr ("definition " ++ e ++ location' (j r)) h j (d, l, k) i (type_constraints_1 x m u0) 0 t' (f3, v2) w3)
       Instance_4 l' e' w0 w e e0 e1 f f' g' c2 r' ->
         let
           f4 = Prelude.foldl (\x -> \(y, g) -> Data.Map.insert y (pkind g) x) n e0
@@ -1782,7 +1772,7 @@ module Typing where
             type_exprs
               (\(Name x g) -> "definition " ++ g ++ " " ++ e ++ location' (j x))
               j
-              (return False <$> f4, d, l, k)
+              (d, l, k)
               (type_constraints_1 g' m u0)
               f
               c
@@ -1874,7 +1864,7 @@ module Typing where
     String ->
     Type_1 ->
     (Location_0 -> Location_1) ->
-    (Map' Bool, Map' Alg, Map' String, Map' Type_2) ->
+    (Map' Alg, Map' String, Map' Type_2) ->
     Expression_1 ->
     Map' (Map' [[String]]) ->
     Integer ->
@@ -1882,12 +1872,12 @@ module Typing where
     (Map' Polykind, Map' Kind) ->
     Map' Strct ->
     Err Expression_2
-  type_expr k h a (b, c, d, e) f m w w' x3 t3 =
+  type_expr k h a (c, d, e) f m w w' (b, x3) t3 =
     let
       n = " in " ++ k
     in
       (
-        type_expression c d a w b [] e f h [] x3 t3 >>=
+        type_expression c d a w (return False <$> b) [] e f h [] (b, x3) t3 >>=
         \(g, i, j, _, x) ->
           (
             solvesys (\y -> \p -> Left ("Type mismatch between types " ++ min y p ++ " and " ++ max y p ++ n)) i j (x, g) >>=
@@ -1904,7 +1894,7 @@ module Typing where
       "input."
       (list_type char_type)
       (Location_1 "input")
-      (return False <$> b, c, d, e)
+      (c, d, e)
       (Application_expression_1
         (Name_expression_1 (Name (Location_0 0 0) "First") Nothing [])
         (Application_expression_1 (Name_expression_1 (Name (Location_0 0 0) "Write_Brackets") Nothing []) f))
@@ -2147,7 +2137,7 @@ module Typing where
     (
       (Name -> String) ->
       (Location_0 -> Location_1) ->
-      (Map' Bool, Map' Alg, Map' String, Map' Type_2) ->
+      (Map' Alg, Map' String, Map' Type_2) ->
       Map' (Map' [[String]]) ->
       [(Name, Expression_1, [(String, Kind_1)], [Constraint_1], Type_1)] ->
       (Map' Expression_2) ->
@@ -2160,7 +2150,7 @@ module Typing where
       (Map' Polykind, Map' Kind) ->
       Map' Strct ->
       Err (Map' Expression_2))
-  type_exprs a b c @ (c0, c1, c2, c3) d h i t z w f' t' t0 t4 f5 =
+  type_exprs a b c d h i t z w f' t' t0 (x2, t4) f5 =
     case h of
       [] -> Right i
       (j @ (Name _ y), k, s, t5, l) : m ->
@@ -2169,14 +2159,14 @@ module Typing where
             (a j)
             (z l)
             b
-            (Prelude.foldl (\k' -> \(l', _) -> Data.Map.insert l' False k') c0 s, c1, c2, c3)
+            c
             k
             (type_constraints_1 t5 d t0)
             w
             t'
-            t4
+            (Prelude.foldl (\k' -> \(l', m0) -> Data.Map.insert l' (pkind m0) k') x2 s, t4)
             f5 >>=
-          \g -> type_exprs a b c d m (Data.Map.insert (y ++ " " ++ t) (f' g) i) t z w f' t' t0 t4 f5)
+          \g -> type_exprs a b c d m (Data.Map.insert (y ++ " " ++ t) (f' g) i) t z w f' t' t0 (x2, t4) f5)
   type_field :: (Location_0 -> Location_1) -> (String, Type_0) -> Map' Polykind -> Map' Kind -> Err (String, Type_1)
   type_field d (a, b) c e  = (,) a <$> type_type d b c e star_kind
   type_fields :: (Location_0 -> Location_1) -> [(String, Type_0)] -> Map' Polykind -> Map' Kind -> Err [(String, Type_1)]

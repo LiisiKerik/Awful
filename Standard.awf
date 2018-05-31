@@ -33,7 +33,7 @@ Instance Braided{Pair}(
   Bimap f g (Pair x y) = Pair (f x) (g y),
   Commute (Pair x y) = Pair y x)
 Def Brackets[T : Star]<Writeable T>(x : T) : List Char =
-  Let y = Write_Brackets x In Match Second y {False -> First y, True -> Cat (Lift "(") (Cat (First y) (Lift ")"))}
+  Let Pair y z = Write_Brackets x In Match z {False -> y, True -> Cat (Lift "(") (Cat y (Lift ")"))}
 Def Convert'[F : Star -> Star, T : Star]<Applicative F, Ring T>(x : Int) : F T = Lift (Convert x)
 Def Equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> True, Default -> False}
 Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing})

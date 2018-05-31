@@ -181,13 +181,6 @@ module Tokenise where
         in
           case e of
             '\n' -> Left ("Newline inside quotes" ++ location' a)
-            '\\' ->
-              case d of
-                [] -> Left ("Missing end quote" ++ location' (next_char a))
-                f : g ->
-                  case f of
-                    Name_char 'n' -> (,) '\n' <$> tokenise_quote (next_char (next_char a)) g
-                    _ -> (,) '\\' <$> tokenise_quote (next_char a) d
             _ -> (,) e <$> tokenise_quote (next_char a) d
   tokenise_multiline :: Integer -> Location_1 -> [Char'] -> Err Tokens
   tokenise_multiline a b c =

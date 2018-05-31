@@ -37,7 +37,6 @@ checki abil võiks saada tüübikontrollida korraga mitut moodulit, andes ette n
 operaatorid struktuuride ja algebraliste andmetüüpide patternmatchides
 teha midagi et kõrvaldada parserist aegunud keelelaienduse hoiatus
 semantics of "Pair -> f" should be "Pair x y -> f x y"
-fix the WTF with newline (look at Tokenise file, word_token function. wtf is going on?)
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")
@@ -1026,15 +1025,12 @@ module Typing where
           Name_type_1 e _ ->
             case d of
               Name_type_1 f _ ->
-                let
-                  n = unsafe_lookup f a
-                in
-                  case unsafe_lookup e a of
-                    False ->
-                      case n of
-                        False -> if c == d then solvesys m a g a' else m e f
-                        True -> solvesys_rep m a f c g a'
-                    True -> solvesys_rep m a e d g a'
+                case unsafe_lookup e a of
+                  False ->
+                    case unsafe_lookup f a of
+                      False -> if c == d then solvesys m a g a' else m e f
+                      True -> solvesys_rep m a f c g a'
+                  True -> solvesys_rep m a e d g a'
               _ -> solvesys' m a e d g a'
   solvesys' ::
     (String -> String -> Err ([(String, Type_1)], Typedexpr)) ->
@@ -1049,7 +1045,12 @@ module Typing where
       (y, _) = typestring c []
     in
       case unsafe_lookup b a of
-        False -> h b y
+        False ->
+          h
+            b
+            (case unsafe_lookup y a of
+              False -> y
+              True -> "an application type")
         True -> solvesys_rep h a b c d x
   solvesys_rep ::
     (String -> String -> Err ([(String, Type_1)], Typedexpr)) ->
@@ -1880,7 +1881,7 @@ module Typing where
         type_expression c d a w (return False <$> b) [] e f h [] (b, x3) t3 >>=
         \(g, i, j, _, x) ->
           (
-            solvesys (\y -> \p -> Left ("Type mismatch between types " ++ min y p ++ " and " ++ max y p ++ n)) i j (x, g) >>=
+            solvesys (\y -> \p -> Left ("Type mismatch between " ++ min y p ++ " and " ++ max y p ++ n)) i j (x, g) >>=
             \(y, p) -> addargs w' p <$ slv m y (\t -> "Failure to resolve constraints for class " ++ t ++ n)))
   type_expr' ::
     (Map' Polykind, Map' Alg, Map' String, Map' Type_2, Map' Kind) ->

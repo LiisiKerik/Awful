@@ -149,7 +149,7 @@ module Eval where
                   Write_Brackets_Modular_expression_2 k ->
                     case j of
                       Modular_expression_2 l ->
-                        Just (pair_expression (list_expression (show_mod (Modular k l))) (Algebraic_expression_2 "True" []))
+                        Just (pair_expression (list_expression (show_mod k l)) (Algebraic_expression_2 "True" []))
                       _ -> undefined
                   _ -> undefined))
       Match_expression_2 d e ->

@@ -149,6 +149,7 @@ module Typing where
       deriving Show
   data Method_3 = Method_3 String [(String, Kind_1)] [Constraint_0] Type_1 deriving Show
   data Method_4 = Method_4 String [(String, Kind_1)] [Constraint_1] Type_1 deriving Show
+  data Modular' = Modular' Integer Integer deriving Show
   data Nat = Nxt Nat | Zr deriving (Eq, Ord, Show)
   data Pat_1 = Application_pat_1 [(String, Pat_1)] | Blank_pat_1 | Name_pat_1 String deriving Show
   data Plain_dat = Plain_dat String [String] Data_branch_1 deriving Show
@@ -335,8 +336,9 @@ module Typing where
     case a of
       Left (Polykind c d) -> (c, d)
       Right b -> ([], b)
-  check_mod :: String -> Modular -> Err Modular
-  check_mod a d @ (Modular b c) = if c < b then Right d else Left ("Invalid Modular " ++ show_mod d ++ a)
+  check_mod :: (Location_0 -> Location_1) -> Modular -> Err Modular'
+  check_mod a (Modular d b c) =
+    if c < b then Right (Modular' b c) else Left ("Invalid Modular " ++ show_mod b c ++ location' (a d))
   classes_0 :: Map' Class_4
   classes_0 =
     Data.Map.fromList
@@ -935,8 +937,8 @@ module Typing where
       _ -> b
   show_char :: Char -> String
   show_char c = show [c]
-  show_mod :: Modular -> String
-  show_mod (Modular a b) = show b ++ " # " ++ show a
+  show_mod :: Integer -> Integer -> String
+  show_mod a b = show b ++ " # " ++ show a
   slv :: Map' (Map' [[String]]) -> [(String, Type_1)] -> (String -> String) -> Err ()
   slv a b h =
     case b of
@@ -1921,13 +1923,9 @@ module Typing where
       (list_type char_type)
       (Location_1 "input")
       (Left <$> b, c, d, e)
-      (Expression_1
-        (Location_0 0 0)
-        (Application_expression_1
-          (Expression_1 (Location_0 0 0) (Name_expression_1 "First" Nothing []))
-          (Expression_1
-            (Location_0 0 0)
-            (Application_expression_1 (Expression_1 (Location_0 0 0) (Name_expression_1 "Write_Brackets" Nothing [])) f))))
+      (Application_expression_1
+        (Name_expression_1 (Name (Location_0 0 0) "First") Nothing [])
+        (Application_expression_1 (Name_expression_1 (Name (Location_0 0 0) "Write_Brackets") Nothing []) f))
       g
       0
       h
@@ -1946,9 +1944,9 @@ module Typing where
     (Map' Polykind, Map' Kind) ->
     Map' Strct ->
     Err (Typedexpr, Map' (Either Polykind Kind_1), [(Type_1, Type_1)], Integer, [(String, Type_1)])
-  type_expression v w r o f h d (Expression_1 a b) e c' (r7, m8) z8 =
+  type_expression v w r o f h d b e c' (r7, m8) z8 =
     let
-      x' = location' (r a)
+      x' a = location' (r a)
     in
       case b of
         Application_expression_1 c g ->
@@ -1991,7 +1989,7 @@ module Typing where
                   (r7, m8)
                   z8))
         Int_expression_1 c -> Right (Int_texpr c, f, (e, int_type) : h, o, c')
-        Match_expression_1 c g ->
+        Match_expression_1 a7 c g ->
           case g of
             Matches_Algebraic_1 i j ->
               case i of
@@ -2039,8 +2037,8 @@ module Typing where
                                           (
                                             (\(a', b', c2, d', a4) -> (k0 (Just a'), b', c2, d', a4)) <$>
                                             type_expression v w r g0 e0 f0 d j0 e a3 (r7, m8) z8)
-                                        Nothing -> Left ("Incomplete match" ++ x')))
-                    Nothing -> Left ("Undefined algebraic constructor " ++ l ++ location' (r l2))
+                                        Nothing -> Left ("Incomplete match" ++ x' a7)))
+                    Nothing -> Left ("Undefined algebraic constructor " ++ l ++ x' l2)
             Matches_char_1 i j ->
               (
                 type_expression v w r o f h d c char_type c' (r7, m8) z8 >>=
@@ -2064,9 +2062,9 @@ module Typing where
             Matches_Modular_1 i j ->
               case i of
                 [] -> undefined
-                Match_Modular_1 q3 (Modular m2 _) _ : _ ->
+                Match_Modular_1 q3 (Modular _ m2 _) _ : _ ->
                   if m2 < 2
-                    then Left ("Match expression over Modular " ++ show m2 ++ location (r a))
+                    then Left ("Match expression over Modular " ++ show m2 ++ location (r a7))
                     else
                       (
                         type_expression v w r o f h d c (mod_type (int_to_nat_type m2)) c' (r7, m8) z8 >>=
@@ -2095,7 +2093,7 @@ module Typing where
                                   if all isJust i0
                                     then
                                       case j of
-                                        Just (l3, _) -> Left ("Unnecessary default case" ++ location' (r l3))
+                                        Just (l3, _) -> Left ("Unnecessary default case" ++ x' l3)
                                         Nothing -> Right (k0 Nothing, e0, f0, g0, a3)
                                     else
                                       case j of
@@ -2103,18 +2101,18 @@ module Typing where
                                           (
                                             (\(a', b', c2, d7, a4) -> (k0 (Just a'), b', c2, d7, a4)) <$>
                                             type_expression v w r g0 e0 f0 d j0 e a3 (r7, m8) z8)
-                                        Nothing -> Left ("Incomplete match" ++ x')))
+                                        Nothing -> Left ("Incomplete match" ++ x' a7)))
         Modular_expression_1 c ->
-          (\(Modular g g1) -> (Modular_texpr g1, f, (e, mod_type (int_to_nat_type g)) : h, o, c')) <$> check_mod x' c
-        Name_expression_1 c g k ->
+          (\(Modular' g g1) -> (Modular_texpr g1, f, (e, mod_type (int_to_nat_type g)) : h, o, c')) <$> check_mod r c
+        Name_expression_1 (Name a7 c) g k ->
           let
-            e5 a' = Left ("Too " ++ a' ++ " type arguments for variable " ++ c ++ x')
+            e5 a' = Left ("Too " ++ a' ++ " type arguments for variable " ++ c ++ x' a7)
           in
             und_err
               c
               d
               "variable"
-              (r a)
+              (r a7)
               (\(Basic_type_1 i x0 a' j) ->
                 let
                   g7 k2 d3 e4 s' r' d5 e8 =
@@ -2146,7 +2144,7 @@ module Typing where
                                     f
                                     d'
                                     (Data.Map.singleton d5 t7))
-                        Nothing -> Left ("Invalid class argument for variable " ++ c ++ x')
+                        Nothing -> Left ("Invalid class argument for variable " ++ c ++ x' a7)
                     Nothing ->
                       case x0 of
                         Just (Constraint_1 y0 _) ->
@@ -2444,12 +2442,12 @@ module Typing where
           [(String, Type_1)]))
   type_match_modular a b c d f g h i (Match_Modular_1 t r l) m n o (p, s) x4 t8 =
     (
-      check_mod (location' (c t)) r >>=
-      \(Modular j k) ->
+      check_mod c r >>=
+      \(Modular' j k) ->
         if j == s
           then
             case unsafe_lookup k n of
-              Just q -> Left (location_err' ("cases for " ++ show_mod r) (c q) (c t))
+              Just q -> Left (location_err' ("cases for " ++ show_mod j k) (c q) (c t))
               Nothing ->
                 (
                   (\(u, v, w, x, z) -> (Data.Map.insert k u i, v, w, x, Data.Map.insert k (Just t) n, z)) <$>

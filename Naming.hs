@@ -27,16 +27,15 @@ module Naming where
     Basic_def_3 Location_0 String [(String, Kind_0)] [Constraint_0] Type_0 Expression_1 |
     Instance_3 Location_0 Name Name [Kind_0] [Pattern_0] [Constraint_0] [(Name, Expression_1)]
       deriving Show
-  data Expression_branch_1 =
+  data Expression_1 =
     Application_expression_1 Expression_1 Expression_1 |
     Char_expression_1 Char |
     Function_expression_1 Pat Expression_1 |
     Int_expression_1 Integer |
-    Match_expression_1 Expression_1 Matches_1 |
+    Match_expression_1 Location_0 Expression_1 Matches_1 |
     Modular_expression_1 Modular |
-    Name_expression_1 String (Maybe Type_0) [Type_0]
+    Name_expression_1 Name (Maybe Type_0) [Type_0]
       deriving Show
-  data Expression_1 = Expression_1 Location_0 Expression_branch_1 deriving Show
   data Form_1 = Form_1 String [Type_0] deriving Show
   data Location' = Language | Library Location_1 deriving Show
   type Locations = Map' Location'
@@ -191,16 +190,21 @@ module Naming where
   naming_defs_2 :: String -> [Def_2] -> (Set String, Locations) -> Err [Def_3]
   naming_defs_2 = naming_list' naming_def_2
   naming_expression :: String -> Expression_0 -> (Set String, Locations) -> Err Expression_1
-  naming_expression e (Expression_0 a c) d = Expression_1 a <$> naming_expression_branch e c d
-  naming_expression_branch :: String -> Expression_branch_0 -> (Set String, Locations) -> Err Expression_branch_1
-  naming_expression_branch g a (f, b) =
+  naming_expression g a (f, b) =
     case a of
       Application_expression_0 c d ->
         naming_expression g c (f, b) >>= \e -> Application_expression_1 e <$> naming_expression g d (f, b)
       Char_expression_0 c -> Right (Char_expression_1 c)
-      Function_expression_0 c d -> naming_pat g c (f, b) >>= \e -> Function_expression_1 c <$> naming_expression g d (f, e)
+      Function_expression_0 c d -> naming_fun g (f, b) c d
       Int_expression_0 c -> Right (Int_expression_1 c)
-      Match_expression_0 c d -> naming_expression g c (f, b) >>= \e -> Match_expression_1 e <$> naming_matches g d (f, b)
+      Let_expression_0 (Eqq (Name l c) d e) h ->
+        let
+          i j t = naming_fun g (f, b) (Pat l j) h >>= \k -> Application_expression_1 k <$> naming_expression g t (f, b)
+        in
+          case Data.Set.member c f of
+            False -> i (Name_pat c) (Prelude.foldr Function_expression_0 e d)
+            True -> i (Application_pat c d) e
+      Match_expression_0 h c d -> naming_expression g c (f, b) >>= \e -> Match_expression_1 h e <$> naming_matches g d (f, b)
       Modular_expression_0 c -> Right (Modular_expression_1 c)
       Name_expression_0 c d e -> Right (Name_expression_1 c d e)
   naming_fields :: String -> [(Name, Type_0)] -> Locations -> Err (Locations, [(String, Type_0)])
@@ -209,6 +213,8 @@ module Naming where
   naming_form d (Form_0 a b) c = second (flip Form_1 b) <$> naming_name d a c
   naming_forms :: String -> [Form_0] -> Locations -> Err (Locations, [Form_1])
   naming_forms = naming_list naming_form
+  naming_fun :: String -> (Set String, Locations) -> Pat -> Expression_0 -> Err Expression_1
+  naming_fun x (y, b) z w = naming_pat x z (y, b) >>= \a -> Function_expression_1 z <$> naming_expression x w (y, a)
   naming_list :: (String -> t -> u -> Err (u, v)) -> String -> [t] -> u -> Err (u, [v])
   naming_list a h b c =
     case b of

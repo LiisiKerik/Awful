@@ -21,10 +21,7 @@ boolean function library
 implement map and set (AVL trees?)
 different ways of folding lists, vectors, sets, maps etc
 module system related functions into a separate file?
-write in error why exactly you need a class constraint (which name of a function caused it)?
-write in error where the need for class constraint occurred?
 make command line arguments nicer
-check for free type variables after typechecking an expression. throw an error (they are a problem with type classes!)
 remove promotion of primitives? it seems that without GADT-s they are pointless?
 liigirakendamise eemaldamine liigituletuse kasuks (igal pool? teatud piiratud juhtudel?)
 võimaldada suvalise arvu konstruktoritega algebralisi andmetüüpe. (LISAKS struktide allesjätmisele?)
@@ -38,6 +35,7 @@ make match expression more flexible (like case in Haskell)?
 mis juhtub kui esimeses moodulis on kusagil tüübimuutuja T ja järgmises moodulis sama nimega globaalne tüüp?
 Let f = Crash, x = f f In 0 -- tüüpimine läheb lõpmatusse tsüklisse sest puudub occur check
 can Data.Set and Data.Map imports be removed if the file uses both and disambiguates all function calls anyways?
+"./Awful eval List (0)" - error message about Writeable class looks bad
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")

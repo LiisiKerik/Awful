@@ -4,6 +4,7 @@ module Eval where
   import Data.Set
   import Data.Map
   import Naming
+  import Standard
   import Tokenise
   import Tree
   import Typing

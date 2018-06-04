@@ -12,11 +12,9 @@ internal: make the system of specifying built-in algebraic data types and things
 Allow hiding things to functions outside module - so that helper functions are not exported from the module?
 normalising constructors for some data types (polynomial, fraction) which assume a certain normal form of fields?
 allow to hide (prevent exporting) constructors and field accessors which can potentially have bad behavior
-internal: remove locations from expressions except from lowest-level things where some checks are necessary (name)?
 switch expression that is less strict and more flexible than match?
 some limited pattern matching in function arguments (and maybe also variables introduced through algebraic matching?)
 syntactic sugar for lists, vectors, matrices... allow writing (tiny, limited to expression parsing) language extensions?
-fix the show-read issue; give a specific error for that (different errors for unresolved type variable and missing constr)
 boolean function library
 implement map and set (AVL trees?)
 different ways of folding lists, vectors, sets, maps etc
@@ -3055,11 +3053,6 @@ module Typing where
                 (old' x)
                 x1
                 (fst <$> k8))))
-  und_err :: String -> Map' t -> String -> Location_1 -> (t -> Err u) -> Err u
-  und_err a b c d f =
-    case Data.Map.lookup a b of
-      Just e -> f e
-      Nothing -> Left ("Undefined " ++ c ++ " " ++ a ++ location' d)
   unsafe_left :: Either t u -> t
   unsafe_left a =
     case a of

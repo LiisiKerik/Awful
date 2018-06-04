@@ -39,7 +39,6 @@ module Naming where
   data Form_1 = Form_1 String [Type_0] deriving Show
   data Location' = Language | Library Location_1 deriving Show
   type Locations = Map' Location'
-  type Map' t = Map String t
   data Match_Algebraic_1 = Match_Algebraic_1 Name [Pat] Expression_1 deriving Show
   data Match_char_1 = Match_char_1 Location_0 Char Expression_1 deriving Show
   data Match_Int_1 = Match_Int_1 Location_0 Integer Expression_1 deriving Show

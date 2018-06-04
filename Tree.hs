@@ -11,6 +11,7 @@ module Tree where
   import Control.Monad
   import Data.Bifunctor
   import Tokenise
+  data Assoc = Lft | Rght deriving (Eq, Show)
   data Brnch_0 = Brnch_0 Name [Name] Name [(Name, Type_0)] deriving Show
   data Class_0 = Class_0 Name (Name, Kind_0) (Maybe Name) [Method] deriving Show
   data Constraint_0 = Constraint_0 Name Name deriving Show
@@ -50,6 +51,7 @@ module Tree where
   data Method = Method Name [(Name, Kind_0)] [Constraint_0] Type_0 deriving Show
   data Modular = Modular Location_0 Integer Integer deriving Show
   data Name = Name Location_0 String deriving Show
+  data Op = Op Integer Assoc String deriving Show
   data Pat = Pat Location_0 Pat_branch deriving Show
   data Pat_branch = Application_pat String [Pat] | Blank_pat | Name_pat String deriving Show
   data Pattern_1 = Pattern_1 Location_0 Pattern_0 deriving Show

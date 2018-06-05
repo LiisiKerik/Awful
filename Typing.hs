@@ -53,7 +53,7 @@ module Typing where
   import Tree
   data Alg = Alg [(String, Kind_1)] (Map' [Type_1]) Type_1 deriving Show -- TODO: REM STRINGS FROM FST MAP
   type Algebraics = Map' (Alg, Status)
-  data Brnch_3 = Brnch_3 String [(String, Kind_1)] String [(String, Type_0)] deriving Show
+  data Brnch_3 = Brnch_3 String [(String, Kind_1)] String [(String, Type_7)] deriving Show
   data Class_3 = Class_3 String (String, Kind_1) (Maybe Name) [Method_3] deriving Show
   data Class_4 = Class_4 (String, Kind_1) (Maybe String) [Method_4] deriving Show
   data Class_5 = Class_5 Kind_1 (Maybe String) [String] deriving Show
@@ -591,23 +591,23 @@ module Typing where
     case b of
       [] -> return c
       d : e -> gather_all_types a e c >>= a d
-  gather_fields :: Set String -> [(String, Type_0)] -> Map' Location_0 -> Maybe (Map' Location_0)
+  gather_fields :: Set String -> [(String, Type_7)] -> Map' Location_0 -> Maybe (Map' Location_0)
   gather_fields b a = gather_types b (snd <$> a)
   gather_form :: Set String -> Form_1 -> Map' Location_0 -> Maybe (Map' Location_0)
   gather_form b (Form_1 _ a) = gather_types b a
   gather_forms :: Set String -> [Form_1] -> Map' Location_0 -> Maybe (Map' Location_0)
   gather_forms a = gather_all_types (gather_form a)
   gather_type :: Set String -> Type_0 -> Map' Location_0 -> Maybe (Map' Location_0)
-  gather_type f (Type_0 a b) c =
+  gather_type f b c =
     case b of
       Application_type_0 d e -> gather_type f e c >>= gather_type f d
-      Name_type_0 d e ->
+      Name_type_0 (Name a d) e ->
         case e of
           [] -> Just (if Data.Set.member d f then c else Data.Map.insert d a c)
           _ -> Nothing
       _ -> Nothing
-  gather_types :: Set String -> [Type_0] -> Map' Location_0 -> Maybe (Map' Location_0)
-  gather_types a = gather_all_types (gather_type a)
+  gather_types :: Set String -> [Type_7] -> Map' Location_0 -> Maybe (Map' Location_0)
+  gather_types a b = gather_all_types (gather_type a) ((\(Type_7 _ c) -> c) <$> b)
   getarg :: [t] -> Nat -> t
   getarg a b =
     case a of
@@ -1684,7 +1684,7 @@ module Typing where
                 \(o1, o2, _) ->
                 (
                   (\h -> (Basic_def_4 f d y o1 h i o2, ins_new d (Basic_type_1 y Nothing o1 h) c, t, t', u3)) <$>
-                  type_type (Location_1 l) g j x star_kind)))
+                  type_typ (Location_1 l) g j x star_kind)))
       Instance_3 d (Name e m) (Name f n) w2 k' o' g ->
         und_err
           m
@@ -2127,7 +2127,7 @@ module Typing where
                             [] -> undefined
                             (d5, k3) : d' ->
                               (
-                                type_type r t3 r7 m8 k3 >>=
+                                type_typ r t3 r7 m8 k3 >>=
                                 \t7 ->
                                   g7
                                     (\_ -> Name_texpr_0 c y0 t7)
@@ -2187,9 +2187,9 @@ module Typing where
             (Prelude.foldl (\k' -> \(l', m0) -> Data.Map.insert l' (pkind m0) k') x2 s, t4)
             f5 >>=
           \g -> type_exprs a b c d m (Data.Map.insert (y ++ " " ++ t) (f' g) i) t z w f' t' t0 (x2, t4) f5)
-  type_field :: (Location_0 -> Location_1) -> (String, Type_0) -> Map' Polykind -> Map' Kind -> Err (String, Type_1)
-  type_field d (a, b) c e  = (,) a <$> type_type d b c e star_kind
-  type_fields :: (Location_0 -> Location_1) -> [(String, Type_0)] -> Map' Polykind -> Map' Kind -> Err [(String, Type_1)]
+  type_field :: (Location_0 -> Location_1) -> (String, Type_7) -> Map' Polykind -> Map' Kind -> Err (String, Type_1)
+  type_field d (a, b) c e  = (,) a <$> type_typ d b c e star_kind
+  type_fields :: (Location_0 -> Location_1) -> [(String, Type_7)] -> Map' Polykind -> Map' Kind -> Err [(String, Type_1)]
   type_fields f a b g =
     case a of
       [] -> Right []
@@ -2556,7 +2556,7 @@ module Typing where
           type_match_modular a b c d f g h i m k u l w x' w1 >>=
           \(o, p, q, r, v, t) -> type_matches_modular a b c r p q h o n k v t w x' w1)
   type_method :: (Location_0 -> Location_1) -> Method_2 -> Map' Polykind -> Map' Kind -> Err Method_3
-  type_method a (Method_2 b c i d) e f = type_kinds_0 a f c e >>= \(g, h) -> Method_3 b g i <$> type_type a d h f star_kind
+  type_method a (Method_2 b c i d) e f = type_kinds_0 a f c e >>= \(g, h) -> Method_3 b g i <$> type_typ a d h f star_kind
   type_method_1 :: String -> Map' Class_5 -> Method_3 -> Err Method_4
   type_method_1 e g (Method_3 a b c d) =
     let
@@ -2761,60 +2761,67 @@ module Typing where
     case b of
       [] -> Right d
       e : f -> type_prom_2 a e c y d >>= type_proms_2 a f c y
-  type_type :: (Location_0 -> Location_1) -> Type_0 -> Map' Polykind -> Map' Kind -> Kind_1 -> Err Type_1
-  type_type l (Type_0 a c) d y e =
+{-
+TODO:
+Do it with 1 function that assembles a system of equations and one function that solves the system
+Make error messages similar to those for type errors ("Kind mismatch between x and y ...")
+-}
+  type_typ :: (Location_0 -> Location_1) -> Type_7 -> Map' Polykind -> Map' Kind -> Kind_1 -> Err Type_1
+  type_typ a (Type_7 b c) = type_type a b c
+  type_type :: (Location_0 -> Location_1) -> Location_0 -> Type_0 -> Map' Polykind -> Map' Kind -> Kind_1 -> Err Type_1
+  type_type l a c d y e =
     let
       x = kind_err (l a)
     in
       case c of
         Application_type_0 f g ->
           (
-            type_type' l f d y >>=
+            type_type' l a f d y >>=
             \(h, i) ->
               case i of
                 Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") j) k ->
-                  if k == e then Application_type_1 h <$> type_type l g d y j else x
+                  if k == e then Application_type_1 h <$> type_type l a g d y j else x
                 _ -> x)
         Char_type_0 b -> if e == char_kind then Right (Char_type_1 b) else x
         Int_type_0 b -> if e == int_kind then Right (Int_type_1 b) else x
-        Name_type_0 f b ->
+        Name_type_0 (Name a' f) b ->
           und_err
             f
             d
             "type"
-            (l a)
+            (l a')
             (\(Polykind h g) ->
-              ziphelp l y f a Data.Map.empty h b >>= \(z, w) -> if repkinds w g == e then Right (Name_type_1 f z) else x)
-  type_type' :: (Location_0 -> Location_1) -> Type_0 -> Map' Polykind -> Map' Kind -> Err (Type_1, Kind_1)
-  type_type' l (Type_0 a c) d y =
+              ziphelp l y f a' Data.Map.empty h b >>= \(z, w) -> if repkinds w g == e then Right (Name_type_1 f z) else x)
+  type_type' :: (Location_0 -> Location_1) -> Location_0 -> Type_0 -> Map' Polykind -> Map' Kind -> Err (Type_1, Kind_1)
+  type_type' l a c d y =
     case c of
       Application_type_0 e f ->
         (
-          type_type' l e d y >>=
+          type_type' l a e d y >>=
           \(g, h) ->
             case h of
               Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") i) j ->
-                (\k -> (Application_type_1 g k, j)) <$> type_type l f d y i
+                (\k -> (Application_type_1 g k, j)) <$> type_type l a f d y i
               _ -> kind_err (l a))
       Char_type_0 e -> Right (Char_type_1 e, char_kind)
       Int_type_0 e -> Right (Int_type_1 e, int_kind)
-      Name_type_0 e g ->
+      Name_type_0 (Name a' e) g ->
         und_err
           e
           d
           "type"
-          (l a)
-          (\(Polykind h f) -> bimap (Name_type_1 e) (\w -> repkinds w f) <$> ziphelp l y e a Data.Map.empty h g)
-  type_types :: (Location_0 -> Location_1) -> [Type_0] -> Map' Polykind -> Map' Kind -> Err [Type_1]
+          (l a')
+          (\(Polykind h f) -> bimap (Name_type_1 e) (\w -> repkinds w f) <$> ziphelp l y e a' Data.Map.empty h g)
+  type_types :: (Location_0 -> Location_1) -> [Type_7] -> Map' Polykind -> Map' Kind -> Err [Type_1]
   type_types f a b g =
     case a of
       [] -> Right []
-      c : d -> type_type f c b g star_kind >>= \e -> (:) e <$> type_types f d b g
-  type_types' :: (Location_0 -> Location_1) -> (Map' Kind, Map' Polykind) -> [(String, Type_0)] -> Err [(String, Type_1)]
+      c : d -> type_typ f c b g star_kind >>= \e -> (:) e <$> type_types f d b g
+  type_types' :: (Location_0 -> Location_1) -> (Map' Kind, Map' Polykind) -> [(String, Type_7)] -> Err [(String, Type_1)]
   type_types' a (b, c) d =
     case d of
       [] -> Right []
-      (e, f) : g -> type_type a f c b star_kind >>= \h -> (:) (e, h) <$> type_types' a (b, c) g
+      (e, f) : g -> type_typ a f c b star_kind >>= \h -> (:) (e, h) <$> type_types' a (b, c) g
   types :: Map' Type_2
   types =
     Data.Map.fromList
@@ -2996,7 +3003,7 @@ module Typing where
       (Map' Polykind, Map' Kind) ->
       (String -> Err (Map' Type_1)) ->
       [(String, Kind_1)] ->
-      [Type_0] ->
+      [Type_7] ->
       Map' Type_1 ->
       Err (Map' Type_1))
   typevars' l (j, k) a b c d =
@@ -3008,7 +3015,7 @@ module Typing where
       (e, f) : g ->
         case c of
           [] -> a "few"
-          h : i -> type_type l h j k f >>= \m -> typevars' l (j, k) a g i (Data.Map.insert e m d)
+          h : i -> type_typ l h j k f >>= \m -> typevars' l (j, k) a g i (Data.Map.insert e m d)
   typing ::
     String ->
     Tree_5 ->

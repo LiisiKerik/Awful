@@ -7,8 +7,8 @@ module Naming where
   import Standard
   import Tokenise
   import Tree
-  data Brnch_1 = Brnch_1 Name [Name] String [(String, Type_0)] deriving Show
-  data Brnch_2 = Brnch_2 Name [String] String [(String, Type_0)] deriving Show
+  data Brnch_1 = Brnch_1 Name [Name] String [(String, Type_7)] deriving Show
+  data Brnch_2 = Brnch_2 Name [String] String [(String, Type_7)] deriving Show
   data Class_1 = Class_1 String (Name, Kind_0) (Maybe Name) [Method_1] deriving Show
   data Class_2 = Class_2 String (String, Kind_0) (Maybe Name) [Method_2] deriving Show
   data Data_1 = Data_1 Name Data_br_1 deriving Show
@@ -18,13 +18,13 @@ module Naming where
   data Data_br_2 =
     Branching_data_2 Name [Kind_0] [(String, Kind_0)] [Brnch_2] | Plain_data_2 [(String, Kind_0)] Data_branch_1
       deriving Show
-  data Data_branch_1 = Algebraic_data_1 [Form_1] | Struct_data_1 [(String, Type_0)] deriving Show
+  data Data_branch_1 = Algebraic_data_1 [Form_1] | Struct_data_1 [(String, Type_7)] deriving Show
   data Def_2 =
-    Basic_def_2 Location_0 String [(Name, Kind_0)] [Constraint_0] Type_0 Expression_0 |
+    Basic_def_2 Location_0 String [(Name, Kind_0)] [Constraint_0] Type_7 Expression_0 |
     Instance_2 Location_0 Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, Expression_0)]
       deriving Show
   data Def_3 =
-    Basic_def_3 Location_0 String [(String, Kind_0)] [Constraint_0] Type_0 Expression_1 |
+    Basic_def_3 Location_0 String [(String, Kind_0)] [Constraint_0] Type_7 Expression_1 |
     Instance_3 Location_0 Name Name [Kind_0] [Pattern_0] [Constraint_0] [(Name, Expression_1)]
       deriving Show
   data Expression_1 =
@@ -34,9 +34,9 @@ module Naming where
     Int_expression_1 Integer |
     Match_expression_1 Location_0 Expression_1 Matches_1 |
     Modular_expression_1 Modular |
-    Name_expression_1 Name (Maybe Type_0) [Type_0]
+    Name_expression_1 Name (Maybe Type_7) [Type_7]
       deriving Show
-  data Form_1 = Form_1 String [Type_0] deriving Show
+  data Form_1 = Form_1 String [Type_7] deriving Show
   data Location' = Language | Library Location_1 deriving Show
   type Locations = Map' Location'
   data Match_Algebraic_1 = Match_Algebraic_1 Name [Pat] Expression_1 deriving Show
@@ -49,8 +49,8 @@ module Naming where
     Matches_Int_1 [Match_Int_1] Expression_1 |
     Matches_Modular_1 [Match_Modular_1] (Maybe (Location_0, Expression_1))
       deriving Show
-  data Method_1 = Method_1 String [(Name, Kind_0)] [Constraint_0] Type_0 deriving Show
-  data Method_2 = Method_2 String [(String, Kind_0)] [Constraint_0] Type_0 deriving Show
+  data Method_1 = Method_1 String [(Name, Kind_0)] [Constraint_0] Type_7 deriving Show
+  data Method_2 = Method_2 String [(String, Kind_0)] [Constraint_0] Type_7 deriving Show
   data Tree_4 = Tree_4 [Data_1] [Class_1] [Def_2] deriving Show
   data Tree_5 = Tree_5 [Data_2] [Class_2] [Def_3] deriving Show
   add :: Ord t => Map t u -> t -> u -> Either u (Map t u)
@@ -207,7 +207,7 @@ module Naming where
       Match_expression_0 h c d -> naming_expression g c (f, b) >>= \e -> Match_expression_1 h e <$> naming_matches g d (f, b)
       Modular_expression_0 c -> Right (Modular_expression_1 c)
       Name_expression_0 c d e -> Right (Name_expression_1 c d e)
-  naming_fields :: String -> [(Name, Type_0)] -> Locations -> Err (Locations, [(String, Type_0)])
+  naming_fields :: String -> [(Name, Type_7)] -> Locations -> Err (Locations, [(String, Type_7)])
   naming_fields = naming_arguments naming_name
   naming_form :: String -> Form_0 -> Locations -> Err (Locations, Form_1)
   naming_form d (Form_0 a b) c = second (flip Form_1 b) <$> naming_name d a c

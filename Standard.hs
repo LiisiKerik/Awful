@@ -6,7 +6,7 @@ module Standard where
   import Tokenise
   import Tree
   data Def_1 =
-    Basic_def_1 Name [(Name, Kind_0)] [Constraint_0] Type_0 Expression_0 |
+    Basic_def_1 Name [(Name, Kind_0)] [Constraint_0] Type_7 Expression_0 |
     Instance_1 Location_0 Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, Expression_0)]
       deriving Show
   type Map' t = Map String t
@@ -43,9 +43,9 @@ module Standard where
   standard_0 (Tree_1 a b) = Tree_3 a (standard_1 b)
   standard_1 :: Tree_0 -> Tree_2
   standard_1 (Tree_0 a b c) = Tree_2 a b (standard_defs c)
-  standard_argument :: (Pat, Type_0) -> (Type_0, Expression_0) -> (Type_0, Expression_0)
+  standard_argument :: (Pat, Type_7) -> (Type_7, Expression_0) -> (Type_7, Expression_0)
   standard_argument (a, b) = bimap (standard_type b) (Function_expression_0 a)
-  standard_arguments :: (Type_0, Expression_0) -> [(Pat, Type_0)] -> (Type_0, Expression_0)
+  standard_arguments :: (Type_7, Expression_0) -> [(Pat, Type_7)] -> (Type_7, Expression_0)
   standard_arguments = Prelude.foldr standard_argument
   standard_def :: Def_0 -> Def_1
   standard_def a =
@@ -56,12 +56,9 @@ module Standard where
   standard_defs = (<$>) standard_def
   standard_patterns :: [Pat] -> Expression_0 -> Expression_0
   standard_patterns a b = Prelude.foldr Function_expression_0 b a
-  standard_type :: Type_0 -> Type_0 -> Type_0
-  standard_type a b =
-    let
-      c = get_location a
-    in
-      Type_0 c (Application_type_0 (Type_0 c (Application_type_0 (Type_0 c (Name_type_0 "Function" [])) a)) b)
+  standard_type :: Type_7 -> Type_7 -> Type_7
+  standard_type (Type_7 a b) (Type_7 _ c) =
+    Type_7 a (Application_type_0 (Application_type_0 (Name_type_0 (Name a "Function") []) b) c)
   und_err :: String -> Map' t -> String -> Location_1 -> (t -> Err u) -> Err u
   und_err a b c d f =
     case Data.Map.lookup a b of

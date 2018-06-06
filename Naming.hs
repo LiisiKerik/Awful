@@ -7,8 +7,8 @@ module Naming where
   import Standard
   import Tokenise
   import Tree
-  data Brnch_1 = Brnch_1 Name [Name] String [(String, Type_7)] deriving Show
-  data Brnch_2 = Brnch_2 Name [String] String [(String, Type_7)] deriving Show
+  data Brnch_1 = Brnch_1 Name [Name] String [(String, Type_8)] deriving Show
+  data Brnch_2 = Brnch_2 Name [String] String [(String, Type_8)] deriving Show
   data Class_1 = Class_1 String (Name, Kind_0) (Maybe Name) [Method_1] deriving Show
   data Class_2 = Class_2 String (String, Kind_0) (Maybe Name) [Method_2] deriving Show
   data Data_1 = Data_1 Name Data_br_1 deriving Show
@@ -18,13 +18,13 @@ module Naming where
   data Data_br_2 =
     Branching_data_2 Name [Kind_0] [(String, Kind_0)] [Brnch_2] | Plain_data_2 [(String, Kind_0)] Data_branch_1
       deriving Show
-  data Data_branch_1 = Algebraic_data_1 [Form_1] | Struct_data_1 [(String, Type_7)] deriving Show
+  data Data_branch_1 = Algebraic_data_1 [Form_1] | Struct_data_1 [(String, Type_8)] deriving Show
   data Def_2 =
-    Basic_def_2 Location_0 String [(Name, Kind_0)] [Constraint_0] Type_7 Expression_0 |
-    Instance_2 Location_0 Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, Expression_0)]
+    Basic_def_2 Location_0 String [(Name, Kind_0)] [Constraint_0] Type_8 Expression_9 |
+    Instance_2 Location_0 Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, Expression_9)]
       deriving Show
   data Def_3 =
-    Basic_def_3 Location_0 String [(String, Kind_0)] [Constraint_0] Type_7 Expression_1 |
+    Basic_def_3 Location_0 String [(String, Kind_0)] [Constraint_0] Type_8 Expression_1 |
     Instance_3 Location_0 Name Name [Kind_0] [Pattern_0] [Constraint_0] [(Name, Expression_1)]
       deriving Show
   data Expression_1 =
@@ -34,9 +34,9 @@ module Naming where
     Int_expression_1 Integer |
     Match_expression_1 Location_0 Expression_1 Matches_1 |
     Modular_expression_1 Modular |
-    Name_expression_1 Name (Maybe Type_7) [Type_7]
+    Name_expression_1 Name (Maybe Type_8) [Type_8]
       deriving Show
-  data Form_1 = Form_1 String [Type_7] deriving Show
+  data Form_1 = Form_1 String [Type_8] deriving Show
   data Location' = Language | Library Location_1 deriving Show
   type Locations = Map' Location'
   data Match_Algebraic_1 = Match_Algebraic_1 Name [Pat] Expression_1 deriving Show
@@ -49,8 +49,8 @@ module Naming where
     Matches_Int_1 [Match_Int_1] Expression_1 |
     Matches_Modular_1 [Match_Modular_1] (Maybe (Location_0, Expression_1))
       deriving Show
-  data Method_1 = Method_1 String [(Name, Kind_0)] [Constraint_0] Type_7 deriving Show
-  data Method_2 = Method_2 String [(String, Kind_0)] [Constraint_0] Type_7 deriving Show
+  data Method_1 = Method_1 String [(Name, Kind_0)] [Constraint_0] Type_8 deriving Show
+  data Method_2 = Method_2 String [(String, Kind_0)] [Constraint_0] Type_8 deriving Show
   data Tree_4 = Tree_4 [Data_1] [Class_1] [Def_2] deriving Show
   data Tree_5 = Tree_5 [Data_2] [Class_2] [Def_3] deriving Show
   add :: Ord t => Map t u -> t -> u -> Either u (Map t u)
@@ -81,7 +81,7 @@ module Naming where
   naming_2 :: String -> Tree_4 -> (Set String, Locations) -> Err Tree_5
   naming_2 e (Tree_4 a f b) (h, i) =
     naming_datas_2 e a i >>= \d -> naming_classes_1 e f i >>= \g -> Tree_5 d g <$> naming_defs_2 e b (h, i)
-  naming_application :: String -> (Set String, Locations) -> Err Expression_1 -> Expression_0 -> Err Expression_1
+  naming_application :: String -> (Set String, Locations) -> Err Expression_1 -> Expression_9 -> Err Expression_1
   naming_application a b c d = c >>= \e -> Application_expression_1 e <$> naming_expression a d b
   naming_args :: String -> [(Name, t)] -> Locations -> Err [(String, t)]
   naming_args a b c =
@@ -96,9 +96,9 @@ module Naming where
   naming_arguments = naming_list <$> naming_argument
   naming_arguments' :: String -> (String -> t -> Locations -> Err (Locations, u)) -> [(t, v)] -> Locations -> Err [(u, v)]
   naming_arguments' c a b = (<$>) snd <$> naming_arguments a c b
-  naming_branch_0 :: String -> Locations -> Brnch_0 -> Err (Locations, Brnch_1)
-  naming_branch_0 a b (Brnch_0 c d e f) = naming_name a e b >>= \(g, h) -> second (Brnch_1 c d h) <$> naming_names a f g
-  naming_branches_0 :: String -> Locations -> [Brnch_0] -> Err (Locations, [Brnch_1])
+  naming_branch_0 :: String -> Locations -> Brnch_6 -> Err (Locations, Brnch_1)
+  naming_branch_0 a b (Brnch_6 c d e f) = naming_name a e b >>= \(g, h) -> second (Brnch_1 c d h) <$> naming_names a f g
+  naming_branches_0 :: String -> Locations -> [Brnch_6] -> Err (Locations, [Brnch_1])
   naming_branches_0 a b c =
     case c of
       [] -> Right (b, [])
@@ -110,11 +110,11 @@ module Naming where
     case c of
       [] -> Right []
       d : e -> naming_branch_1 a b d >>= \f -> (:) f <$> naming_branches_1 a b e
-  naming_class_0 :: String -> Class_0 -> Locations -> Err (Locations, Class_1)
-  naming_class_0 a (Class_0 b c h d) e = naming_name a b e >>= \(f, g) -> second (Class_1 g c h) <$> naming_methods_0 a d f
+  naming_class_0 :: String -> Class_7 -> Locations -> Err (Locations, Class_1)
+  naming_class_0 a (Class_7 b c h d) e = naming_name a b e >>= \(f, g) -> second (Class_1 g c h) <$> naming_methods_0 a d f
   naming_class_1 :: String -> Class_1 -> Locations -> Err Class_2
   naming_class_1 a (Class_1 b (c, d) h e) f = naming_name a c f >>= \(i, g) -> Class_2 b (g, d) h <$> naming_methods_1 a e i
-  naming_classes_0 :: String -> [Class_0] -> Locations -> Err (Locations, [Class_1])
+  naming_classes_0 :: String -> [Class_7] -> Locations -> Err (Locations, [Class_1])
   naming_classes_0 a b c =
     case b of
       [] -> Right (c, [])
@@ -124,21 +124,21 @@ module Naming where
     case b of
       [] -> Right []
       d : e -> naming_class_1 a d c >>= \g -> (:) g <$> naming_classes_1 a e c
-  naming_data_1 :: String -> Data_0 -> (Set String, Locations) -> Err ((Set String, Locations), Data_1)
-  naming_data_1 a (Data_0 b c) (x, d) =
+  naming_data_1 :: String -> Data_6 -> (Set String, Locations) -> Err ((Set String, Locations), Data_1)
+  naming_data_1 a (Data_6 b c) (x, d) =
     (
       naming_name a b d >>=
       \(e, t) ->
         (
           second (Data_1 b) <$>
           case c of
-            Branching_data_0 g h i j -> bimap ((,) x) (Branching_data_1 g h i) <$> naming_branches_0 a e j
-            Plain_data_0 g h ->
+            Branching_data_6 g h i j -> bimap ((,) x) (Branching_data_1 g h i) <$> naming_branches_0 a e j
+            Plain_data_6 g h ->
               (
                 second (Plain_data_1 g) <$>
                 case h of
-                  Algebraic_data_0 i -> bimap ((,) x) Algebraic_data_1 <$> naming_forms a i e
-                  Struct_data_0 i -> bimap ((,) (Data.Set.insert t x)) Struct_data_1 <$> naming_fields a i e)))
+                  Algebraic_data_6 i -> bimap ((,) x) Algebraic_data_1 <$> naming_forms a i e
+                  Struct_data_6 i -> bimap ((,) (Data.Set.insert t x)) Struct_data_1 <$> naming_fields a i e)))
   naming_data_2 :: String -> Data_1 -> Locations -> Err Data_2
   naming_data_2 a (Data_1 b c) d =
     (
@@ -147,7 +147,7 @@ module Naming where
         Branching_data_1 e f g h ->
           naming_arguments naming_name a g d >>= \(i, j) -> Branching_data_2 e f j <$> naming_branches_1 a i h
         Plain_data_1 e f -> (\g -> Plain_data_2 g f) <$> naming_arguments' a naming_name e d)
-  naming_datas_1 :: String -> [Data_0] -> (Set String, Locations) -> Err ((Set String, Locations), [Data_1])
+  naming_datas_1 :: String -> [Data_6] -> (Set String, Locations) -> Err ((Set String, Locations), [Data_1])
   naming_datas_1 = naming_list naming_data_1
   naming_datas_2 :: String -> [Data_1] -> Locations -> Err [Data_2]
   naming_datas_2 f a b =
@@ -172,7 +172,7 @@ module Naming where
       u ->
       String ->
       (t -> Maybe (Location_0, Expression_1) -> Matches_1) ->
-      Maybe (Location_0, Expression_0) ->
+      Maybe (Location_0, Expression_9) ->
       Err Matches_1)
   naming_default b i j a g c =
     (
@@ -190,30 +190,30 @@ module Naming where
       d : e -> naming_def_1 a d c >>= \(f, g) -> first ((:) f) <$> naming_defs_1 a e g
   naming_defs_2 :: String -> [Def_2] -> (Set String, Locations) -> Err [Def_3]
   naming_defs_2 = naming_list' naming_def_2
-  naming_expression :: String -> Expression_0 -> (Set String, Locations) -> Err Expression_1
+  naming_expression :: String -> Expression_9 -> (Set String, Locations) -> Err Expression_1
   naming_expression g a (f, b) =
     case a of
-      Application_expression_0 c d -> naming_application g (f, b) (naming_expression g c (f, b)) d
-      Char_expression_0 c -> Right (Char_expression_1 c)
-      Function_expression_0 c d -> naming_fun g (f, b) c d
-      Int_expression_0 c -> Right (Int_expression_1 c)
-      Let_expression_0 (Eqq (Name l c) d e) h ->
+      Application_expression_9 c d -> naming_application g (f, b) (naming_expression g c (f, b)) d
+      Char_expression_9 c -> Right (Char_expression_1 c)
+      Function_expression_9 c d -> naming_fun g (f, b) c d
+      Int_expression_9 c -> Right (Int_expression_1 c)
+      Let_expression_9 (Eqq' (Name l c) d e) h ->
         let
           i j = naming_application g (f, b) (naming_fun g (f, b) (Pat l j) h)
         in
           case Data.Set.member c f of
-            False -> i (Name_pat c) (Prelude.foldr Function_expression_0 e d)
+            False -> i (Name_pat c) (Prelude.foldr Function_expression_9 e d)
             True -> i (Application_pat c d) e
-      Match_expression_0 h c d -> naming_expression g c (f, b) >>= \e -> Match_expression_1 h e <$> naming_matches g d (f, b)
-      Modular_expression_0 c -> Right (Modular_expression_1 c)
-      Name_expression_0 c d e -> Right (Name_expression_1 c d e)
-  naming_fields :: String -> [(Name, Type_7)] -> Locations -> Err (Locations, [(String, Type_7)])
+      Match_expression_9 h c d -> naming_expression g c (f, b) >>= \e -> Match_expression_1 h e <$> naming_matches g d (f, b)
+      Modular_expression_9 c -> Right (Modular_expression_1 c)
+      Name_expression_9 c d e -> Right (Name_expression_1 c d e)
+  naming_fields :: String -> [(Name, Type_8)] -> Locations -> Err (Locations, [(String, Type_8)])
   naming_fields = naming_arguments naming_name
-  naming_form :: String -> Form_0 -> Locations -> Err (Locations, Form_1)
-  naming_form d (Form_0 a b) c = second (flip Form_1 b) <$> naming_name d a c
-  naming_forms :: String -> [Form_0] -> Locations -> Err (Locations, [Form_1])
+  naming_form :: String -> Form_6 -> Locations -> Err (Locations, Form_1)
+  naming_form d (Form_6 a b) c = second (flip Form_1 b) <$> naming_name d a c
+  naming_forms :: String -> [Form_6] -> Locations -> Err (Locations, [Form_1])
   naming_forms = naming_list naming_form
-  naming_fun :: String -> (Set String, Locations) -> Pat -> Expression_0 -> Err Expression_1
+  naming_fun :: String -> (Set String, Locations) -> Pat -> Expression_9 -> Err Expression_1
   naming_fun x (y, b) z w = naming_pat x z (y, b) >>= \(a, c) -> Function_expression_1 c <$> naming_expression x w (y, a)
   naming_list :: (String -> t -> u -> Err (u, v)) -> String -> [t] -> u -> Err (u, [v])
   naming_list a h b c =
@@ -225,50 +225,50 @@ module Naming where
     case b of
       [] -> Right []
       d : e -> a g d c >>= \f -> (:) f <$> naming_list' a g e c
-  naming_match_algebraic :: String -> Match_Algebraic_0 -> (Set String, Locations) -> Err Match_Algebraic_1
-  naming_match_algebraic a (Match_Algebraic_0 b c d) (g, e) =
+  naming_match_algebraic :: String -> Match_Algebraic_9 -> (Set String, Locations) -> Err Match_Algebraic_1
+  naming_match_algebraic a (Match_Algebraic_9 b c d) (g, e) =
     naming_pats a c (g, e) >>= \(f, h) -> Match_Algebraic_1 b h <$> naming_expression a d (g, f)
-  naming_match_char :: String -> Match_char_0 -> (Set String, Locations) -> Err Match_char_1
-  naming_match_char a (Match_char_0 e b c) d = Match_char_1 e b <$> naming_expression a c d
-  naming_match_int :: String -> Match_Int_0 -> (Set String, Locations) -> Err Match_Int_1
-  naming_match_int a (Match_Int_0 e b c) d = Match_Int_1 e b <$> naming_expression a c d
-  naming_match_modular :: String -> Match_Modular_0 -> (Set String, Locations) -> Err Match_Modular_1
-  naming_match_modular a (Match_Modular_0 e b c) d = Match_Modular_1 e b <$> naming_expression a c d
-  naming_matches :: String -> Matches_0 -> (Set String, Locations) -> Err Matches_1
+  naming_match_char :: String -> Match_char_9 -> (Set String, Locations) -> Err Match_char_1
+  naming_match_char a (Match_char_9 e b c) d = Match_char_1 e b <$> naming_expression a c d
+  naming_match_int :: String -> Match_Int_9 -> (Set String, Locations) -> Err Match_Int_1
+  naming_match_int a (Match_Int_9 e b c) d = Match_Int_1 e b <$> naming_expression a c d
+  naming_match_modular :: String -> Match_Modular_9 -> (Set String, Locations) -> Err Match_Modular_1
+  naming_match_modular a (Match_Modular_9 e b c) d = Match_Modular_1 e b <$> naming_expression a c d
+  naming_matches :: String -> Matches_9 -> (Set String, Locations) -> Err Matches_1
   naming_matches a b c =
     let
       j k = naming_expression a k c
     in
       case b of
-        Matches_Algebraic_0 d e -> naming_default c naming_matches_algebraic d a Matches_Algebraic_1 e
-        Matches_char_0 d e -> naming_matches_char a d c >>= \f -> Matches_char_1 f <$> j e
-        Matches_Int_0 d e -> naming_matches_int a d c >>= \f -> Matches_Int_1 f <$> j e
-        Matches_Modular_0 d e -> naming_default c naming_matches_modular d a Matches_Modular_1 e
-  naming_matches_algebraic :: String -> [Match_Algebraic_0] -> (Set String, Locations) -> Err [Match_Algebraic_1]
+        Matches_Algebraic_9 d e -> naming_default c naming_matches_algebraic d a Matches_Algebraic_1 e
+        Matches_char_9 d e -> naming_matches_char a d c >>= \f -> Matches_char_1 f <$> j e
+        Matches_Int_9 d e -> naming_matches_int a d c >>= \f -> Matches_Int_1 f <$> j e
+        Matches_Modular_9 d e -> naming_default c naming_matches_modular d a Matches_Modular_1 e
+  naming_matches_algebraic :: String -> [Match_Algebraic_9] -> (Set String, Locations) -> Err [Match_Algebraic_1]
   naming_matches_algebraic a b c =
     case b of
       [] -> Right []
       d : e -> naming_match_algebraic a d c >>= \f -> (:) f <$> naming_matches_algebraic a e c
-  naming_matches_char :: String -> [Match_char_0] -> (Set String, Locations) -> Err [Match_char_1]
+  naming_matches_char :: String -> [Match_char_9] -> (Set String, Locations) -> Err [Match_char_1]
   naming_matches_char a b c =
     case b of
       [] -> Right []
       d : e -> naming_match_char a d c >>= \f -> (:) f <$> naming_matches_char a e c
-  naming_matches_int :: String -> [Match_Int_0] -> (Set String, Locations) -> Err [Match_Int_1]
+  naming_matches_int :: String -> [Match_Int_9] -> (Set String, Locations) -> Err [Match_Int_1]
   naming_matches_int a b c =
     case b of
       [] -> Right []
       d : e -> naming_match_int a d c >>= \f -> (:) f <$> naming_matches_int a e c
-  naming_matches_modular :: String -> [Match_Modular_0] -> (Set String, Locations) -> Err [Match_Modular_1]
+  naming_matches_modular :: String -> [Match_Modular_9] -> (Set String, Locations) -> Err [Match_Modular_1]
   naming_matches_modular a b c =
     case b of
       [] -> Right []
       d : e -> naming_match_modular a d c >>= \f -> (:) f <$> naming_matches_modular a e c
-  naming_method_0 :: String -> Method -> Locations -> Err (Locations, Method_1)
-  naming_method_0 a (Method b c g d) e = second (\f -> Method_1 f c g d) <$> naming_name a b e
+  naming_method_0 :: String -> Method_9 -> Locations -> Err (Locations, Method_1)
+  naming_method_0 a (Method_9 b c g d) e = second (\f -> Method_1 f c g d) <$> naming_name a b e
   naming_method_1 :: String -> Method_1 -> Locations -> Err Method_2
   naming_method_1 a (Method_1 b c g d) e = (\f -> Method_2 b f g d) <$> naming_args a c e
-  naming_methods_0 :: String -> [Method] -> Locations -> Err (Locations, [Method_1])
+  naming_methods_0 :: String -> [Method_9] -> Locations -> Err (Locations, [Method_1])
   naming_methods_0 a b c =
     case b of
       [] -> Right (c, [])
@@ -281,7 +281,7 @@ module Naming where
   naming_name :: String -> Name -> Locations -> Err (Locations, String)
   naming_name f (Name a c) d =
     bimap (flip (location_err ("definitions of " ++ c)) (Location_1 f a)) (flip (,) c) (add d c (Library (Location_1 f a)))
-  naming_nameexprs :: String -> (Set String, Locations) -> [(Name, Expression_0)] -> Err [(Name, Expression_1)]
+  naming_nameexprs :: String -> (Set String, Locations) -> [(Name, Expression_9)] -> Err [(Name, Expression_1)]
   naming_nameexprs a b c =
     case c of
       [] -> Right []

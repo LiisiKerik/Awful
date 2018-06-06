@@ -272,7 +272,12 @@ module Eval where
     Map' Strct ->
     Err String
   tokenise_parse_naming_typing_eval c f (g, h, i) l b u v w a =
-    parse_expression b >>= \e -> naming_expression "input" e c >>= \j -> eval l <$> type_expr' (f, g, h, i, w) j u v a
+    (
+      parse_expression b >>=
+      \e ->
+        (
+          std_expr (Location_1 "input") e >>=
+          \e' -> naming_expression "input" e' c >>= \j -> eval l <$> type_expr' (f, g, h, i, w) j u v a))
   tostr :: Expression_2 -> String
   tostr x =
     case x of

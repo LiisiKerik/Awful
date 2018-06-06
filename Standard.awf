@@ -121,7 +121,7 @@ Def Write[T : Star]<Writeable T>(x : T) : List Char = First (Write_Brackets x)
 Def Write'(x : List Char, y : List (List Char)) : List Char = Interleave (Lift " ") (Construct_List x y)
 Instance Writeable{Char}(
   Write_Brackets c =
-    Pair (Match c {Newline -> List (""", c, """), Default -> List ("N", "e", "w", "l", "i", "n", "e")}) False)
+    Pair (Match c {Newline -> List ("N", "e", "w", "l", "i", "n", "e"), Default -> List (""", c, """)}) False)
 Instance Writeable{Comparison}(
   Write_Brackets x = Pair (Match x {LT -> List ("L", "T"), EQ -> List ("E", "Q"), GT -> List ("G", "T")}) False)
 Instance Writeable{Either T U}<Writeable T, Writeable U>(

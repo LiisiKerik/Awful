@@ -13,13 +13,13 @@ import System.FilePath
 import Tokenise
 import Tree
 import Typing
-type Files = Map' File
+type Files = Map' (File, Map' Op)
 check ::
   (
     [String] ->
     (
       Files,
-      (Set String, Locations),
+      (Set String, Locations, Locations),
       Map' Expression_2,
       Map' Polykind,
       Map' (Map' Location'),
@@ -31,12 +31,12 @@ check ::
         (
           (
             Files,
-            (Set String, Locations),
+            (Set String, Locations, Locations),
             Map' Expression_2,
             Map' Polykind,
             Map' (Map' Location'),
             Map' ([String], Map' [(String, Nat)])),
-          File)))
+          (File, Map' Op))))
 check b m' @ (f, _, _, _, _, _) j name_qc =
   case Data.Map.lookup name_qc f of
     Just a -> return (Right (m', a))
@@ -48,9 +48,9 @@ check b m' @ (f, _, _, _, _, _) j name_qc =
           case find_file of
             Just file -> do
               a <- readFile file
-              case standard (Location_1 name_qc) a of
+              case parse_tree (Location_1 name_qc) a of
                 Left c -> return (Left c)
-                Right (Tree_3 c d) -> do
+                Right (Tree_1 c d) -> do
                   g <-
                     check_imports
                       (name_qc : b)
@@ -62,7 +62,7 @@ check b m' @ (f, _, _, _, _, _) j name_qc =
                       \((h, i, l, p, p', r'), m) ->
                         (
                           (\(k, n, o, q, s, t') -> ((Data.Map.insert name_qc n h, k, o, q, s, t'), n)) <$>
-                          naming_typing name_qc d (i, m, l, p, p', r')))
+                          standard_naming_typing name_qc d (i, m, l, p, p', r')))
             Nothing ->
               err
                 (
@@ -93,24 +93,24 @@ check_imports ::
     (
       (
         Files,
-        (Set String, Locations),
+        (Set String, Locations, Locations),
         Map' Expression_2,
         Map' Polykind,
         Map' (Map' Location'),
         Map' ([String], Map' [(String, Nat)])),
-      File) ->
+      (File, Map' Op)) ->
     [(Location', String)] ->
     IO
       (Err
         (
           (
             Files,
-            (Set String, Locations),
+            (Set String, Locations, Locations),
             Map' Expression_2,
             Map' Polykind,
             Map' (Map' Location'),
             Map' ([String], Map' [(String, Nat)])),
-          File)))
+          (File, Map' Op))))
 check_imports a b @ (f, k) c =
   case c of
     [] -> return (Right b)
@@ -127,11 +127,12 @@ eval'' a b = do
   return
     (
       c >>=
-      \((_, e, f, j, _, y), File _ g h i w _ _ _ m _ _ z) -> tokenise_parse_naming_typing_eval e j (g, h, i) f b m y w z)
+      \((_, (e, t, _), f, j, _, y), (File _ g h i w _ _ _ m _ _ z, u)) ->
+        tokenise_parse_naming_typing_eval (e, t) j (g, h, i) f b m y w z u)
 init' ::
   (
     Files,
-    (Set String, Locations),
+    (Set String, Locations, Locations),
     Map' Expression_2,
     Map' Polykind,
     Map' (Map' Location'),
@@ -139,7 +140,7 @@ init' ::
 init' =
   (
     Data.Map.empty,
-    (Data.Set.singleton "Pair", locations),
+    (Data.Set.singleton "Pair", locations, Data.Map.empty),
     defs,
     kinds,
     Data.Map.fromList

@@ -33,8 +33,8 @@ make match expression more flexible (like case in Haskell)?
 mis juhtub kui esimeses moodulis on kusagil tüübimuutuja T ja järgmises moodulis sama nimega globaalne tüüp?
 Let f = Crash, x = f f In 0 -- tüüpimine läheb lõpmatusse tsüklisse sest puudub occur check
 can Data.Set and Data.Map imports be removed if the file uses both and disambiguates all function calls anyways?
-"./Awful eval List (0)" - error message about Writeable class looks bad
-let de-sugaring completely to Standard.hs module
+"./Awful eval "List (0)"" without importing Standard.awf - error message about Writeable class looks bad; fix
+let expr de-sugaring (and therefore struct name collection) completely to Standard.hs module
 all de-sugaring: remove from Tree.hs, put into Standard.hs
 simplify parsing of match expression and remove duplicate code from de-sugaring, name checking, typechecking & eval
 -}
@@ -153,7 +153,6 @@ module Typing where
   data Plain_dat = Plain_dat String [String] Data_branch_1 deriving Show
   data Polykind = Polykind [String] Kind_1 deriving Show
   data Prom_alg = Prom_alg [String] (Map' [Kind_1]) deriving Show
-  data Status = New | Old deriving (Eq, Show)
   data Strct = Strct [(String, Kind_1)] [(String, Type_1)] Type_1 deriving Show
   data Type_1 = Application_type_1 Type_1 Type_1 | Char_type_1 Char | Int_type_1 Integer | Name_type_1 String [Kind_1]
     deriving (Eq, Show)
@@ -454,21 +453,23 @@ module Typing where
         ("True", "Logical"),
         ("Wrap", "Maybe"),
         ("Zr", "Nat")]
-  context_union :: File -> File -> File
-  context_union (File b i j d a x e q t g o d') (File f k l h c y m r u n p m') =
-    File
-      (Data.Map.union b f)
-      (Data.Map.union i k)
-      (Data.Map.union j l)
-      (Data.Map.union d h)
-      (Data.Map.union a c)
-      (Data.Map.union x y)
-      (Data.Map.union e m)
-      (Data.Map.union q r)
-      (unionWith Data.Map.union t u)
-      (Data.Map.union g n)
-      (Data.Map.union o p)
-      (Data.Map.union d' m')
+  context_union :: (File, Map' Op) -> (File, Map' Op) -> (File, Map' Op)
+  context_union (File b i j d a x e q t g o d', t0) (File f k l h c y m r u n p m', t2) =
+    (
+      File
+        (Data.Map.union b f)
+        (Data.Map.union i k)
+        (Data.Map.union j l)
+        (Data.Map.union d h)
+        (Data.Map.union a c)
+        (Data.Map.union x y)
+        (Data.Map.union e m)
+        (Data.Map.union q r)
+        (unionWith Data.Map.union t u)
+        (Data.Map.union g n)
+        (Data.Map.union o p)
+        (Data.Map.union d' m'),
+      Data.Map.union t0 t2)
   defs :: Map' Expression_2
   defs =
     Data.Map.fromList
@@ -634,28 +635,28 @@ module Typing where
         ("!Nat", Star_kind),
         ("!Pair", Arrow_kind (Arrow_kind Star_kind)),
         ("Star", Star_kind)]
-  init_type_context :: File
+  init_type_context :: (File, Map' Op)
   init_type_context =
-    File
-      kinds
-      algebraics
-      constrs
-      types
-      hkinds
-      promotables
-      classes_0
-      classes_1
-      instances
-      classes_2
-      prom_algs
-      (Data.Map.singleton
-        "Pair"
-        (Strct
-          [("T", star_kind), ("U", star_kind)]
-          [("First", ntype "T"), ("Second", ntype "U")]
-          (pair_type (ntype "T") (ntype "U"))))
-  ins_new :: Ord t => t -> u -> Map t (u, Status) -> Map t (u, Status)
-  ins_new a b = Data.Map.insert a (b, New)
+    (
+      File
+        kinds
+        algebraics
+        constrs
+        types
+        hkinds
+        promotables
+        classes_0
+        classes_1
+        instances
+        classes_2
+        prom_algs
+        (Data.Map.singleton
+          "Pair"
+          (Strct
+            [("T", star_kind), ("U", star_kind)]
+            [("First", ntype "T"), ("Second", ntype "U")]
+            (pair_type (ntype "T") (ntype "U")))),
+      Data.Map.empty)
   instances :: Map' (Map' [[String]])
   instances =
     Data.Map.fromList
@@ -810,27 +811,6 @@ module Typing where
   maybe_type = Application_type_1 (Name_type_1 "Maybe" [])
   mod_type :: Type_1 -> Type_1
   mod_type = Application_type_1 (Name_type_1 "Modular" [])
-  naming_typing ::
-    (
-      String ->
-      Tree_2 ->
-      (
-        (Set String, Locations),
-        File,
-        Map' Expression_2,
-        Map' Polykind,
-        Map' (Map' Location'),
-        Map' ([String], Map' [(String, Nat)])) ->
-      Err
-        (
-          (Set String, Locations),
-          File,
-          Map' Expression_2,
-          Map' Polykind,
-          Map' (Map' Location'),
-          Map' ([String], Map' [(String, Nat)])))
-  naming_typing f a (b, c, g, j, m, w) =
-    naming f a b >>= \(d, e) -> (\(h, i, k, n, u) -> (d, h, i, k, n, u)) <$> typing f e (c, g, j, m, w)
   nat_kind :: Kind_1
   nat_kind = Name_kind_1 "!Nat"
   nat_to_int :: Type_1 -> Integer
@@ -856,8 +836,6 @@ module Typing where
       _ -> True
   ntype :: String -> Type_1
   ntype a = Name_type_1 a []
-  old :: Map' t -> Map' (t, Status)
-  old = (<$>) (flip (,) Old)
   old' :: Map' (Map' t) -> Map' (Map' (t, Status))
   old' = (<$>) old
   pair_type :: Type_1 -> Type_1 -> Type_1
@@ -906,8 +884,6 @@ module Typing where
   promotables =
     Data.Map.fromList
       ((\a -> (a, True)) <$> ["Char", "Comparison", "Either", "Function", "Int", "List", "Logical", "Maybe", "Nat", "Pair"])
-  rem_old :: Map' (t, Status) -> Map' t
-  rem_old a = fst <$> Data.Map.filter (\(_, b) -> b == New) a
   rem_old' :: Map' (Map' (t, Status)) -> Map' (Map' t)
   rem_old' a = Data.Map.filter (\b -> not (Data.Map.null b)) (rem_old <$> a)
   repkinds :: Map' Kind_1 -> Kind_1 -> Kind_1
@@ -1066,6 +1042,29 @@ module Typing where
       m = sysrep' c d
     in
       solvesys a ((<$>) (bimap m m) e) (second (second m) <$> x, sysrep2 c d f, Data.Set.delete c k)
+  standard_naming_typing ::
+    (
+      String ->
+      Tree_0 ->
+      (
+        (Set String, Locations, Locations),
+        (File, Map' Op),
+        Map' Expression_2,
+        Map' Polykind,
+        Map' (Map' Location'),
+        Map' ([String], Map' [(String, Nat)])) ->
+      Err
+        (
+          (Set String, Locations, Locations),
+          (File, Map' Op),
+          Map' Expression_2,
+          Map' Polykind,
+          Map' (Map' Location'),
+          Map' ([String], Map' [(String, Nat)])))
+  standard_naming_typing f a (b, (c, t), g, j, m, w) =
+    (
+      standard_1 (Location_1 f) t a >>=
+      \(v, n') -> naming f n' b >>= \(d, e) -> (\(h, i, k, n, u) -> (d, (h, v), i, k, n, u)) <$> typing f e (c, g, j, m, w))
   star_kind :: Kind_1
   star_kind = Name_kind_1 "Star"
   sysrep' :: String -> Type_1 -> Type_1 -> Type_1
@@ -1811,6 +1810,7 @@ module Typing where
     String ->
     Map' Kind ->
     [Def_3] ->
+    [Name] ->
     (Map' Polykind, Map' Alg, Map' String) ->
     (Map' Expression_2, Types) ->
     Map' Class_4 ->
@@ -1826,11 +1826,14 @@ module Typing where
         Map' (Map' Location'),
         Map' (Map' ([[String]], Status)),
         Map' ([String], Map' [(String, Nat)]))
-  type_defs h x a (b, i, j) (c, d) y y0 z t u' k' =
+  type_defs h x a a2 (b, i, j) (c, d) y y0 z t u' k' =
     (
       type_defs_1 h x a b d y y0 z t u' >>=
       \(g, e, k, u, f') ->
-        (\f -> (f, e, k, u, f')) <$> type_defs_2 (Location_1 h) g (i, j, fst <$> e) c ((<$>) fst <$> u) b f' y x k')
+        (
+          (\f -> (f, e, k, u, f')) <$
+          type_ops h (fst <$> e) a2 <*>
+          type_defs_2 (Location_1 h) g (i, j, fst <$> e) c ((<$>) fst <$> u) b f' y x k'))
   type_defs_1 ::
     String ->
     Map' Kind ->
@@ -2576,6 +2579,23 @@ module Typing where
     case a of
       [] -> Right []
       b : c -> type_method_1 e f b >>= \d -> (:) d <$> type_methods_1 e f c
+  type_ops :: String -> Map' Type_2 -> [Name] -> Err ()
+  type_ops a b c =
+    case c of
+      [] -> Right ()
+      Name d e : f ->
+        und_err
+          e
+          b
+          "function"
+          (Location_1 a d)
+          (\(Basic_type_1 _ _ _ g) ->
+            case g of
+              Application_type_1
+                (Application_type_1 (Name_type_1 "Function" []) _)
+                (Application_type_1 (Application_type_1 (Name_type_1 "Function" []) _) _) ->
+                  type_ops a b f
+              _ -> Left ("Function " ++ e ++ location (Location_1 a d) ++ " takes less than 2 arguments."))
   type_pat ::
     (
       (Location_0 -> Location_1) ->
@@ -3024,7 +3044,7 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
     Tree_5 ->
     (File, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])) ->
     Err (File, Map' Expression_2, Map' Polykind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)]))
-  typing k (Tree_5 a a' c) (File d t u v w w0 b' c5 x t2 u0 k7, l, m, m', n4) =
+  typing k (Tree_5 a a' x7 c) (File d t u v w w0 b' c5 x t2 u0 k7, l, m, m', n4) =
     (
       type_datas (Location_1 k) a (old d, old t, old u, old v, old w, l, m, old w0, old u0, old k7) >>=
       \(e, b, h, g, o, f, n, w1, u1, k8) ->
@@ -3055,6 +3075,7 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
                 k
                 (fst <$> o)
                 c
+                x7
                 (fst <$> e, fst <$> b, fst <$> h)
                 (f, g0)
                 (fst <$> c')

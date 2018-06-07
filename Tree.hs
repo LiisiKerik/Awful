@@ -51,6 +51,7 @@ module Tree where
   data Method = Method Name [(Name, Kind_0)] [Constraint_0] Type_7 deriving Show
   data Modular = Modular Location_0 Integer Integer deriving Show
   data Name = Name Location_0 String deriving Show
+  data Opdecl_0 = Opdecl_0 Location_0 String Name Integer Assoc deriving Show
   data Pat = Pat Location_0 Pat_branch deriving Show
   data Pat_branch = Application_pat String [Pat] | Blank_pat | Name_pat String deriving Show
   data Pattern_1 = Pattern_1 Location_0 Pattern_0 deriving Show
@@ -61,7 +62,7 @@ module Tree where
   type Parser = Parser' State (Either Location_0)
   newtype Parser' s f t = Parser {parser :: s -> f (t, s)}
   data State = State Tokens Location_0 deriving Show
-  data Tree_0 = Tree_0 [Data_0] [Class_0] [Def_0] deriving Show
+  data Tree_0 = Tree_0 [Data_0] [Class_0] [Opdecl_0] [Def_0] deriving Show
   data Tree_1 = Tree_1 [Name] Tree_0 deriving Show
   data Type_0 =
     Application_type_0 Type_0 [Type_0] |
@@ -103,6 +104,8 @@ module Tree where
     get_location (Pat a _) = a
   instance Get_location Pattern_1 where
     get_location (Pattern_1 a _) = a
+  instance Monad f => Monad (Parser' s f) where
+    Parser p >>= f = Parser (p >=> \(y, z) -> parser (f y) z)
   init_location :: Location_0
   init_location = Location_0 0 0
   int_to_nat_type_0 :: Location_0 -> Integer -> Type_0
@@ -450,15 +453,7 @@ module Tree where
   parse_nothing :: Parser ()
   parse_nothing = Parser (\a -> Right ((), a))
   parse_op :: Parser Name
-  parse_op =
-    (
-      Name <&>
-      parse_elementary
-        (\a ->
-          case a of
-            Operator_token b -> Just b
-            _ -> Nothing))
-
+  parse_op = Name <&> parse_op''
   parse_op' :: Parser Name
   parse_op' =
     (
@@ -471,8 +466,24 @@ module Tree where
                 "=" -> Nothing
                 _ -> Just b
             _ -> Nothing))
+  parse_op'' :: Parser String
+  parse_op'' =
+    parse_elementary
+      (\a ->
+        case a of
+          Operator_token b -> Just b
+          _ -> Nothing)
   parse_op_type :: Parser Type_0
   parse_op_type = Op_type_0 <$> parse_br_type' <*> some ((,) <$> parse_op' <*> parse_br_type')
+  parse_opdecl :: Parser Opdecl_0
+  parse_opdecl =
+    (
+      Opdecl_0 <&
+      parse_token Opdecl_token <*>
+      parse_op'' <*>
+      parse_name' <*>
+      parse_int <*>
+      (Lft <$ parse_name_4 "Left" <|> Rght <$ parse_name_4 "Right"))
   parse_operator :: String -> Parser ()
   parse_operator x = parse_token (Operator_token x)
   parse_optional :: (Parser [t] -> Parser [t]) -> Parser t -> Parser [t]
@@ -498,7 +509,8 @@ module Tree where
   parse_tree :: (Location_0 -> Location_1) -> String -> Err Tree_1
   parse_tree = parse parse_tree'
   parse_tree' :: Parser Tree_1
-  parse_tree' = Tree_1 <$> many parse_load <*> (Tree_0 <$> many parse_data <*> many parse_class <*> many parse_def)
+  parse_tree' =
+    Tree_1 <$> many parse_load <*> (Tree_0 <$> many parse_data <*> many parse_class <*> many parse_opdecl <*> many parse_def)
   parse_type :: Parser Type_7
   parse_type = Type_7 <&> (parse_op_type <|> parse_ap_type <|> parse_elementary_type)
   state_location :: State -> Location_0

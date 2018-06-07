@@ -270,13 +270,14 @@ module Eval where
     Map' ([String], Map' [(String, Nat)]) ->
     Map' Kind ->
     Map' Strct ->
+    Map' Op ->
     Err String
-  tokenise_parse_naming_typing_eval c f (g, h, i) l b u v w a =
+  tokenise_parse_naming_typing_eval c f (g, h, i) l b u v w a q =
     (
       parse_expression b >>=
       \e ->
         (
-          std_expr (Location_1 "input") e >>=
+          std_expr (Location_1 "input") q e >>=
           \e' -> naming_expression "input" e' c >>= \j -> eval l <$> type_expr' (f, g, h, i, w) j u v a))
   tostr :: Expression_2 -> String
   tostr x =

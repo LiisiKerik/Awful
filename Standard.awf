@@ -11,7 +11,8 @@ Class Finite_Modular{N : !Nat}(All_Modular : List (Modular N))
 Class Functor{F : Star -> Star}(Fmap[T : Star, U : Star] : (T -> U) -> F T -> F U)
 Class Monad{F : Star -> Star}<Applicative>(Bind[T : Star, U : Star] : F T -> (T -> F U) -> F U)
 Class Monad'{F : Star -> Star}<Monad>(Unsafe[T : Star] : F T -> T)
-Operator + Add 0 Left
+Operator * Multiply 0 Left
+Operator + Add 1 Left
 Def Add'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Add
 Def All_Modular'[N : !Nat]<Nonzero N>(x : Modular N, y : List (Modular N)) : List (Modular N) =
   Let z = Construct_List x y In Match Is_Zero x {False -> All_Modular' (Minus x Identity) z, True -> z}
@@ -116,7 +117,7 @@ Instance Ring{Logical}(Add = Not_equal, Convert x = Equal (Mod' x 2) 1, Multiply
 Instance Ring{Pair T U}<Ring T, Ring U>(
   Add (Pair x y) (Pair z a) = Pair (x + z) (y + a),
   Convert x = Pair (Convert x) (Convert x),
-  Multiply (Pair x y) (Pair z a) = Pair (Multiply x z) (Multiply y a),
+  Multiply (Pair x y) (Pair z a) = Pair (x * z) (y * a),
   Negate (Pair x y) = Pair (Negate x) (Negate y))
 Def Write[T : Star]<Writeable T>(x : T) : List Char = First (Write_Brackets x)
 Def Write'(x : List Char, y : List (List Char)) : List Char = Interleave (Lift " ") (Construct_List x y)

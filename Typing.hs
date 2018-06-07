@@ -4,8 +4,6 @@ tests
 type synonyms?
 operators
 topelt-esindajate kontroll nimekontrolliga kokku? move duplicate instance control into Naming module?
-matchimine võrdusega (sobiks mitte algebraliste andmetüüpide jaoks)
-Keelata kasutajal -0 kirjutada
 internal: do something with old/new status tags. check where exactly they're necessary. get rid of them where they're useless
 change semantics of missing pattern-match variables from blank to lambda? (Left -> e is not Left _ -> e but Left x -> e x)
 internal: make the system of specifying built-in algebraic data types and things better and safer
@@ -38,9 +36,8 @@ let expr de-sugaring (and therefore struct name collection) completely to Standa
 all de-sugaring: remove from Tree.hs, put into Standard.hs
 simplify parsing of match expression and remove duplicate code from de-sugaring, name checking, typechecking & eval
 allow operators in pattern matching?
--}
-{-
-    error("Internal compiler error. Free type variable after type application when trying to derive type.")
+What happens with unary minus and binary minus during parsing?
+allow using operators in class method definitions? Instance Ring{Complex T}<Ring T>(..., Complex x y * Complex z w = ...)
 -}
 -----------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}

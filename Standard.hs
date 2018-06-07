@@ -161,7 +161,7 @@ module Standard where
   std_expr :: (Location_0 -> Location_1) -> Map' Op -> Expression_0 -> Err Expression_9
   std_expr a f b =
     case b of
-      Application_expression_0 c d -> Application_expression_9 <$> std_expr a f c <*> std_expr a f d
+      Application_expression_0 c d -> Prelude.foldl Application_expression_9 <$> std_expr a f c <*> traverse (std_expr a f) d
       Char_expression_0 c -> Right (Char_expression_9 c)
       Function_expression_0 c d -> Function_expression_9 c <$> std_expr a f d
       Int_expression_0 c -> Right (Int_expression_9 c)
@@ -169,6 +169,8 @@ module Standard where
       Match_expression_0 c d e -> Match_expression_9 c <$> std_expr a f d <*> std_matches a f e
       Modular_expression_0 c -> Right (Modular_expression_9 c)
       Name_expression_0 c d e -> Name_expression_9 c <$> traverse (std_type a) d <*> traverse (std_type a) e
+      Op_expression_0 c d ->
+        shunting_yard a (std_expr a f, Application_expression_9, \e -> Name_expression_9 e Nothing []) f [] c d
   std_inst :: (Location_0 -> Location_1) -> Map' Op -> (Name, ([Pat], Expression_0)) -> Err (Name, Expression_9)
   std_inst a f (b, (c, d)) = (\e -> (b, Prelude.foldr Function_expression_9 e c)) <$> std_expr a f d
   std_match_alg :: (Location_0 -> Location_1) -> Map' Op -> Match_Algebraic_0 -> Err Match_Algebraic_9

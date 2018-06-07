@@ -79,18 +79,18 @@ Def Pow'[T : Star]<Ring T>(x : T, i : Int) : T =
 Instance Ring{Complex T}<Ring T>(
   Add = Add',
   Convert x = Complex (Convert x) Zero,
-  Multiply (Complex x y) (Complex z a) = Complex (Minus (Multiply x z) (Multiply y a)) (Add (Multiply x a) (Multiply y z)),
+  Multiply (Complex x y) (Complex z a) = Complex (Minus (Multiply x z) (Multiply y a)) (Multiply x a + Multiply y z),
   Negate = Negate')
-Instance Ring{Trivial}(Add _ = Id, Convert _ = Trivial, Multiply _ = Id, Negate = Id)
+Instance Ring{Trivial}(Add Trivial = Id, Convert _ = Trivial, Multiply Trivial = Id, Negate = Id)
 Instance Ring{Quaternion T}<Ring T>(
   Add = Add',
   Convert x = Quaternion (Convert x) Zero Zero Zero,
   Multiply (Quaternion x y z a) (Quaternion b c d e) =
     Quaternion
       (Minus (Minus (Minus (Multiply x b) (Multiply y c)) (Multiply z d)) (Multiply a e))
-      (Add (Minus (Add (Multiply x c) (Multiply y b)) (Multiply z e)) (Multiply a d))
-      (Minus (Add (Add (Multiply x d) (Multiply y e)) (Multiply z b)) (Multiply a c))
-      (Add (Add (Minus (Multiply x e) (Multiply y d)) (Multiply z c)) (Multiply a b)),
+      (Minus (Multiply x c + Multiply y b) (Multiply z e) + Multiply a d)
+      (Minus (Multiply x d + Multiply y e + Multiply z b) (Multiply a c))
+      (Minus (Multiply x e) (Multiply y d) + Multiply z c + Multiply a b),
   Negate = Negate')
 Def Sum[F : Star -> Star, T : Star]<Foldable F, Ring T> : F T -> T = Fold_right Add Zero
 Def Sum_squares[F : Star -> Star, T : Star]<Foldable F, Functor F, Ring T>(x : F T) : T = Sum (Fmap (y -> Pow' y 2) x)

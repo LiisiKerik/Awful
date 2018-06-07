@@ -26,14 +26,15 @@ module Tree where
       deriving Show
   data Eqq = Eqq Name [Pat] Expression_0 deriving Show
   data Expression_0 =
-    Application_expression_0 Expression_0 Expression_0 |
+    Application_expression_0 Expression_0 [Expression_0] |
     Char_expression_0 Char |
     Function_expression_0 Pat Expression_0 |
     Int_expression_0 Integer |
     Let_expression_0 Eqq Expression_0 |
     Match_expression_0 Location_0 Expression_0 Matches_0 |
     Modular_expression_0 Modular |
-    Name_expression_0 Name (Maybe Type_7) [Type_7]
+    Name_expression_0 Name (Maybe Type_7) [Type_7] |
+    Op_expression_0 Expression_0 [(Name, Expression_0)]
       deriving Show
   data Form_0 = Form_0 Name [Type_7] deriving Show
   data Kind_0 = Kind_0 Location_0 Kind_branch_0 deriving (Eq, Show)
@@ -132,7 +133,8 @@ module Tree where
   mk_list :: Location_0 -> [Expression_0] -> Expression_0
   mk_list l =
     Prelude.foldr
-      (\x -> Application_expression_0 (Application_expression_0 (Name_expression_0 (Name l "Construct_List") Nothing []) x))
+      (\x -> \y ->
+        Application_expression_0 (Application_expression_0 (Name_expression_0 (Name l "Construct_List") Nothing []) [x]) [y])
       (Name_expression_0 (Name l "Empty_List") Nothing [])
   parse :: Parser t -> (Location_0 -> Location_1) -> String -> Err t
   parse a b c =
@@ -150,15 +152,10 @@ module Tree where
                 _ -> d g)
   parse_algebraic :: Parser Data_0
   parse_algebraic = parse_data' Algebraic_data_0 Algebraic_token (parse_round (parse_list 2 parse_form))
+  parse_ap_expr :: Parser Expression_0
+  parse_ap_expr = Application_expression_0 <$> parse_br_expr <*> some parse_br_expr
   parse_ap_type :: Parser Type_0
   parse_ap_type = Application_type_0 <$> parse_br_type <*> some parse_br_type
-  parse_application_expression :: Parser Expression_0
-  parse_application_expression =
-    (
-      (\x -> \y -> \z -> foldl Application_expression_0 x (y : z)) <$>
-      parse_bracketed_expression <*>
-      parse_bracketed_expression <*>
-      many parse_bracketed_expression)
   parse_application_kind :: Parser Kind_branch_0
   parse_application_kind =
     (
@@ -205,10 +202,12 @@ module Tree where
   parse_blank = Blank_pattern <$ parse_token Blank_token
   parse_blank_pat :: Parser Pat
   parse_blank_pat = (\x -> Pat x Blank_pat) <& parse_token Blank_token
+  parse_br_expr :: Parser Expression_0
+  parse_br_expr = parse_round (parse_comp_expr <|> parse_mid_expr) <|> parse_elementary_expression
+  parse_br_expr' :: Parser Expression_0
+  parse_br_expr' = parse_round parse_comp_expr <|> parse_mid_expr <|> parse_elementary_expression
   parse_brack_pat :: Parser Pat
   parse_brack_pat = parse_round parse_application_pat <|> parse_elementary_pat
-  parse_bracketed_expression :: Parser Expression_0
-  parse_bracketed_expression = parse_elementary_expression <|> parse_round parse_composite_expression
   parse_bracketed_kind :: Parser Kind_0
   parse_bracketed_kind = Kind_0 <&> (parse_round (parse_arrow_kind <|> parse_application_kind) <|> parse_name_kind)
   parse_br_type :: Parser Type_0
@@ -266,15 +265,8 @@ module Tree where
   parse_colon = parse_operator ":"
   parse_comma :: Parser ()
   parse_comma = parse_token Comma_token
-  parse_composite_expression :: Parser Expression_0
-  parse_composite_expression =
-    (
-      parse_mod_expr <|>
-      parse_list_expr <|>
-      parse_function <|>
-      parse_application_expression <|>
-      parse_match_expression <|>
-      parse_let_expression)
+  parse_comp_expr :: Parser Expression_0
+  parse_comp_expr = parse_list_expr <|> parse_let_expression <|> parse_match_expression <|> parse_function <|> parse_op_expr
   parse_constraint :: Parser Constraint_0
   parse_constraint = Constraint_0 <$> parse_name' <*> parse_name'
   parse_constraints :: Parser [Constraint_0]
@@ -323,7 +315,7 @@ module Tree where
   parse_expression :: String -> Err Expression_0
   parse_expression = parse parse_expression' (Location_1 "input")
   parse_expression' :: Parser Expression_0
-  parse_expression' = parse_composite_expression <|> parse_elementary_expression
+  parse_expression' = parse_comp_expr <|> parse_mid_expr <|> parse_elementary_expression
   parse_form :: Parser Form_0
   parse_form = Form_0 <$> parse_name' <*> many (Type_7 <&> parse_br_type)
   parse_function :: Parser Expression_0
@@ -344,7 +336,7 @@ module Tree where
         parse_round
         ((\x -> \y -> \z -> (x, (y, z))) <$> parse_name' <*> many parse_brack_pat <* parse_eq <*> parse_expression'))
   parse_int :: Parser Integer
-  parse_int = (negate <$ parse_operator "-" <|> pure id) <*> parse_int'
+  parse_int = parse_int' <|> (negate <$ parse_operator "-" <*> parse_int' >>= \x -> if x == 0 then empty else return x)
   parse_int' :: Parser Integer
   parse_int' =
     parse_elementary
@@ -412,10 +404,10 @@ module Tree where
   parse_matches_modular = Matches_Modular_0 <$> parse_list 1 parse_match_modular <*> parse_default'
   parse_method :: Parser Method
   parse_method = Method <$> parse_name' <*> parse_kinds <*> parse_constraints <* parse_colon <*> parse_type
-  parse_mod_expr :: Parser Expression_0
-  parse_mod_expr = Modular_expression_0 <$> parse_modular
+  parse_mid_expr :: Parser Expression_0
+  parse_mid_expr = parse_ap_expr <|> Modular_expression_0 <$> parse_modular
   parse_modular :: Parser Modular
-  parse_modular = (\x -> flip (Modular x)) <&> parse_int' <* parse_token Hash_token <*> parse_int'
+  parse_modular = (\x -> flip (Modular x)) <&> parse_int' <* parse_token (Operator_token "#") <*> parse_int'
   parse_name :: Parser String
   parse_name =
     parse_elementary
@@ -473,6 +465,10 @@ module Tree where
         case a of
           Operator_token b -> Just b
           _ -> Nothing)
+  parse_op_0 :: Parser Name
+  parse_op_0 = Name <&> (parse_op'' >>= \x -> if elem x ["#", "->"] then empty else return x)
+  parse_op_expr :: Parser Expression_0
+  parse_op_expr = Op_expression_0 <$> parse_br_expr' <*> some ((,) <$> parse_op_0 <*> parse_br_expr')
   parse_op_type :: Parser Type_0
   parse_op_type = Op_type_0 <$> parse_br_type' <*> some ((,) <$> parse_op' <*> parse_br_type')
   parse_opdecl :: Parser Opdecl_0

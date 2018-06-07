@@ -11,6 +11,7 @@ Class Finite_Modular{N : !Nat}(All_Modular : List (Modular N))
 Class Functor{F : Star -> Star}(Fmap[T : Star, U : Star] : (T -> U) -> F T -> F U)
 Class Monad{F : Star -> Star}<Applicative>(Bind[T : Star, U : Star] : F T -> (T -> F U) -> F U)
 Class Monad'{F : Star -> Star}<Monad>(Unsafe[T : Star] : F T -> T)
+Operator + Add 0 Left
 Def Add'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Add
 Def All_Modular'[N : !Nat]<Nonzero N>(x : Modular N, y : List (Modular N)) : List (Modular N) =
   Let z = Construct_List x y In Match Is_Zero x {False -> All_Modular' (Minus x Identity) z, True -> z}
@@ -70,7 +71,7 @@ Def Map_left[T : Star, U : Star, F : Star -> Star -> Star, V : Star]<Braided F>(
 Def Map_right[T : Star, U : Star, F : Star -> Star -> Star, V : Star]<Braided F> : (T -> U) -> F V T -> F V U = Bimap Id
 Def Max[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> y, Default -> x}
 Def Min[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> x, Default -> y}
-Def Minus[T : Star]<Ring T>(x : T, y : T) : T = Add x (Negate y)
+Def Minus[T : Star]<Ring T>(x : T, y : T) : T = x + Negate y
 Def Mod'(x : Int, y : Int) : Int = Unsafe (Mod x y)
 Instance Monad{Either _}(Bind x f = Match x {Left y -> Left y, Right y -> f y})
 Instance Monad{Function _}(Bind f g x = g (f x) x)
@@ -113,7 +114,7 @@ Instance Ord{Tree T}<Ord T>(
         Match y {Empty_Tree -> GT, Construct_Tree c d e -> Compare (Pair z (Pair a b)) (Pair c (Pair d e))}})
 Instance Ring{Logical}(Add = Not_equal, Convert x = Equal (Mod' x 2) 1, Multiply = Min, Negate = Id)
 Instance Ring{Pair T U}<Ring T, Ring U>(
-  Add (Pair x y) (Pair z a) = Pair (Add x z) (Add y a),
+  Add (Pair x y) (Pair z a) = Pair (x + z) (y + a),
   Convert x = Pair (Convert x) (Convert x),
   Multiply (Pair x y) (Pair z a) = Pair (Multiply x z) (Multiply y a),
   Negate (Pair x y) = Pair (Negate x) (Negate y))

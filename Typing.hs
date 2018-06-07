@@ -37,6 +37,7 @@ can Data.Set and Data.Map imports be removed if the file uses both and disambigu
 let expr de-sugaring (and therefore struct name collection) completely to Standard.hs module
 all de-sugaring: remove from Tree.hs, put into Standard.hs
 simplify parsing of match expression and remove duplicate code from de-sugaring, name checking, typechecking & eval
+allow operators in pattern matching?
 -}
 {-
     error("Internal compiler error. Free type variable after type application when trying to derive type.")

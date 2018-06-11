@@ -9,15 +9,15 @@ Class Finite{T : Star}<Ord>(All : List T)
 Class Finite_Modular{N : !Nat}(All_Modular : List (Modular N))
 Class Functor{F : Star -> Star}(Compose[T : Star, U : Star] : (T -> U) -> F T -> F U)
 Class Monad{F : Star -> Star}<Applicative>(Bind[T : Star, U : Star] : F T -> (T -> F U) -> F U)
-Class Monad'{F : Star -> Star}<Monad>(Unsafe[T : Star] : F T -> T)
 Operator ! Apply 2 Left
+Operator - Minus 1 Left
 Operator * Multiply 0 Left
 Operator + Add 1 Left
 Operator . Compose 2 Left
-Operator .. Bimap 2 Left
+Operator .. Bimap 2 Right
 Def Add'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Add
 Def All_Modular'[N : !Nat]<Nonzero N>(x : Modular N, y : List (Modular N)) : List (Modular N) =
-  Let z = Construct_List x y In Match Is_Zero x {False -> All_Modular' (Minus x Identity) z, True -> z}
+  Let z = Construct_List x y In Match Is_Zero x {False -> All_Modular' (x - Identity) z, True -> z}
 Instance Applicative{Either _}(Apply x y = Match x {Left z -> Left z, Right f -> f . y}, Lift = Right)
 Instance Applicative{Function _}(Apply f g x = f x (g x), Lift x _ = x)
 Instance Applicative{List}(
@@ -76,13 +76,10 @@ Def Map_right[T : Star, U : Star, F : Star -> Star -> Star, V : Star]<Braided F>
 Def Max[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> y, Default -> x}
 Def Min[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> x, Default -> y}
 Def Minus[T : Star]<Ring T>(x : T, y : T) : T = x + Negate y
-Def Mod'(x : Int, y : Int) : Int = Unsafe (Mod x y)
 Instance Monad{Either _}(Bind x f = Match x {Left y -> Left y, Right y -> f y})
 Instance Monad{Function _}(Bind f g x = g (f x) x)
 Instance Monad{List}(Bind x f = Match x {Empty_List -> List, Construct_List y z -> Cat (f y) (Bind z f)})
 Instance Monad{Maybe}(Bind x f = Match x {Nothing -> Nothing, Wrap y -> f y})
-Instance Monad'{Either _}(Unsafe x = Match x {Left _ -> Crash, Right y -> y})
-Instance Monad'{Maybe}(Unsafe x = Match x {Nothing -> Crash, Wrap y -> y})
 Def Multiply'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Multiply
 Def Negate'[F : Star -> Star, T : Star]<Functor F, Ring T> : F T -> F T = Compose Negate
 Def Not(x : Logical) : Logical = Match x {False -> True, True -> False}
@@ -110,7 +107,7 @@ Instance Ord{Maybe T}<Ord T>(
     Match x {Nothing -> Match y {Nothing -> EQ, Wrap -> LT}, Wrap z -> Match y {Nothing -> GT, Wrap w -> Compare z w}})
 Instance Ord{Pair T U}<Ord T, Ord U>(
   Compare (Pair x y) (Pair z a) = Match Compare x z {LT -> LT, EQ -> Compare y a, GT -> GT})
-Instance Ring{Logical}(Add = Not_equal, Convert x = Equal (Mod' x 2) 1, Multiply = Min, Negate = Id)
+Instance Ring{Logical}(Add = Not_equal, Convert x = Equal (Convert x) (1 # 2), Multiply = Min, Negate = Id)
 Instance Ring{Pair T U}<Ring T, Ring U>(
   Add (Pair x y) (Pair z a) = Pair (x + z) (y + a),
   Convert x = Pair (Convert x) (Convert x),

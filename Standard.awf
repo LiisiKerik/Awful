@@ -10,11 +10,12 @@ Class Finite_Modular{N : !Nat}(All_Modular : List (Modular N))
 Class Functor{F : Star -> Star}(Compose[T : Star, U : Star] : (T -> U) -> F T -> F U)
 Class Monad{F : Star -> Star}<Applicative>(Bind[T : Star, U : Star] : F T -> (T -> F U) -> F U)
 Operator ! Apply 2 Left
-Operator - Minus 1 Left
 Operator * Multiply 0 Left
 Operator + Add 1 Left
+Operator - Minus 1 Left
 Operator . Compose 2 Left
 Operator .. Bimap 2 Right
+Operator | Div 0 Left
 Def Add'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Add
 Def All_Modular'[N : !Nat]<Nonzero N>(x : Modular N, y : List (Modular N)) : List (Modular N) =
   Let z = Construct_List x y In Match Is_Zero x {False -> All_Modular' (x - Identity) z, True -> z}

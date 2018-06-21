@@ -9,7 +9,7 @@ module Standard where
   data Class_7 = Class_7 Name (Name, Kind_0) (Maybe Name) [Method_9] deriving Show
   data Def_1 =
     Basic_def_1 Name [(Name, Kind_0)] [Constraint_0] Type_8 Expression_9 |
-    Instance_1 Location_0 Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, Expression_9)]
+    Instance_1 Location_0 Name Name [Pattern_1] [Constraint_0] [(Name, Expression_9)]
       deriving Show
   data Data_6 = Data_6 Name Data_br_6 deriving Show
   data Data_br_6 = Branching_data_6 Name [Kind_0] [(Name, Kind_0)] [Brnch_6] | Plain_data_6 [(Name, Kind_0)] Data_branch_6
@@ -47,8 +47,7 @@ module Standard where
   data Status = New | Old deriving (Eq, Show)
   data Tree_2 = Tree_2 [Data_6] [Class_7] [Opdecl_1] [Def_1] deriving Show
   data Tree_3 = Tree_3 [Name] Tree_2 deriving Show
-  data Type_5 = Application_type_5 Type_5 Type_5 | Char_type_5 Char | Int_type_5 Integer | Name_type_5 Name [Kind_0]
-    deriving Show
+  data Type_5 = Application_type_5 Type_5 Type_5 | Name_type_5 Name | Nat_type_5 Integer deriving Show
   data Type_8 = Type_8 Location_0 Type_5 deriving Show
   gather_ops :: (Location_0 -> Location_1) -> Map' (Op, Status) -> [Opdecl_0] -> (Map' (Op, Status), [Opdecl_1])
   gather_ops a b c =
@@ -122,7 +121,7 @@ module Standard where
         (
           (\h -> \(Type_8 i j, k) ->
             (
-              Type_8 i (Application_type_5 (Application_type_5 (Name_type_5 (Name l "Function") []) h) j),
+              Type_8 i (Application_type_5 (Application_type_5 (Name_type_5 (Name l "Function")) h) j),
               Function_expression_9 e k)) <$>
           std_type' a f <*>
           standard_arguments a m g c d)
@@ -130,7 +129,7 @@ module Standard where
   standard_def i j a =
     case a of
       Basic_def_0 b c g d e f -> uncurry (Basic_def_1 b c g) <$> standard_arguments i j d e f
-      Instance_def_0 b c d h f g e -> Instance_1 b c d h f g <$> traverse (std_inst i j) e
+      Instance_def_0 b c d f g e -> Instance_1 b c d f g <$> traverse (std_inst i j) e
   standard_defs :: (Location_0 -> Location_1) -> Map' Op -> [Def_0] -> Err [Def_1]
   standard_defs a b = traverse (standard_def a b)
   std_cls :: (Location_0 -> Location_1) -> Class_0 -> Err Class_7
@@ -196,13 +195,12 @@ module Standard where
   std_type' e b =
     case b of
       Application_type_0 c d -> Prelude.foldl Application_type_5 <$> std_type' e c <*> traverse (std_type' e) d
-      Char_type_0 c -> Right (Char_type_5 c)
-      Int_type_0 c -> Right (Int_type_5 c)
-      Name_type_0 c d -> Right (Name_type_5 c d)
+      Name_type_0 c -> Right (Name_type_5 c)
+      Nat_type_0 a -> Right (Nat_type_5 a)
       Op_type_0 a c ->
         shunting_yard
           e
-          (std_type' e, Application_type_5, \f -> Name_type_5 f [])
+          (std_type' e, Application_type_5, \f -> Name_type_5 f)
           (fromList [("*", Op 0 Rght "Pair"), ("+", Op 1 Rght "Either"), ("->", Op 2 Rght "Function")])
           []
           a

@@ -14,11 +14,12 @@ module Tree where
   data Brnch_0 = Brnch_0 Name [Name] Name [(Name, Type_7)] deriving Show
   data Class_0 = Class_0 Name (Name, Kind_0) (Maybe Name) [Method] deriving Show
   data Constraint_0 = Constraint_0 Name Name deriving Show
-  data Data_0 = Data_0 Name Data_br_0 deriving Show
-  data Data_br_0 = Branching_data_0 Name [Kind_0] [(Name, Kind_0)] [Brnch_0] | Plain_data_0 [(Name, Kind_0)] Data_branch_0
-    deriving Show
-  data Data_branch_0 = Algebraic_data_0 [Form_0] | Struct_data_0 [(Name, Type_7)]
-    deriving Show
+  data Data_0 =
+    Algebraic_data_0 Location_0 String [(Name, Kind_0)] [Form_0] |
+    Branching_data_0 Location_0 String [(Name, Kind_0)] Data_br_0 Name Data_br_0 |
+    Struct_data_0 Location_0 String [(Name, Kind_0)] [(Name, Type_7)]
+      deriving Show
+  data Data_br_0 = Data_br_0 Name [(Name, Type_7)] deriving Show
   data Def_0 =
     Basic_def_0 Name [(Name, Kind_0)] [Constraint_0] [(Pat, Type_7)] Type_7 Expression_0 |
     Instance_def_0 Location_0 Name Name [Pattern_1] [Constraint_0] [(Name, ([Pat], Expression_0))]
@@ -116,7 +117,15 @@ module Tree where
                 [] -> Right f
                 _ -> d g)
   parse_algebraic :: Parser' Data_0
-  parse_algebraic = parse_data' Algebraic_data_0 Algebraic_token (parse_round (parse_list 2 parse_form))
+  parse_algebraic =
+    (
+      Algebraic_data_0 <&
+      parse_token Algebraic_token <*>
+      parse_name <*>
+      parse_kinds <*
+      parse_token Left_curly_token <*>
+      parse_list 2 parse_form <*
+      parse_token Right_curly_token)
   parse_ap_expr :: Parser' Expression_0
   parse_ap_expr = Application_expression_0 <$> parse_br_expr <*> parse_some parse_br_expr
   parse_ap_type :: Parser' Type_0
@@ -170,30 +179,21 @@ module Tree where
   parse_br_type' = parse_round parse_op_type <+> parse_ap_type <+> parse_elementary_type
   parse_brackets :: Token_0 -> Parser' t -> Token_0 -> Parser' t
   parse_brackets a b c = parse_token a *> b <* parse_token c
-  parse_brnch :: Parser' Brnch_0
-  parse_brnch =
-    (
-      Brnch_0 <$>
-      ((\x -> \y -> Name x ('!' : y)) <& parse_lift <*> parse_name) <*>
-      parse_many parse_name' <*
-      parse_arrow <*>
-      parse_name' <*>
-      parse_arguments' parse_name')
   parse_brnchs :: Parser' Data_0
   parse_brnchs =
     (
-      Data_0 <$>
-      parse_name'' Branching_token <*>
-      (
-        Branching_data_0 <$
-        parse_token Left_square_token <*>
-        ((\x -> \y -> Name x ('!' : y)) <& parse_lift <*> parse_name) <*>
-        parse_many parse_kind <*
-        parse_token Right_square_token <*>
-        parse_kinds <*
-        parse_token Left_round_token <*>
-        parse_list 2 parse_brnch <*
-        parse_token Right_round_token))
+      Branching_data_0 <&
+      parse_token Branching_token <*>
+      parse_name <*>
+      parse_kinds <*
+      parse_token Left_curly_token <*
+      parse_name_4 "Zero" <*>
+      parse_data_br <*
+      parse_comma <*
+      parse_name_4 "Next" <*>
+      parse_name' <*>
+      parse_data_br <*
+      parse_token Right_curly_token)
   parse_char :: Parser' Char
   parse_char =
     parse_elementary
@@ -225,8 +225,8 @@ module Tree where
   parse_constraints = parse_optional' (parse_operator "<" *> parse_list 1 parse_constraint <* parse_operator ">")
   parse_data :: Parser' Data_0
   parse_data = parse_algebraic <+> parse_brnchs <+> parse_struct
-  parse_data' :: (t -> Data_branch_0) -> Token_0 -> Parser' t -> Parser' Data_0
-  parse_data' f a b = (\x -> \y -> \z -> Data_0 x (Plain_data_0 y (f z))) <$> parse_name'' a <*> parse_kinds <*> b
+  parse_data_br :: Parser' Data_br_0
+  parse_data_br = Data_br_0 <$ parse_arrow <*> parse_name' <*> parse_arguments' parse_name'
   parse_def :: Parser' Def_0
   parse_def = parse_basic <+> parse_instance
   parse_default :: Parser' Expression_0
@@ -310,8 +310,6 @@ module Tree where
   parse_kind = parse_arrow_kind <+> parse_name_kind
   parse_kinds :: Parser' [(Name, Kind_0)]
   parse_kinds = parse_arguments (\a -> parse_brackets Left_square_token a Right_square_token) parse_name' parse_kind
-  parse_lift :: Parser' ()
-  parse_lift = parse_operator "!"
   parse_list :: Integer -> Parser' t -> Parser' [t]
   parse_list i p =
     case i of
@@ -441,7 +439,7 @@ module Tree where
   parse_some :: Parser' t -> Parser' [t]
   parse_some a = (:) <$> a <*> parse_many a
   parse_struct :: Parser' Data_0
-  parse_struct = parse_data' Struct_data_0 Struct_token (parse_arguments' parse_name')
+  parse_struct = Struct_data_0 <& parse_token Struct_token <*> parse_name <*> parse_kinds <*> parse_arguments' parse_name'
   parse_token :: Token_0 -> Parser' ()
   parse_token a = parse_elementary (\b -> if b == a then Just () else Nothing)
   parse_tree :: (Location_0 -> Location_1) -> String -> Err Tree_1

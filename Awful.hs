@@ -17,11 +17,11 @@ type Files = Map' (File, Map' Op)
 check ::
   (
     [String] ->
-    (Files, (Set String, Locations, Locations), Map' Expr_2, Map' Kind_0, Map' (Map' Location')) ->
+    (Files, (Set String, Locations, Locations), Map' Expr_2, Map' (Map' Location')) ->
     Location' ->
     String ->
-    IO (Err ((Files, (Set String, Locations, Locations), Map' Expr_2, Map' Kind_0, Map' (Map' Location')), (File, Map' Op))))
-check b m' @ (f, _, _, _, _) j name_qc =
+    IO (Err ((Files, (Set String, Locations, Locations), Map' Expr_2, Map' (Map' Location')), (File, Map' Op))))
+check b m' @ (f, _, _, _) j name_qc =
   case Data.Map.lookup name_qc f of
     Just a -> return (Right (m', a))
     Nothing ->
@@ -43,10 +43,10 @@ check b m' @ (f, _, _, _, _) j name_qc =
                   return
                     (
                       g >>=
-                      \((h, i, l, p, p'), m) ->
+                      \((h, i, l, p'), m) ->
                         (
-                          (\(k, n, o, q, s) -> ((Data.Map.insert name_qc n h, k, o, q, s), n)) <$>
-                          standard_naming_typing name_qc d (i, m, l, p, p')))
+                          (\(k, n, o, s) -> ((Data.Map.insert name_qc n h, k, o, s), n)) <$>
+                          standard_naming_typing name_qc d (i, m, l, p')))
             Nothing ->
               err
                 (
@@ -74,9 +74,9 @@ check_extensions a c =
 check_imports ::
   (
     [String] ->
-    ((Files, (Set String, Locations, Locations), Map' Expr_2, Map' Kind_0, Map' (Map' Location')), (File, Map' Op)) ->
+    ((Files, (Set String, Locations, Locations), Map' Expr_2, Map' (Map' Location')), (File, Map' Op)) ->
     [(Location', String)] ->
-    IO (Err ((Files, (Set String, Locations, Locations), Map' Expr_2, Map' Kind_0, Map' (Map' Location')), (File, Map' Op))))
+    IO (Err ((Files, (Set String, Locations, Locations), Map' Expr_2, Map' (Map' Location')), (File, Map' Op))))
 check_imports a b @ (f, k) c =
   case c of
     [] -> return (Right b)
@@ -93,21 +93,13 @@ eval'' a b = do
   return
     (
       c >>=
-      \((_, (e, t, _), f, j, _), (File _ g h i _ _ m _ z, u)) ->
-        tokenise_parse_naming_typing_eval (e, t) j (g, h, i) f b m z u)
-init' ::
-  (
-    Files,
-    (Set String, Locations, Locations),
-    Map' Expr_2,
-    Map' Kind_0,
-    Map' (Map' Location'))
+      \((_, (e, t, _), f, _), (File j g h i _ _ m _ z, u)) -> tokenise_parse_naming_typing_eval (e, t) j (g, h, i) f b m z u)
+init' :: (Files, (Set String, Locations, Locations), Map' Expr_2, Map' (Map' Location'))
 init' =
   (
     Data.Map.empty,
     (Data.Set.singleton "Pair", locations, Data.Map.fromList ((\x -> (x, Language)) <$> ["#", "->", "="])),
     defs,
-    kinds,
     Data.Map.fromList
       [
         ("Field", Data.Map.fromList [("Modular", Language)]),

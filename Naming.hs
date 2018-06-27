@@ -7,18 +7,17 @@ module Naming where
   import Standard
   import Tokenise
   import Tree
-  data Brnch_1 = Brnch_1 Name [Name] String [(String, Type_8)] deriving Show
-  data Brnch_2 = Brnch_2 Name [String] String [(String, Type_8)] deriving Show
   data Class_1 = Class_1 String (Name, Kind_0) (Maybe Name) [Method_1] deriving Show
   data Class_2 = Class_2 String (String, Kind_0) (Maybe Name) [Method_2] deriving Show
-  data Data_1 = Data_1 Name Data_br_1 deriving Show
-  data Data_2 = Data_2 Name Data_br_2 deriving Show
-  data Data_br_1 = Branching_data_1 Name [Kind_0] [(Name, Kind_0)] [Brnch_1] | Plain_data_1 [(Name, Kind_0)] Data_branch_1
-    deriving Show
-  data Data_br_2 =
-    Branching_data_2 Name [Kind_0] [(String, Kind_0)] [Brnch_2] | Plain_data_2 [(String, Kind_0)] Data_branch_1
+  data Data_1 = Data_1 String [(Name, Kind_0)] Data_branch_1 deriving Show
+  data Data_2 = Data_2 String [(String, Kind_0)] Data_branch_2 deriving Show
+  data Data_br_1 = Data_br_1 String [(String, Type_8)] deriving Show
+  data Data_branch_1 =
+    Algebraic_data_1 [Form_1] | Branching_data_1 Data_br_1 Name Data_br_1 | Struct_data_1 [(String, Type_8)]
       deriving Show
-  data Data_branch_1 = Algebraic_data_1 [Form_1] | Struct_data_1 [(String, Type_8)] deriving Show
+  data Data_branch_2 =
+    Algebraic_data_2 [Form_1] | Branching_data_2 Data_br_1 String Data_br_1 | Struct_data_2 [(String, Type_8)]
+      deriving Show
   data Def_2 =
     Basic_def_2 Location_0 String [(Name, Kind_0)] [Constraint_0] Type_8 Expression_9 |
     Instance_2 Location_0 Name Name [Pattern_1] [Constraint_0] [(Name, Expression_9)]
@@ -98,20 +97,6 @@ module Naming where
   naming_arguments = naming_list <$> naming_argument
   naming_arguments' :: String -> (String -> t -> Locations -> Err (Locations, u)) -> [(t, v)] -> Locations -> Err [(u, v)]
   naming_arguments' c a b = (<$>) snd <$> naming_arguments a c b
-  naming_branch_0 :: String -> Locations -> Brnch_6 -> Err (Locations, Brnch_1)
-  naming_branch_0 a b (Brnch_6 c d e f) = naming_name a e b >>= \(g, h) -> second (Brnch_1 c d h) <$> naming_names a f g
-  naming_branches_0 :: String -> Locations -> [Brnch_6] -> Err (Locations, [Brnch_1])
-  naming_branches_0 a b c =
-    case c of
-      [] -> Right (b, [])
-      d : e -> naming_branch_0 a b d >>= \(f, g) -> second ((:) g) <$> naming_branches_0 a f e
-  naming_branch_1 :: String -> Locations -> Brnch_1 -> Err Brnch_2
-  naming_branch_1 a b (Brnch_1 c d e f) = (\g -> Brnch_2 c g e f) <$> naming_names' a b d
-  naming_branches_1 :: String -> Locations -> [Brnch_1] -> Err [Brnch_2]
-  naming_branches_1 a b c =
-    case c of
-      [] -> Right []
-      d : e -> naming_branch_1 a b d >>= \f -> (:) f <$> naming_branches_1 a b e
   naming_class_0 :: String -> Class_7 -> Locations -> Err (Locations, Class_1)
   naming_class_0 a (Class_7 b c h d) e = naming_name a b e >>= \(f, g) -> second (Class_1 g c h) <$> naming_methods_0 a d f
   naming_class_1 :: String -> Class_1 -> Locations -> Err Class_2
@@ -127,28 +112,28 @@ module Naming where
       [] -> Right []
       d : e -> naming_class_1 a d c >>= \g -> (:) g <$> naming_classes_1 a e c
   naming_data_1 :: String -> Data_6 -> (Set String, Locations) -> Err ((Set String, Locations), Data_1)
-  naming_data_1 a (Data_6 b c) (x, d) =
-    (
-      naming_name a b d >>=
-      \(e, t) ->
-        (
-          second (Data_1 b) <$>
-          case c of
-            Branching_data_6 g h i j -> bimap ((,) x) (Branching_data_1 g h i) <$> naming_branches_0 a e j
-            Plain_data_6 g h ->
-              (
-                second (Plain_data_1 g) <$>
-                case h of
-                  Algebraic_data_6 i -> bimap ((,) x) Algebraic_data_1 <$> naming_forms a i e
-                  Struct_data_6 i -> bimap ((,) (Data.Set.insert t x)) Struct_data_1 <$> naming_fields a i e)))
+  naming_data_1 a (Data_6 b c d e) (f, g) =
+    naming_name a (Name b c) g >>= \(h, _) -> second (Data_1 c d) <$> naming_data_branch_1 a e (f, h) c
   naming_data_2 :: String -> Data_1 -> Locations -> Err Data_2
-  naming_data_2 a (Data_1 b c) d =
-    (
-      Data_2 b <$>
-      case c of
-        Branching_data_1 e f g h ->
-          naming_arguments naming_name a g d >>= \(i, j) -> Branching_data_2 e f j <$> naming_branches_1 a i h
-        Plain_data_1 e f -> (\g -> Plain_data_2 g f) <$> naming_arguments' a naming_name e d)
+  naming_data_2 a (Data_1 b c d) e =
+    naming_arguments naming_name a c e >>= \(f, g) -> Data_2 b g <$> naming_data_branch_2 a d f
+  naming_data_br :: String -> Data_br_6 -> (Set String, Locations) -> Err ((Set String, Locations), Data_br_1)
+  naming_data_br a (Data_br_6 b c) (d, e) =
+    naming_name a b e >>= \(f, g) -> bimap ((,) (Data.Set.insert g d)) (Data_br_1 g) <$> naming_fields a c f
+  naming_data_branch_1 ::
+    String -> Data_branch_6 -> (Set String, Locations) -> String -> Err ((Set String, Locations), Data_branch_1)
+  naming_data_branch_1 a b (c, d) e =
+    case b of
+      Algebraic_data_6 f -> bimap ((,) c) Algebraic_data_1 <$> naming_forms a f d
+      Branching_data_6 f g h ->
+        naming_data_br a f (c, d) >>= \(i, j) -> second (Branching_data_1 j g) <$> naming_data_br a h i
+      Struct_data_6 f -> bimap ((,) (Data.Set.insert e c)) Struct_data_1 <$> naming_fields a f d
+  naming_data_branch_2 :: String -> Data_branch_1 -> Locations -> Err Data_branch_2
+  naming_data_branch_2 a b c =
+    case b of
+      Algebraic_data_1 d -> Right (Algebraic_data_2 d)
+      Branching_data_1 d e f -> (\(_, g) -> Branching_data_2 d g f) <$> naming_name a e c
+      Struct_data_1 d -> Right (Struct_data_2 d)
   naming_datas_1 :: String -> [Data_6] -> (Set String, Locations) -> Err ((Set String, Locations), [Data_1])
   naming_datas_1 = naming_list naming_data_1
   naming_datas_2 :: String -> [Data_1] -> Locations -> Err [Data_2]

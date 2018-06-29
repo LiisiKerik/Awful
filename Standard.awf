@@ -1,4 +1,6 @@
-`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+Class Foo{_ : Star}
+Class Bar{_ : Star}
 Class Applicative{F : Star -> Star}<Functor>(Apply[T : Star, U : Star] : F (T -> U) -> F T -> F U, Lift[T : Star] : T -> F T)
 Class Braided{F : Star -> Star -> Star}(
   Associate[T : Star, U : Star, V : Star] : F (F T U) V -> F T (F U V),
@@ -144,4 +146,4 @@ Instance Writeable{Pair T U}<Writeable T, Writeable U>(
   Write_Brackets (Pair x y) = Pair (Write' (List ("P", "a", "i", "r")) (List (Brackets x, Brackets y))) True)
 Def Zero[T : Star]<Ring T> : T = Convert 0
 Def Zip[F : Star -> Star, T : Star, U : Star, V : Star]<Applicative F>(f : T -> U -> V, x : F T) : F U -> F V = Apply (f . x)
-`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

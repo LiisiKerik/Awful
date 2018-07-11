@@ -40,6 +40,7 @@ What happens with unary minus and binary minus during parsing?
 allow using operators in class method definitions? Instance Ring{Complex T}<Ring T>(..., Complex x y * Complex z w = ...)
 Match expression parsing has a bug. Match Foo{Int} vs Match x {False -> ...
 check that struct pattern matching for branching types never occurs in worng place: Branch N {Zero -> Construct_Array x y -> ...
+Ensure that <Nonzero N> constraint gets translated to N = Next N'.
 -}
 -----------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}

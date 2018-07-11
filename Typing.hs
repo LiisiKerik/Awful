@@ -1,8 +1,6 @@
 {-
 protection against duplicate file loading - what happens now? if crashes - fix, give a nice error/warning. if nothing - warn?
 tests
-type synonyms?
-operators
 topelt-esindajate kontroll nimekontrolliga kokku? move duplicate instance control into Naming module?
 internal: do something with old/new status tags. check where exactly they're necessary. get rid of them where they're useless
 change semantics of missing pattern-match variables from blank to lambda? (Left -> e is not Left _ -> e but Left x -> e x)
@@ -11,7 +9,6 @@ Allow hiding things to functions outside module - so that helper functions are n
 normalising constructors for some data types (polynomial, fraction) which assume a certain normal form of fields?
 allow to hide (prevent exporting) constructors and field accessors which can potentially have bad behavior
 switch expression that is less strict and more flexible than match?
-some limited pattern matching in function arguments (and maybe also variables introduced through algebraic matching?)
 syntactic sugar for lists, vectors, matrices... allow writing (tiny, limited to expression parsing) language extensions?
 boolean function library
 implement map and set (AVL trees?)
@@ -30,7 +27,6 @@ semantics of "Pair -> f" should be "Pair x y -> f x y"
 make match expression more flexible (like case in Haskell)?
 mis juhtub kui esimeses moodulis on kusagil tüübimuutuja T ja järgmises moodulis sama nimega globaalne tüüp?
 Let f = Crash, x = f f In 0 -- tüüpimine läheb lõpmatusse tsüklisse sest puudub occur check
-can Data.Set and Data.Map imports be removed if the file uses both and disambiguates all function calls anyways?
 "./Awful eval "List (0)"" without importing Standard.awf - error message about Writeable class looks bad; fix
 let expr de-sugaring (and therefore struct name collection) completely to Standard.hs module
 all de-sugaring: remove from Tree.hs, put into Standard.hs
@@ -41,6 +37,7 @@ allow using operators in class method definitions? Instance Ring{Complex T}<Ring
 Match expression parsing has a bug. Match Foo{Int} vs Match x {False -> ...
 check that struct pattern matching for branching types never occurs in worng place: Branch N {Zero -> Construct_Array x y -> ...
 Ensure that <Nonzero N> constraint gets translated to N = Next N'.
+syntactic sugar in pattern matching. List (x, y, z) -> ...    and Array (x, y, z) in function argument.
 -}
 -----------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}

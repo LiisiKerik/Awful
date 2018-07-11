@@ -17,6 +17,7 @@ module Standard where
   data Eqq' = Eqq' Name [Pat] Expression_9 deriving Show
   data Expression_9 =
     Application_expression_9 Expression_9 Expression_9 |
+    Branch_expression_9 Name Expression_9 Name Expression_9 |
     Char_expression_9 Char |
     Function_expression_9 Pat Expression_9 |
     Int_expression_9 Integer |
@@ -45,7 +46,7 @@ module Standard where
   data Status = New | Old deriving (Eq, Show)
   data Tree_2 = Tree_2 [Data_6] [Class_7] [Opdecl_1] [Def_1] deriving Show
   data Tree_3 = Tree_3 [Name] Tree_2 deriving Show
-  data Type_5 = Application_type_5 Type_5 Type_5 | Name_type_5 Name | Nat_type_5 Integer deriving Show
+  data Type_5 = Application_type_5 Type_5 Type_5 | Name_type_5 Name deriving Show
   data Type_8 = Type_8 Location_0 Type_5 deriving Show
   gather_ops :: (Location_0 -> Location_1) -> Map' (Op, Status) -> [Opdecl_0] -> (Map' (Op, Status), [Opdecl_1])
   gather_ops a b c =
@@ -54,6 +55,11 @@ module Standard where
       Opdecl_0 d e (Name f g) h i : j -> second ((:) (Opdecl_1 d e (Name f g))) (gather_ops a (ins_new e (Op h i g) b) j)
   ins_new :: Ord t => t -> u -> Map t (u, Status) -> Map t (u, Status)
   ins_new a b = Data.Map.insert a (b, New)
+  int_to_nat :: Integer -> Type_5
+  int_to_nat a =
+    case a of
+      0 -> Name_type_5 (Name (Location_0 0 0) "Zero")
+      _ -> Application_type_5 (Name_type_5 (Name (Location_0 0 0) "Next")) (int_to_nat (a - 1))
   old :: Map' t -> Map' (t, Status)
   old = (<$>) (flip (,) Old)
   pop :: (t -> t -> t, Name -> t) -> [(Op', t)] -> t -> Op' -> [(Op', t)]
@@ -153,6 +159,7 @@ module Standard where
   std_expr a f b =
     case b of
       Application_expression_0 c d -> Prelude.foldl Application_expression_9 <$> std_expr a f c <*> traverse (std_expr a f) d
+      Branch_expression_0 c d e g -> (\h -> Branch_expression_9 c h e) <$> std_expr a f d <*> std_expr a f g
       Char_expression_0 c -> Right (Char_expression_9 c)
       Function_expression_0 c d -> Function_expression_9 c <$> std_expr a f d
       Int_expression_0 c -> Right (Int_expression_9 c)
@@ -188,7 +195,7 @@ module Standard where
     case b of
       Application_type_0 c d -> Prelude.foldl Application_type_5 <$> std_type' e c <*> traverse (std_type' e) d
       Name_type_0 c -> Right (Name_type_5 c)
-      Nat_type_0 a -> Right (Nat_type_5 a)
+      Nat_type_0 a -> Right (int_to_nat a)
       Op_type_0 a c ->
         shunting_yard
           e

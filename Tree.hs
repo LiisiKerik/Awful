@@ -27,6 +27,7 @@ module Tree where
   data Eqq = Eqq Name [Pat] Expression_0 deriving Show
   data Expression_0 =
     Application_expression_0 Expression_0 [Expression_0] |
+    Branch_expression_0 Name Expression_0 Name Expression_0 |
     Char_expression_0 Char |
     Function_expression_0 Pat Expression_0 |
     Int_expression_0 Integer |
@@ -61,9 +62,8 @@ module Tree where
   data State = State Tokens Location_0 deriving Show
   data Tree_0 = Tree_0 [Data_0] [Class_0] [Opdecl_0] [Def_0] deriving Show
   data Tree_1 = Tree_1 [Name] Tree_0 deriving Show
-  data Type_0 =
-    Application_type_0 Type_0 [Type_0] | Name_type_0 Name | Nat_type_0 Integer | Op_type_0 Type_0 [(Name, Type_0)]
-      deriving Show
+  data Type_0 = Application_type_0 Type_0 [Type_0] | Name_type_0 Name | Nat_type_0 Integer | Op_type_0 Type_0 [(Name, Type_0)]
+    deriving Show
   data Type_7 = Type_7 Location_0 Type_0 deriving Show
   class Get_location t where
     get_location :: t -> Location_0
@@ -171,14 +171,30 @@ module Tree where
   parse_br_expr = parse_round (parse_comp_expr <+> parse_mid_expr) <+> parse_elementary_expression
   parse_br_expr' :: Parser' Expression_0
   parse_br_expr' = parse_round parse_comp_expr <+> parse_mid_expr <+> parse_elementary_expression
-  parse_brack_pat :: Parser' Pat
-  parse_brack_pat = parse_round parse_application_pat <+> parse_elementary_pat
+  parse_br_expression :: Parser' Expression_0
+  parse_br_expression = parse_arrow *> parse_expression'
   parse_br_type :: Parser' Type_0
   parse_br_type = parse_round (parse_op_type <+> parse_ap_type) <+> parse_elementary_type
   parse_br_type' :: Parser' Type_0
   parse_br_type' = parse_round parse_op_type <+> parse_ap_type <+> parse_elementary_type
+  parse_brack_pat :: Parser' Pat
+  parse_brack_pat = parse_round parse_application_pat <+> parse_elementary_pat
   parse_brackets :: Token_0 -> Parser' t -> Token_0 -> Parser' t
   parse_brackets a b c = parse_token a *> b <* parse_token c
+  parse_branch_expression :: Parser' Expression_0
+  parse_branch_expression =
+    (
+      Branch_expression_0 <$
+      parse_token Branch_token <*>
+      parse_name' <*
+      parse_token Left_curly_token <*
+      parse_name_4 "Zero" <*>
+      parse_br_expression <*
+      parse_comma <*
+      parse_name_4 "Next" <*>
+      parse_name' <*>
+      parse_br_expression <*
+      parse_token Right_curly_token)
   parse_brnchs :: Parser' Data_0
   parse_brnchs =
     (
@@ -218,7 +234,14 @@ module Tree where
   parse_comma :: Parser' ()
   parse_comma = parse_token Comma_token
   parse_comp_expr :: Parser' Expression_0
-  parse_comp_expr = parse_list_expr <+> parse_let_expression <+> parse_match_expression <+> parse_function <+> parse_op_expr
+  parse_comp_expr =
+    (
+      parse_list_expr <+>
+      parse_let_expression <+>
+      parse_branch_expression <+>
+      parse_match_expression <+>
+      parse_function <+>
+      parse_op_expr)
   parse_constraint :: Parser' Constraint_0
   parse_constraint = Constraint_0 <$> parse_name' <*> parse_name'
   parse_constraints :: Parser' [Constraint_0]

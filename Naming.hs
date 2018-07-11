@@ -28,6 +28,7 @@ module Naming where
       deriving Show
   data Expression_1 =
     Application_expression_1 Expression_1 Expression_1 |
+    Branch_expression_1 Name Expression_1 String Expression_1 |
     Char_expression_1 Char |
     Function_expression_1 Pat Expression_1 |
     Int_expression_1 Integer |
@@ -181,6 +182,11 @@ module Naming where
   naming_expression g a (f, b) =
     case a of
       Application_expression_9 c d -> naming_application g (f, b) (naming_expression g c (f, b)) d
+      Branch_expression_9 c d e h ->
+        (
+          (\i -> \(j, k) -> Branch_expression_1 c i j k) <$>
+          naming_expression g d (f, b) <*>
+          (naming_name g e b >>= \(i, j) -> (,) j <$> naming_expression g h (f, i)))
       Char_expression_9 c -> Right (Char_expression_1 c)
       Function_expression_9 c d -> naming_fun g (f, b) c d
       Int_expression_9 c -> Right (Int_expression_1 c)

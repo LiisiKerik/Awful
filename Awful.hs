@@ -103,7 +103,7 @@ init' =
     Data.Map.fromList
       [
         ("Field", Data.Map.fromList [("Modular", Language)]),
-        ("Nonzero", Data.Map.fromList []),
+        ("Nonzero", Data.Map.fromList [("Next", Language)]),
         ("Ord", Data.Map.fromList [("Char", Language), ("Int", Language), ("Modular", Language)]),
         ("Ring", Data.Map.fromList [("Int", Language), ("Modular", Language)]),
         ("Writeable", Data.Map.fromList [("Int", Language), ("Modular", Language)])])

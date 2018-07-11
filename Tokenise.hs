@@ -30,6 +30,7 @@ module Tokenise where
   data Token_0 =
     Algebraic_token |
     Blank_token |
+    Branch_token |
     Branching_token |
     Case_token |
     Char_token Char |
@@ -263,6 +264,7 @@ module Tokenise where
     case a of
       "_" -> Blank_token
       "Algebraic" -> Algebraic_token
+      "Branch" -> Branch_token
       "Branching" -> Branching_token
       "Case" -> Case_token
       "Class" -> Class_token

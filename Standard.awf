@@ -1,6 +1,4 @@
 ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
-Class Foo{_ : Star}
-Class Bar{_ : Star}
 Class Applicative{F : Star -> Star}<Functor>(Apply[T : Star, U : Star] : F (T -> U) -> F T -> F U, Lift[T : Star] : T -> F T)
 Class Braided{F : Star -> Star -> Star}(
   Associate[T : Star, U : Star, V : Star] : F (F T U) V -> F T (F U V),
@@ -10,14 +8,21 @@ Class Container{F : Star -> Star}(Empty[T : Star] : F T, Filter[T : Star] : (T -
 Class Finite{T : Star}<Ord>(All : List T)
 Class Functor{F : Star -> Star}(Compose[T : Star, U : Star] : (T -> U) -> F T -> F U)
 Class Monad{F : Star -> Star}<Applicative>(Bind[T : Star, U : Star] : F T -> (T -> F U) -> F U)
-Operator ! Apply 2 Left
+Operator ! Apply 3 Left
 Operator * Multiply 0 Left
 Operator + Add 1 Left
 Operator - Minus 1 Left
-Operator . Compose 2 Left
-Operator .. Bimap 2 Right
+Operator . Compose 3 Left
+Operator .. Bimap 3 Right
+Operator < Less 2 Left
+Operator <= Less_or_equal 2 Left
+Operator =/ Not_equal 2 Left
+Operator == Equal 2 Left
+Operator > Greater 2 Left
+Operator >= Greater_or_equal 2 Left
+Operator ? Filter 3 Right
 Operator | Div 0 Left
-Def Add'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Add
+Operator ~ Bind 3 Right
 Def All_Modular[N : Nat]<Nonzero N>(x : Modular N, y : List (Modular N)) : List (Modular N) =
   Let z = Construct_List x y In Match Is_Zero x {False -> All_Modular (x - Id) z, True -> z}
 Instance Applicative{Either _}(Apply x y = Match x {Left z -> Left z, Right f -> f . y}, Lift = Right)

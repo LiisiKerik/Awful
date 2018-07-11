@@ -28,6 +28,8 @@ Class Ord_Array{N : !Nat}(Compare_Array[T : Star]<Ord T> : Array N T -> Array N 
 Class Writeable_Array{N : !Nat}(Write_Brackets_Array[T : Star]<Writeable T> : Array N T -> List Char * Logical)
 Class Writeable_Square{N : !Nat}(Write_Brackets_Square[T : Star]<Writeable T> : Square N T -> List Char * Logical)
 Class Writeable_Triangle{N : !Nat}(Write_Brackets_Triangle[T : Star]<Writeable T> : Triangle N T -> List Char * Logical)
+Operator !+ Add' 1 Left
+Def Add'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Add
 Instance Applicative{Complex}(Apply (Complex f g) (Complex x y) = Complex (f x) (g y), Lift x = Complex x x)
 Instance Applicative{Quaternion}(
   Apply (Quaternion f g h i) (Quaternion x y z a) = Quaternion (f x) (g y) (h z) (i a),

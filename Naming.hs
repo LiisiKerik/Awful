@@ -7,6 +7,15 @@ module Naming where
   import Standard
   import Tokenise
   import Tree
+  data Alg_pat_1 =
+    Application_alg_pat_1 String [Alg_pat_1] |
+    Blank_alg_pat_1 |
+    Char_alg_pat_1 Char |
+    Int_alg_pat_1 Integer |
+    Modular_alg_pat_1 Modular |
+    Name_alg_pat_1 String
+      deriving Show
+  data Case_2 = Case_2 Alg_pat_1 Expression_1 deriving Show
   data Class_1 = Class_1 String (Name, Kind_0) (Maybe Name) [Method_1] deriving Show
   data Class_2 = Class_2 String (String, Kind_0) (Maybe Name) [Method_2] deriving Show
   data Data_1 = Data_1 String [(Name, Kind_0)] Data_branch_1 deriving Show
@@ -32,22 +41,12 @@ module Naming where
     Char_expression_1 Char |
     Function_expression_1 Pat Expression_1 |
     Int_expression_1 Integer |
-    Match_expression_1 Location_0 Expression_1 Matches_1 |
+    Match_expression_1 Location_0 Expression_1 [Case_2] |
     Modular_expression_1 Modular |
     Name_expression_1 Name (Maybe Type_8) [Type_8]
       deriving Show
   data Form_1 = Form_1 String [Type_8] deriving Show
   type Locations = Map' Location'
-  data Match_Algebraic_1 = Match_Algebraic_1 Name [Pat] Expression_1 deriving Show
-  data Match_char_1 = Match_char_1 Location_0 Char Expression_1 deriving Show
-  data Match_Int_1 = Match_Int_1 Location_0 Integer Expression_1 deriving Show
-  data Match_Modular_1 = Match_Modular_1 Location_0 Modular Expression_1 deriving Show
-  data Matches_1 =
-    Matches_Algebraic_1 [Match_Algebraic_1] (Maybe (Location_0, Expression_1)) |
-    Matches_char_1 [Match_char_1] Expression_1 |
-    Matches_Int_1 [Match_Int_1] Expression_1 |
-    Matches_Modular_1 [Match_Modular_1] (Maybe (Location_0, Expression_1))
-      deriving Show
   data Method_1 = Method_1 String [(Name, Kind_0)] [Constraint_0] Type_8 deriving Show
   data Method_2 = Method_2 String [(String, Kind_0)] [Constraint_0] Type_8 deriving Show
   data Tree_4 = Tree_4 [Data_1] [Class_1] [Name] [Def_2] deriving Show
@@ -83,6 +82,34 @@ module Naming where
   naming_2 :: String -> Tree_4 -> (Set String, Locations) -> Err Tree_5
   naming_2 e (Tree_4 a f c b) (h, i) =
     naming_datas_2 e a i >>= \d -> naming_classes_1 e f i >>= \g -> Tree_5 d g c <$> naming_defs_2 e b (h, i)
+{-
+  naming_pat :: String -> Pat -> (Set String, Locations) -> Err (Locations, Pat)
+  naming_pat a (Pat b c) (f, d) =
+    case c of
+      Application_pat g e -> second (\h -> Pat b (Application_pat g h)) <$> naming_pats a e (f, d)
+      Blank_pat -> Right (d, Pat b Blank_pat)
+      Name_pat e ->
+        case Data.Set.member e f of
+          False -> (\(g, _) -> (g, Pat b c)) <$> naming_name a (Name b e) d
+          True -> Right (d, Pat b (Application_pat e []))
+-}
+  naming_alg_pats :: String -> (Set String, Locations) -> [Alg_pat] -> Err (Locations, [Alg_pat_1])
+  naming_alg_pats a (b, c) d =
+    case d of
+      [] -> Right (c, [])
+      e : f -> naming_alg_pattern a (b, c) e >>= \(g, h) -> second ((:) h) <$> naming_alg_pats a (b, g) f
+  naming_alg_pattern :: String -> (Set String, Locations) -> Alg_pat -> Err (Locations, Alg_pat_1)
+  naming_alg_pattern a (b, c) d =
+    case d of
+      Application_alg_pat e f -> second (Application_alg_pat_1 e) <$> naming_alg_pats a (b, c) f
+      Blank_alg_pat -> Right (c, Blank_alg_pat_1)
+      Char_alg_pat e -> Right (c, Char_alg_pat_1 e)
+      Int_alg_pat e -> Right (c, Int_alg_pat_1 e)
+      Modular_alg_pat e -> Right (c, Modular_alg_pat_1 e)
+      Name_alg_pat (Name e f) ->
+        case Data.Set.member f b of
+          False -> (\(g, _) -> (g, Name_alg_pat_1 f)) <$> naming_name a (Name e f) c
+          True -> Right (c, Application_alg_pat_1 f [])
   naming_application :: String -> (Set String, Locations) -> Err Expression_1 -> Expression_9 -> Err Expression_1
   naming_application a b c d = c >>= \e -> Application_expression_1 e <$> naming_expression a d b
   naming_args :: String -> [(Name, t)] -> Locations -> Err [(String, t)]
@@ -98,6 +125,10 @@ module Naming where
   naming_arguments = naming_list <$> naming_argument
   naming_arguments' :: String -> (String -> t -> Locations -> Err (Locations, u)) -> [(t, v)] -> Locations -> Err [(u, v)]
   naming_arguments' c a b = (<$>) snd <$> naming_arguments a c b
+  naming_case :: String -> (Set String, Locations) -> Case_1 -> Err Case_2
+  naming_case a (b, g) (Case_1 c d) = naming_alg_pattern a (b, g) c >>= \(e, f) -> Case_2 f <$> naming_expression a d (b, e)
+  naming_cases :: String -> [Case_1] -> (Set String, Locations) -> Err [Case_2]
+  naming_cases a b c = traverse (naming_case a c) b
   naming_class_0 :: String -> Class_7 -> Locations -> Err (Locations, Class_1)
   naming_class_0 a (Class_7 b c h d) e = naming_name a b e >>= \(f, g) -> second (Class_1 g c h) <$> naming_methods_0 a d f
   naming_class_1 :: String -> Class_1 -> Locations -> Err Class_2
@@ -153,24 +184,6 @@ module Naming where
       Basic_def_2 k c d t f g ->
         naming_arguments naming_name j d b >>= \(h, i) -> Basic_def_3 k c i t f <$> naming_expression j g (m, h)
       Instance_2 f c d g k e -> naming_patterns j g b >>= \(h, i) -> Instance_3 f c d i k <$> naming_nameexprs j (m, h) e
-  naming_default ::
-    (
-      (Set String, Locations) ->
-      (String -> u -> (Set String, Locations) -> Err t) ->
-      u ->
-      String ->
-      (t -> Maybe (Location_0, Expression_1) -> Matches_1) ->
-      Maybe (Location_0, Expression_9) ->
-      Err Matches_1)
-  naming_default b i j a g c =
-    (
-      i a j b >>=
-      \h ->
-        (
-          g h <$>
-          case c of
-            Just (d, e) -> (\f -> Just (d, f)) <$> naming_expression a e b
-            Nothing -> Right Nothing))
   naming_defs_1 :: String -> [Def_1] -> Locations -> Err ([Def_2], Locations)
   naming_defs_1 a b c =
     case b of
@@ -197,7 +210,7 @@ module Naming where
           case Data.Set.member c f of
             False -> i (Name_pat c) (Prelude.foldr Function_expression_9 e d)
             True -> i (Application_pat c d) e
-      Match_expression_9 h c d -> naming_expression g c (f, b) >>= \e -> Match_expression_1 h e <$> naming_matches g d (f, b)
+      Match_expression_9 h c d -> Match_expression_1 h <$> naming_expression g c (f, b) <*> naming_cases g d (f, b)
       Modular_expression_9 c -> Right (Modular_expression_1 c)
       Name_expression_9 c d e -> Right (Name_expression_1 c d e)
   naming_fields :: String -> [(Name, Type_8)] -> Locations -> Err (Locations, [(String, Type_8)])
@@ -218,6 +231,7 @@ module Naming where
     case b of
       [] -> Right []
       d : e -> a g d c >>= \f -> (:) f <$> naming_list' a g e c
+{-
   naming_match_algebraic :: String -> Match_Algebraic_9 -> (Set String, Locations) -> Err Match_Algebraic_1
   naming_match_algebraic a (Match_Algebraic_9 b c d) (g, e) =
     naming_pats a c (g, e) >>= \(f, h) -> Match_Algebraic_1 b h <$> naming_expression a d (g, f)
@@ -257,6 +271,7 @@ module Naming where
     case b of
       [] -> Right []
       d : e -> naming_match_modular a d c >>= \f -> (:) f <$> naming_matches_modular a e c
+-}
   naming_method_0 :: String -> Method_9 -> Locations -> Err (Locations, Method_1)
   naming_method_0 a (Method_9 b c g d) e = second (\f -> Method_1 f c g d) <$> naming_name a b e
   naming_method_1 :: String -> Method_1 -> Locations -> Err Method_2

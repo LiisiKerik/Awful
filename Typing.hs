@@ -38,6 +38,8 @@ Match expression parsing has a bug. Match Foo{Int} vs Match x {False -> ...
 check that struct pattern matching for branching types never occurs in worng place: Branch N {Zero -> Construct_Array x y -> ...
 Ensure that <Nonzero N> constraint gets translated to N = Next N'.
 syntactic sugar in pattern matching. List (x, y, z) -> ...    and Array (x, y, z) in function argument.
+move single-name-pattern disambiguation from Naming to Standard?
+unused variable warnings?
 -}
 -----------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
@@ -54,6 +56,7 @@ module Typing where
   import Tree
   data Alg = Alg [(String, Kind_0)] (Map' [Type_1]) Type_1 deriving Show -- TODO: REM STRINGS FROM FST MAP
   type Algebraics = Map' (Alg, Status)
+  data Case_3 = Case_3 Alg_pat_1 Expression_2 deriving Show
   data Class_3 = Class_3 String (String, Kind_0) (Maybe Name) [Method_3] deriving Show
   data Class_4 = Class_4 (String, Kind_0) (Maybe String) [Method_4] deriving Show
   data Class_5 = Class_5 Kind_0 (Maybe String) [String] deriving Show
@@ -103,7 +106,7 @@ module Typing where
     Int_expression_2 Integer |
     Inverse_Modular_expression_2 Integer |
     Loc_expression_2 String |
-    Match_expression_2 Expression_2 Matches_2 |
+    Match_expression_2 Expression_2 [Case_3] |
     Mod_0_expression_2 |
     Mod_1_expression_2 Integer |
     Modular_expression_2 Integer |
@@ -131,13 +134,6 @@ module Typing where
         deriving Show
   data Form_2 = Form_2 String [Type_1] deriving Show
   data Globloc = Glob | Loc deriving Show
-  data Match_Algebraic_2 = Match_Algebraic_2 [Pat_1] Expression_2 deriving Show
-  data Matches_2 =
-    Matches_Algebraic_2 (Map' Match_Algebraic_2) (Maybe Expression_2) |
-    Matches_char_2 (Map Char Expression_2) Expression_2 |
-    Matches_Int_2 (Map Integer Expression_2) Expression_2 |
-    Matches_Modular_2 (Map Integer Expression_2) (Maybe Expression_2)
-      deriving Show
   data Method_3 = Method_3 String [(String, Kind_0)] [Constraint_0] Type_1 deriving Show
   data Method_4 = Method_4 String [(String, Kind_0)] [Constraint_1] Type_1 deriving Show
   data Modular' = Modular' Integer Integer deriving Show
@@ -1633,6 +1629,7 @@ module Typing where
     case c of
       [] -> d
       (e, f) : g -> type_kinds g (Data.Map.insert e f d)
+{-
   type_match_algebraic ::
     (
       Map' Alg ->
@@ -1822,6 +1819,7 @@ module Typing where
         (
           type_match_modular a b c d g h i m k u w x' w1 >>=
           \(o, q, r, v) -> type_matches_modular a b c r q h o n k v w x' w1)
+-}
   type_method :: (Location_0 -> Location_1) -> Method_2 -> Map' Kind_0 -> Err Method_3
   type_method a (Method_2 b c i d) e = Method_3 b c i <$> type_typ a d (type_kinds c e) Star_kind_0
   type_method_1 :: String -> Map' Class_5 -> Method_3 -> Err Method_4

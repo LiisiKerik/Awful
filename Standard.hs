@@ -5,6 +5,7 @@ module Standard where
   import Data.Map
   import Tokenise
   import Tree
+  data Case_1 = Case_1 Alg_pat Expression_9 deriving Show
   data Class_7 = Class_7 Name (Name, Kind_0) (Maybe Name) [Method_9] deriving Show
   data Def_1 =
     Basic_def_1 Name [(Name, Kind_0)] [Constraint_0] Type_8 Expression_9 |
@@ -22,23 +23,13 @@ module Standard where
     Function_expression_9 Pat Expression_9 |
     Int_expression_9 Integer |
     Let_expression_9 Eqq' Expression_9 |
-    Match_expression_9 Location_0 Expression_9 Matches_9 |
+    Match_expression_9 Location_0 Expression_9 [Case_1] |
     Modular_expression_9 Modular |
     Name_expression_9 Name (Maybe Type_8) [Type_8]
       deriving Show
   data Form_6 = Form_6 Name [Type_8] deriving Show
   data Location' = Language | Library Location_1 deriving Show
   type Map' t = Map String t
-  data Match_Algebraic_9 = Match_Algebraic_9 Name [Pat] Expression_9 deriving Show
-  data Match_char_9 = Match_char_9 Location_0 Char Expression_9 deriving Show
-  data Match_Int_9 = Match_Int_9 Location_0 Integer Expression_9 deriving Show
-  data Match_Modular_9 = Match_Modular_9 Location_0 Modular Expression_9 deriving Show
-  data Matches_9 =
-    Matches_Algebraic_9 [Match_Algebraic_9] (Maybe (Location_0, Expression_9)) |
-    Matches_char_9 [Match_char_9] Expression_9 |
-    Matches_Int_9 [Match_Int_9] Expression_9 |
-    Matches_Modular_9 [Match_Modular_9] (Maybe (Location_0, Expression_9))
-      deriving Show
   data Method_9 = Method_9 Name [(Name, Kind_0)] [Constraint_0] Type_8 deriving Show
   data Op = Op Integer Assoc String deriving Show
   data Op' = Op' Location_0 Op deriving Show
@@ -138,6 +129,8 @@ module Standard where
   standard_defs a b = traverse (standard_def a b)
   std_br :: (Location_0 -> Location_1) -> Data_br_0 -> Err Data_br_6
   std_br a (Data_br_0 b c) = Data_br_6 b <$> traverse (\(g, h) -> (,) g <$> std_type a h) c
+  std_case :: (Location_0 -> Location_1) -> Map' Op -> Case_0 -> Err Case_1
+  std_case a b (Case_0 c e) = Case_1 c <$> std_expr a b e
   std_cls :: (Location_0 -> Location_1) -> Class_0 -> Err Class_7
   std_cls e (Class_0 a b c d) = Class_7 a b c <$> traverse (std_mthd e) d
   std_dat :: (Location_0 -> Location_1) -> Data_0 -> Err Data_6
@@ -171,21 +164,8 @@ module Standard where
         shunting_yard a (std_expr a f, Application_expression_9, \e -> Name_expression_9 e Nothing []) f [] c d
   std_inst :: (Location_0 -> Location_1) -> Map' Op -> (Name, ([Pat], Expression_0)) -> Err (Name, Expression_9)
   std_inst a f (b, (c, d)) = (\e -> (b, Prelude.foldr Function_expression_9 e c)) <$> std_expr a f d
-  std_match_alg :: (Location_0 -> Location_1) -> Map' Op -> Match_Algebraic_0 -> Err Match_Algebraic_9
-  std_match_alg a e (Match_Algebraic_0 b c d) = Match_Algebraic_9 b c <$> std_expr a e d
-  std_match_char :: (Location_0 -> Location_1) -> Map' Op -> Match_char_0 -> Err Match_char_9
-  std_match_char a e (Match_char_0 b c d) = Match_char_9 b c <$> std_expr a e d
-  std_match_int :: (Location_0 -> Location_1) -> Map' Op -> Match_Int_0 -> Err Match_Int_9
-  std_match_int a e (Match_Int_0 b c d) = Match_Int_9 b c <$> std_expr a e d
-  std_match_modular :: (Location_0 -> Location_1) -> Map' Op -> Match_Modular_0 -> Err Match_Modular_9
-  std_match_modular a e (Match_Modular_0 b d c) = Match_Modular_9 b d <$> std_expr a e c
-  std_matches :: (Location_0 -> Location_1) -> Map' Op -> Matches_0 -> Err Matches_9
-  std_matches a e b =
-    case b of
-      Matches_Algebraic_0 c d -> Matches_Algebraic_9 <$> traverse (std_match_alg a e) c <*> std_default a e d
-      Matches_char_0 c d -> Matches_char_9 <$> traverse (std_match_char a e) c <*> std_expr a e d
-      Matches_Int_0 c d -> Matches_Int_9 <$> traverse (std_match_int a e) c <*> std_expr a e d
-      Matches_Modular_0 c d -> Matches_Modular_9 <$> traverse (std_match_modular a e) c <*> std_default a e d
+  std_matches :: (Location_0 -> Location_1) -> Map' Op -> [Case_0] -> Err [Case_1]
+  std_matches a b = traverse (std_case a b)
   std_mthd :: (Location_0 -> Location_1) -> Method -> Err Method_9
   std_mthd a (Method b c d e) = Method_9 b c d <$> std_type a e
   std_type :: (Location_0 -> Location_1) -> Type_7 -> Err Type_8

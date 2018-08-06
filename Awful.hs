@@ -17,10 +17,10 @@ type Files = Map' (File, Map' Op)
 check ::
   (
     [String] ->
-    (Files, (Set String, Locations, Locations), Map' Expr_2, Map' (Map' Location')) ->
+    (Files, ((Set String, Set String), Locations, Locations), Map' Expr_2, Map' (Map' Location')) ->
     Location' ->
     String ->
-    IO (Err ((Files, (Set String, Locations, Locations), Map' Expr_2, Map' (Map' Location')), (File, Map' Op))))
+    IO (Err ((Files, ((Set String, Set String), Locations, Locations), Map' Expr_2, Map' (Map' Location')), (File, Map' Op))))
 check b m' @ (f, _, _, _) j name_qc =
   case Data.Map.lookup name_qc f of
     Just a -> return (Right (m', a))
@@ -74,9 +74,9 @@ check_extensions a c =
 check_imports ::
   (
     [String] ->
-    ((Files, (Set String, Locations, Locations), Map' Expr_2, Map' (Map' Location')), (File, Map' Op)) ->
+    ((Files, ((Set String, Set String), Locations, Locations), Map' Expr_2, Map' (Map' Location')), (File, Map' Op)) ->
     [(Location', String)] ->
-    IO (Err ((Files, (Set String, Locations, Locations), Map' Expr_2, Map' (Map' Location')), (File, Map' Op))))
+    IO (Err ((Files, ((Set String, Set String), Locations, Locations), Map' Expr_2, Map' (Map' Location')), (File, Map' Op))))
 check_imports a b @ (f, k) c =
   case c of
     [] -> return (Right b)
@@ -94,11 +94,16 @@ eval'' a b = do
     (
       c >>=
       \((_, (e, t, _), f, _), (File j g h i _ _ m _ z, u)) -> tokenise_parse_naming_typing_eval (e, t) j (g, h, i) f b m z u)
-init' :: (Files, (Set String, Locations, Locations), Map' Expr_2, Map' (Map' Location'))
+init' :: (Files, ((Set String, Set String), Locations, Locations), Map' Expr_2, Map' (Map' Location'))
 init' =
   (
     Data.Map.empty,
-    (Data.Set.singleton "Pair", locations, Data.Map.fromList ((\x -> (x, Language)) <$> ["#", "->", "="])),
+    (
+      (
+        Data.Set.singleton "Pair",
+        Data.Set.fromList ["Construct_List", "Empty_List", "False", "Left", "Nothing", "Pair", "Right", "True", "Wrap"]),
+      locations,
+      Data.Map.fromList ((\x -> (x, Language)) <$> ["#", "->", "="])),
     defs,
     Data.Map.fromList
       [

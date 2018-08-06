@@ -21,14 +21,12 @@ checki abil võiks saada tüübikontrollida korraga mitut moodulit, andes ette n
 operaatorid struktuuride ja algebraliste andmetüüpide patternmatchides
 teha midagi et kõrvaldada parserist aegunud keelelaienduse hoiatus
 semantics of "Pair -> f" should be "Pair x y -> f x y"
-make match expression more flexible (like case in Haskell)?
 mis juhtub kui esimeses moodulis on kusagil tüübimuutuja T ja järgmises moodulis sama nimega globaalne tüüp?
 Let f = Crash, x = f f In 0 -- tüüpimine läheb lõpmatusse tsüklisse sest puudub occur check
 "./Awful eval "List (0)"" without importing Standard.awf - error message about Writeable class looks bad; fix
 let expr de-sugaring (and therefore struct name collection) completely to Standard.hs module
 all de-sugaring: remove from Tree.hs, put into Standard.hs
 simplify parsing of match expression and remove duplicate code from de-sugaring, name checking, typechecking & eval
-allow operators in pattern matching?
 What happens with unary minus and binary minus during parsing?
 allow using operators in class method definitions? Instance Ring{Complex T}<Ring T>(..., Complex x y * Complex z w = ...)
 Match expression parsing has a bug. Match Foo{Int} vs Match x {False -> ...
@@ -42,7 +40,7 @@ move modular checks to parser, std or namer?
 {-
                                         Nothing -> Left ("Incomplete match" ++ x' a7)))
 -}
------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
 module Typing where
   import Control.Monad
@@ -141,6 +139,7 @@ module Typing where
         deriving Show
   data Form_2 = Form_2 String [Type_1] deriving Show
   data Globloc = Glob | Loc deriving Show
+  data Kind_1 = Arrow_kind_1 Kind_1 Kind_1 | Nat_kind_1 | Star_kind_1 | Var_kind_1 Integer deriving (Eq, Show)
   data Method_3 = Method_3 String [(String, Kind_0)] [Constraint_0] Type_1 deriving Show
   data Method_4 = Method_4 String [(String, Kind_0)] [Constraint_1] Type_1 deriving Show
   data Modular' = Modular' Integer Integer deriving Show
@@ -484,8 +483,16 @@ module Typing where
     case a of
       Left _ -> True
       Right _ -> False
+  kind_0_to_1 :: Kind_0 -> Kind_1
+  kind_0_to_1 a =
+    case a of
+      Arrow_kind_0 b c -> Arrow_kind_1 (kind_0_to_1 b) (kind_0_to_1 c)
+      Nat_kind_0 -> Nat_kind_1
+      Star_kind_0 -> Star_kind_1
   kind_err :: Location_1 -> Err t
   kind_err a = Left ("Kind mismatch" ++ location' a)
+  kind_mism_err :: Location_1 -> Kind_1 -> Kind_1 -> String
+  kind_mism_err a b c = "Kind mismatch" ++ location a ++ " between " ++ show_kind b ++ " and " ++ show_kind c ++ "."
   kinds :: Map' Kind_0
   kinds =
     Data.Map.fromList
@@ -564,6 +571,12 @@ module Typing where
     case a of
       '!' : _ -> False
       _ -> True
+  occ_kind :: Integer -> Kind_1 -> Bool
+  occ_kind a b =
+    case b of
+      Arrow_kind_1 c d -> occ_kind a c || occ_kind a d
+      Var_kind_1 c -> c == a
+      _ -> False
   old' :: Map' (Map' t) -> Map' (Map' (t, Status))
   old' = (<$>) old
   pair_type :: Type_1 -> Type_1 -> Type_1
@@ -578,8 +591,39 @@ module Typing where
         case Data.Map.lookup c a of
           Just d -> d
           Nothing -> b
+  repl_kind_eq :: Integer -> Kind_1 -> Kind_1 -> Kind_1
+  repl_kind_eq a b c =
+    case c of
+      Arrow_kind_1 d e -> Arrow_kind_1 (repl_kind_eq a b d) (repl_kind_eq a b e)
+      Var_kind_1 d ->
+        case d == a of
+          False -> c
+          True -> b
+      _ -> c
+  repl_kind_eqs :: Integer -> Kind_1 -> [(Kind_1, Kind_1)] -> [(Kind_1, Kind_1)]
+  repl_kind_eqs a b c = bimap (repl_kind_eq a b) (repl_kind_eq a b) <$> c
   show_char :: Char -> String
   show_char c = show [c]
+  show_kind :: Kind_1 -> String
+  show_kind a = fst (show_kind' a)
+  show_kind' :: Kind_1 -> (String, Bool)
+  show_kind' a =
+    case a of
+      Arrow_kind_1 b c ->
+        let
+          (d, e) = show_kind' b
+        in
+          (
+            (
+              (case e of
+                False -> d
+                True -> "(" ++ d ++ ")") ++
+              " -> " ++
+              show_kind c),
+            True)
+      Nat_kind_1 -> ("Nat", False)
+      Star_kind_1 -> ("Star", False)
+      Var_kind_1 b -> (show b, False)
   slv :: Map' (Map' [[String]]) -> [(String, (Name, Type_1))] -> (Name -> String -> String -> String) -> Err ()
   slv a b h =
     case b of
@@ -638,6 +682,24 @@ module Typing where
     case d of
       [] -> Right e
       f : g -> solve_cond a b c f e >>= solve_conds a b c g
+  solve_type_eqs :: Location_1 -> [(Kind_1, Kind_1)] -> Err ()
+  solve_type_eqs a b =
+    case b of
+      [] -> Right ()
+      d : e ->
+        case d of
+          (Arrow_kind_1 f g, Arrow_kind_1 h i) -> solve_type_eqs a ((f, h) : (g, i) : e)
+          (Nat_kind_1, Nat_kind_1) -> solve_type_eqs a e
+          (Star_kind_1, Star_kind_1) -> solve_type_eqs a e
+          (Var_kind_1 f, Var_kind_1 g) -> solve_type_eqs a (repl_kind_eqs f (Var_kind_1 g) e)
+          (Var_kind_1 f, g) -> solve_type_eqs' a f g e
+          (f, Var_kind_1 g) -> solve_type_eqs' a g f e
+          (f, g) -> Left (kind_mism_err a f g)
+  solve_type_eqs' :: Location_1 -> Integer -> Kind_1 -> [(Kind_1, Kind_1)] -> Err ()
+  solve_type_eqs' a b c d =
+    case occ_kind b c of
+      False -> solve_type_eqs a (repl_kind_eqs b c d)
+      True -> Left (kind_mism_err a (Var_kind_1 b) c)
   solvesys ::
     (String -> String -> Err ([(String, (Name, Type_1))], Expression_2, Set String, [Cond_eqtns])) ->
     [(Type_1, Type_1)] ->
@@ -1367,6 +1429,22 @@ module Typing where
     case a of
       [] -> Right c
       d : e -> type_def_2 f d b c g i u w >>= \h -> type_defs_2 f e b h g i u w
+  type_eqs ::
+    (
+      (Location_0 -> Location_1) ->
+      Integer ->
+      Type_5 ->
+      Map' Kind_0 ->
+      Kind_1 ->
+      [(Kind_1, Kind_1)] ->
+      Err (Integer, [(Kind_1, Kind_1)], Type_1))
+  type_eqs m i a d k f =
+    case a of
+      Application_type_5 b c ->
+        (
+          type_eqs m (i + 1) b d (Arrow_kind_1 (Var_kind_1 i) k) f >>=
+          \(i', f', b') -> (\(i2, f2, c') -> (i2, f2, Application_type_1 b' c')) <$> type_eqs m i' c d (Var_kind_1 i) f')
+      Name_type_5 (Name l b) -> und_err b d "type" (m l) (\q -> Right (i, (k, kind_0_to_1 q) : f, Name_type_1 b))
   type_expr ::
     String ->
     Type_1 ->
@@ -1744,38 +1822,8 @@ module Typing where
               (
                 type_pat a b j m f g h i >>=
                 \(c, o, p, q, r) -> (\(s, t, u, v, w) -> (c : s, t, u, v, w)) <$> type_pats a b k n o p q r (Name x y))
-{-
-TODO:
-Do it with 1 function that assembles a system of equations and one function that solves the system
-Make error messages similar to those for type errors ("Kind mismatch between x and y ...")
--}
   type_typ :: (Location_0 -> Location_1) -> Type_8 -> Map' Kind_0 -> Kind_0 -> Err Type_1
-  type_typ a (Type_8 b c) = type_type a b c
-  type_type :: (Location_0 -> Location_1) -> Location_0 -> Type_5 -> Map' Kind_0 -> Kind_0 -> Err Type_1
-  type_type l a c d e =
-    let
-      x = kind_err (l a)
-    in
-      case c of
-        Application_type_5 f g ->
-          (
-            type_type' l a f d >>=
-            \(h, i) ->
-              case i of
-                Arrow_kind_0 j k -> if k == e then Application_type_1 h <$> type_type l a g d j else x
-                _ -> x)
-        Name_type_5 (Name a' f) -> und_err f d "type" (l a') (\g -> if g == e then Right (Name_type_1 f) else x)
-  type_type' :: (Location_0 -> Location_1) -> Location_0 -> Type_5 -> Map' Kind_0 -> Err (Type_1, Kind_0)
-  type_type' l a c d =
-    case c of
-      Application_type_5 e f ->
-        (
-          type_type' l a e d >>=
-          \(g, h) ->
-            case h of
-              Arrow_kind_0 i j -> (\k -> (Application_type_1 g k, j)) <$> type_type l a f d i
-              _ -> kind_err (l a))
-      Name_type_5 (Name a' e) -> und_err e d "type" (l a') (\f -> Right (Name_type_1 e, f))
+  type_typ a (Type_8 b c) d e = type_eqs a 0 c d (kind_0_to_1 e) [] >>= \(_, h, i) -> i <$ solve_type_eqs (a b) h
   type_types :: (Location_0 -> Location_1) -> [Type_8] -> Map' Kind_0 -> Err [Type_1]
   type_types f a b =
     case a of
@@ -1986,4 +2034,4 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
     case Data.Map.lookup a b of
       Just c -> c
       Nothing -> undefined
------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------

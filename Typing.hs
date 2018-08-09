@@ -16,9 +16,8 @@ module system related functions into a separate file?
 make command line arguments nicer
 todo: make a function writing operator/function. For printing stuff like "Complex (Fraction 0 1) (Fraction 1 1)"
 checki abil võiks saada tüübikontrollida korraga mitut moodulit, andes ette nimekirja
-ühildada Standard ja parser? või vastupidi, süntaktiline suhkur (listide sün.suhk.) standard moodulisse?
+süntaktiline suhkur (listide sün.suhk.) standard moodulisse?
 operaatorid struktuuride ja algebraliste andmetüüpide patternmatchides
-teha midagi et kõrvaldada parserist aegunud keelelaienduse hoiatus
 semantics of "Pair -> f" should be "Pair x y -> f x y"
 mis juhtub kui esimeses moodulis on kusagil tüübimuutuja T ja järgmises moodulis sama nimega globaalne tüüp?
 Let f = Crash, x = f f In 0 -- tüüpimine läheb lõpmatusse tsüklisse sest puudub occur check
@@ -39,14 +38,12 @@ special type (with special constructor for flexible type variables) for type equ
 not give equations as argument; instead, compose equations with ++
 check in Naming module that all pattern constructors are valid
 -}
-{-
-                                        Nothing -> Left ("Incomplete match" ++ x' a7)))
--}
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
 module Typing where
   import Control.Monad
   import Data.Bifunctor
+  import Data.Foldable
   import Data.List
   import Data.Map
   import Data.Set
@@ -572,6 +569,54 @@ module Typing where
   old' = (<$>) old
   pair_type :: Type_1 -> Type_1 -> Type_1
   pair_type x = Application_type_1 (Application_type_1 (Name_type_1 "Pair") x)
+  pats :: (Location_0 -> Location_1) -> (Map' Constructor, Map' [String]) -> [(Location_0, [Alg_pat_3])] -> Err ()
+  pats a b = traverse_ (\(d, e) -> patterns b (a d, e))
+  pattern :: (Map' Constructor, Map' [String]) -> [(Pattern_5, Bool)] -> Alg_pat_3 -> ([(Pattern_5, Bool)], Bool)
+  pattern context x y =
+    case x of
+      [] -> ([], False)
+      z : a ->
+        let
+          (b, c) = pattern' context z y
+        in
+          bimap ((++) b) ((||) c) (pattern context a y)
+  pattern' :: (Map' Constructor, Map' [String]) -> (Pattern_5, Bool) -> Alg_pat_3 -> ([(Pattern_5, Bool)], Bool)
+  pattern' context (x, y) z =
+    case y of
+      False -> split_pattern context x z
+      True -> ([(x, True)], False)
+  patterns :: (Map' Constructor, Map' [String]) -> (Location_1, [Alg_pat_3]) -> Err ()
+  patterns context (l, x) =
+    (
+      patterns' context [(Blank_pattern_5, False)] (l, x) >>=
+      \y ->
+        case all snd y of
+          False -> Left ("Incomplete match" ++ location' l)
+          True -> Right ())
+  patterns' :: (Map' Constructor, Map' [String]) -> [(Pattern_5, Bool)] -> (Location_1, [Alg_pat_3]) -> Err [(Pattern_5, Bool)]
+  patterns' context x (l, y) =
+    case y of
+      [] -> Right x
+      z : a ->
+        let
+          (b, c) = pattern context x z
+        in
+          case c of
+            False -> Left ("Unnecessary patterns" ++ location' l)
+            True -> patterns' context b (l, a)
+  primitive_pattern_0 :: (t -> Pattern_5, Set t -> Pattern_5) -> t -> ([(Pattern_5, Bool)], Bool)
+  primitive_pattern_0 (f, g) x = ([(f x, True), (g (Data.Set.singleton x), False)], True)
+  primitive_pattern_1 :: Eq t => (t -> Pattern_5) -> t -> t -> ([(Pattern_5, Bool)], Bool)
+  primitive_pattern_1 f x y =
+    let
+      z = y == x
+    in
+      ([(f x, z)], z)
+  primitive_pattern_2 :: Ord t => (t -> Pattern_5, Set t -> Pattern_5) -> Set t -> t -> ([(Pattern_5, Bool)], Bool)
+  primitive_pattern_2 (f, g) x y =
+    case Data.Set.member y x of
+      False -> ([(f y, True), (g (Data.Set.insert y x), False)], True)
+      True -> ([(g x, False)], False)
   rem_old' :: Map' (Map' (t, Status)) -> Map' (Map' t)
   rem_old' a = Data.Map.filter (\b -> not (Data.Map.null b)) (rem_old <$> a)
   repl' :: Map' Type_1 -> Type_1 -> Type_1
@@ -754,6 +799,39 @@ module Typing where
       m = sysrep' c d
     in
       solvesys a (bimap m m <$> e) (second (second m) <$> x, sysrep2 c d f, Data.Set.delete c k, sysrep_cond c d <$> w)
+  split_pattern :: (Map' Constructor, Map' [String]) -> Pattern_5 -> Alg_pat_3 -> ([(Pattern_5, Bool)], Bool)
+  split_pattern (constructors, structs) x y =
+    case (x, y) of
+      (Blank_pattern_5, Char_alg_pat_3 z) -> primitive_pattern_0 (Char_pattern_5, Char_blank_pattern_5) z
+      (Blank_pattern_5, Int_alg_pat_3 z) -> primitive_pattern_0 (Int_pattern_5, Int_blank_pattern_5) z
+      (Blank_pattern_5, Modular_alg_pat_3 (Modular' z a)) -> ((\b -> (Modular_pattern_5 b, b == a)) <$> [0 .. z - 1], True)
+      (Blank_pattern_5, Struct_alg_pat_3 z a) ->
+        let
+          Constructor d _ = constructors ! z
+        in
+          (
+            join
+              (
+                (\b ->
+                  let
+                    Constructor _ c = constructors ! b
+                  in
+                    case b == z of
+                      False -> [(Struct_pattern_5 b (replicate (length c) Blank_pattern_5), False)]
+                      True -> fst (struct_pattern (constructors, structs) z ((,) Blank_pattern_5 <$> a))) <$>
+                structs ! d),
+            True)
+      (Char_blank_pattern_5 z, Char_alg_pat_3 a) -> primitive_pattern_2 (Char_pattern_5, Char_blank_pattern_5) z a
+      (Char_pattern_5 z, Char_alg_pat_3 a) -> primitive_pattern_1 Char_pattern_5 z a
+      (Int_blank_pattern_5 z, Int_alg_pat_3 a) -> primitive_pattern_2 (Int_pattern_5, Int_blank_pattern_5) z a
+      (Int_pattern_5 z, Int_alg_pat_3 a) -> primitive_pattern_1 Int_pattern_5 z a
+      (Modular_pattern_5 z, Modular_alg_pat_3 (Modular' _ a)) -> primitive_pattern_1 Modular_pattern_5 z a
+      (Struct_pattern_5 z a, Struct_alg_pat_3 b c) ->
+        case b == z of
+          False -> ([(x, False)], False)
+          True -> struct_pattern (constructors, structs) z (zip a c)
+      (_, Blank_alg_pat_3) -> ([(x, True)], True)
+      _ -> undefined
   standard_naming_typing ::
     (
       String ->
@@ -764,6 +842,14 @@ module Typing where
     (
       standard_1 (Location_1 f) t a >>=
       \(v, n') -> naming f n' b >>= \(d, e) -> (\(h, i, n) -> (d, (h, v), i, n)) <$> typing f e (c, g, m))
+  struct_pattern :: (Map' Constructor, Map' [String]) -> String -> [(Pattern_5, Alg_pat_3)] -> ([(Pattern_5, Bool)], Bool)
+  struct_pattern context x y =
+    first
+      (fmap (first (Struct_pattern_5 x)))
+      (Prelude.foldr
+        (\(z, a) -> \(b, c) -> (compose_patterns <$> z <*> b, a && c))
+        ([([], True)], True)
+        (uncurry (split_pattern context) <$> y))
   sysrep' :: String -> Type_1 -> Type_1 -> Type_1
   sysrep' a b c =
     let
@@ -818,62 +904,6 @@ module Typing where
     case b of
       [] -> []
       c : d -> (c, Field_expression_2 a) : type_brs_0 (a + 1) d
-{-
-  type_match_algebraic ::
-    (
-      Map' Alg ->
-      Map' String ->
-      (Location_0 -> Location_1) ->
-      Integer ->
-      Eqtns ->
-      Map' (Type_2, Globloc) ->
-      Map' Match_Algebraic_2 ->
-      Match_Algebraic_1 ->
-      Type_1 ->
-      Map' (Either Location_0 [Type_1]) ->
-      (Location_0, String) ->
-      Map' Type_1 ->
-      Map' Kind_0 ->
-      Map' Strct ->
-      Err (Map' Match_Algebraic_2, Eqtns, Integer, Map' (Either Location_0 [Type_1])))
-  type_match_algebraic a b c d (Eqtns g t0 t1 t2) h i (Match_Algebraic_1 (Name j k) l m) n o (q1, q) r m2 x5 =
-    case Data.Map.lookup k o of
-      Just p' ->
-        case p' of
-          Left e' -> Left (location_err' ("cases for " ++ k) (c e') (c j))
-          Right p ->
-            (
-              type_case c (Name j k) r l p h x5 d g t0 >>=
-              \(s0, s, w2, g2, t4) ->
-                (
-                  (\(t, u, v) -> (Data.Map.insert k (Match_Algebraic_2 s0 t) i, u, v, Data.Map.insert k (Left j) o)) <$>
-                  type_expression a b c w2 (Eqtns g2 t4 t1 t2) s m n m2 x5))
-      Nothing ->
-        Left
-          (
-            case Data.Map.lookup k b of
-              Just _ -> "Incompatible constructors " ++ q ++ " and " ++ k ++ location (c q1) ++ " and" ++ location' (c j)
-              Nothing -> "Undefined algebraic constructor " ++ k ++ location' (c j))
-  type_match_char ::
-    (
-      Map' Alg ->
-      Map' String ->
-      (Location_0 -> Location_1) ->
-      Integer ->
-      Eqtns ->
-      Map' (Type_2, Globloc) ->
-      Map Char Expression_2 ->
-      Match_char_1 ->
-      Type_1 ->
-      Map Char Location_0 ->
-      Map' Kind_0 ->
-      Map' Strct ->
-      Err (Map Char Expression_2, Eqtns, Integer, Map Char Location_0))
-  type_match_char a b c d g h i (Match_char_1 y2 j k) l x1 w w7 =
-    case Data.Map.lookup j x1 of
-      Just y0 -> Left (location_err' ("cases for " ++ show_char j) (c y0) (c y2))
-      Nothing -> (\(m, n, o) -> (Data.Map.insert j m i, n, o, Data.Map.insert j y2 x1)) <$> type_expression a b c d g h k l w w7
--}
   type_case ::
     (
       Map' Alg ->
@@ -1459,7 +1489,7 @@ module Typing where
   type_expr k h a (c, d, e) f m w b =
     (
       type_expression c d a w (Eqtns Data.Set.empty [] [] []) ((\e' -> (e', Glob)) <$> e) f h b >>=
-      \(g, i, _, w3) -> solve_all a m (" in " ++ k) i g)
+      \(g, i, _, z) -> solve_all a m (" in " ++ k) i g <* pats a (d, (\(Alg _ _ e') -> e') <$> c) z)
   type_expr' ::
     (Map' Kind_0, Map' Alg, Map' Constructor, Map' Type_2) -> Expression_1 -> Map' (Map' [[String]]) -> Err Expression_2
   type_expr' (b, c, d, e) f g =

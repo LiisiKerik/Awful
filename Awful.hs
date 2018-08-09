@@ -91,9 +91,7 @@ eval'' :: [String] -> String -> IO (Err String)
 eval'' a b = do
   c <- check_imports [] (init', init_type_context) ((,) Language <$> a)
   return
-    (
-      c >>=
-      \((_, (e, t, _), f, _), (File j g h i _ _ m _ z, u)) -> tokenise_parse_naming_typing_eval (e, t) j (g, h, i) f b m z u)
+    (c >>= \((_, (e, t, _), f, _), (File j g h i _ _ m _, u)) -> tokenise_parse_naming_typing_eval (e, t) j (g, h, i) f b m u)
 init' :: (Files, ((Set String, Set String), Locations, Locations), Map' Expr_2, Map' (Map' Location'))
 init' =
   (

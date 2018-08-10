@@ -99,7 +99,8 @@ init' =
     (
       (
         Data.Set.singleton "Pair",
-        Data.Set.fromList ["Construct_List", "Empty_List", "False", "Left", "Nothing", "Pair", "Right", "True", "Wrap"]),
+        Data.Set.fromList
+          ["Construct_List", "EQ", "Empty_List", "False", "GT", "Left", "LT", "Nothing", "Pair", "Right", "True", "Wrap"]),
       locations,
       Data.Map.fromList ((\x -> (x, Language)) <$> ["#", "->", "="])),
     defs,

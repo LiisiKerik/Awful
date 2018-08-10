@@ -268,11 +268,6 @@ module Tree where
   parse_data_br = Data_br_0 <$ parse_arrow <*> parse_name' <*> parse_arguments' parse_name'
   parse_def :: Parser' Def_0
   parse_def = parse_basic <+> parse_instance
-  parse_default :: Parser' Expression_0
-  parse_default = parse_comma *> parse_token Default_token *> parse_arrow *> parse_expression'
-  parse_default' :: Parser' (Maybe (Location_0, Expression_0))
-  parse_default' =
-    Just <$ parse_comma <*> ((,) <& parse_token Default_token <* parse_arrow <*> parse_expression') <+> pure Nothing
   parse_elementary :: (Token_0 -> Maybe t) -> Parser' t
   parse_elementary a =
     Parser

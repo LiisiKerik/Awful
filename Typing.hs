@@ -33,6 +33,8 @@ Ensure that <Nonzero N> constraint gets translated to N = Next N'.
 syntactic sugar in pattern matching. List (x, y, z) -> ...    and Array (x, y, z) in function argument
 move single-name-pattern disambiguation from Naming to Standard?
 unused variable warnings?
+eta reduction warnings?
+variable defined under let used in only one place warning?
 move modular checks to parser, std or namer?
 special type (with special constructor for flexible type variables) for type equations?
 not give equations as argument; instead, compose equations with ++

@@ -51,8 +51,8 @@ Instance Container{List}(
       Construct_List y z -> Let a = Filter f z In Match f y {False -> a, True -> Construct_List y a}})
 Instance Container{Maybe}(Empty = Nothing, Filter f x = Bind x (y -> Match f y {False -> Nothing, True -> x}))
 Def Convert'[F : Star -> Star, T : Star]<Applicative F, Ring T>(x : Int) : F T = Lift (Convert x)
-Def Equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> True, Default -> False}
-Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing})
+Def Equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> True, _ -> False}
+Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, _ -> Nothing})
 Instance Field{Logical}(Inverse x = Match x {False -> Nothing, True -> Wrap True})
 Instance Field{Pair T U}<Field T, Field U>(Inverse (Pair x y) = Zip Pair (Inverse x) (Inverse y))
 Instance Finite{Comparison}(All = List (LT,  EQ,  GT))
@@ -67,19 +67,19 @@ Instance Functor{Function _}(Compose f g x = f (g x))
 Instance Functor{List}(Compose f x = Match x {Empty_List -> List, Construct_List y z -> Construct_List (f y) (f . z)})
 Instance Functor{Maybe}(Compose f x = Match x {Nothing -> Nothing, Wrap y -> Wrap (f y)})
 Instance Functor{Pair _}(Compose = Map_right)
-Def Greater[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> True, Default -> False}
-Def Greater_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> False, Default -> True}
+Def Greater[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> True, _ -> False}
+Def Greater_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> False, _ -> True}
 Def Id[T : Star]<Ring T> : T = Convert 1
 Def Identity[T : Star](x : T) : T = x
 Def Interleave[T : Star](x : List T, y : List (List T)) : List T =
   Match y {Empty_List -> List, Construct_List z a -> Cat z (Flatten (Cat x . a))}
 Def Is_Zero[T : Star]<Ord T, Ring T> : T -> Logical = Equal Zr
-Def Less[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> True, Default -> False}
-Def Less_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> False, Default -> True}
+Def Less[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> True, _ -> False}
+Def Less_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> False, _ -> True}
 Def Map_left[T : Star, U : Star, F : Star -> Star -> Star, V : Star]<Braided F>(f : T -> U) : F T V -> F U V = f .. Identity
 Def Map_right[T : Star, U : Star, F : Star -> Star -> Star, V : Star]<Braided F> : (T -> U) -> F V T -> F V U = Bimap Identity
-Def Max[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> y, Default -> x}
-Def Min[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> x, Default -> y}
+Def Max[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> y, _ -> x}
+Def Min[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> x, _ -> y}
 Def Minus[T : Star]<Ring T>(x : T, y : T) : T = x + Negate y
 Instance Monad{Either _}(Bind x f = Match x {Left y -> Left y, Right y -> f y})
 Instance Monad{Function _}(Bind f g x = g (f x) x)
@@ -88,18 +88,18 @@ Instance Monad{Maybe}(Bind x f = Match x {Nothing -> Nothing, Wrap y -> f y})
 Def Multiply'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Multiply
 Def Negate'[F : Star -> Star, T : Star]<Functor F, Ring T> : F T -> F T = Compose Negate
 Def Not(x : Logical) : Logical = Match x {False -> True, True -> False}
-Def Not_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> False, Default -> True}
+Def Not_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> False, _ -> True}
 Instance Ord{Comparison}(
   Compare x y =
     Match x {
-      LT -> Match y {LT -> EQ, Default -> LT},
+      LT -> Match y {LT -> EQ, _ -> LT},
       EQ -> Match y {LT -> GT, EQ -> EQ, GT -> LT},
-      GT -> Match y {GT -> EQ, Default -> GT}})
+      GT -> Match y {GT -> EQ, _ -> GT}})
 Instance Ord{Either T U}<Ord T, Ord U>(
   Compare x y =
     Match x {
-      Left z -> Match y {Left w -> Compare z w, Right -> LT},
-      Right z -> Match y {Left -> GT, Right w -> Compare z w}})
+      Left z -> Match y {Left w -> Compare z w, Right _ -> LT},
+      Right z -> Match y {Left _ -> GT, Right w -> Compare z w}})
 Instance Ord{List T}<Ord T>(
   Compare x y =
     Match x {
@@ -109,7 +109,7 @@ Instance Ord{Logical}(
   Compare x y = Match x {False -> Match y {False -> EQ, True -> LT}, True -> Match y {False -> GT, True -> EQ}})
 Instance Ord{Maybe T}<Ord T>(
   Compare x y =
-    Match x {Nothing -> Match y {Nothing -> EQ, Wrap -> LT}, Wrap z -> Match y {Nothing -> GT, Wrap w -> Compare z w}})
+    Match x {Nothing -> Match y {Nothing -> EQ, Wrap _ -> LT}, Wrap z -> Match y {Nothing -> GT, Wrap w -> Compare z w}})
 Instance Ord{Pair T U}<Ord T, Ord U>(
   Compare (Pair x y) (Pair z a) = Match Compare x z {LT -> LT, EQ -> Compare y a, GT -> GT})
 Instance Ring{Logical}(Add = Not_equal, Convert x = Equal (Convert x) (1 # 2), Multiply = Min, Negate = Identity)
@@ -122,7 +122,7 @@ Def Write[T : Star]<Writeable T>(x : T) : List Char = First (Write_Brackets x)
 Def Write'(x : List Char, y : List (List Char)) : List Char = Interleave (Lift " ") (Construct_List x y)
 Instance Writeable{Char}(
   Write_Brackets c =
-    Pair (Match c {Newline -> List ("N", "e", "w", "l", "i", "n", "e"), Default -> List (""", c, """)}) False)
+    Pair (Match c {Newline -> List ("N", "e", "w", "l", "i", "n", "e"), _ -> List (""", c, """)}) False)
 Instance Writeable{Comparison}(
   Write_Brackets x = Pair (Match x {LT -> List ("L", "T"), EQ -> List ("E", "Q"), GT -> List ("G", "T")}) False)
 Instance Writeable{Either T U}<Writeable T, Writeable U>(

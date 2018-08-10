@@ -129,8 +129,8 @@ Instance Writeable{Either T U}<Writeable T, Writeable U>(
   Write_Brackets x =
     Pair
       (Match x {
-        Left y -> Cat (List ("L", "e", "f", "t")) (Brackets y),
-        Right y -> Cat (List ("R", "i", "g", "h", "t")) (Brackets y)})
+        Left y -> Cat (List ("L", "e", "f", "t", " ")) (Brackets y),
+        Right y -> Cat (List ("R", "i", "g", "h", "t", " ")) (Brackets y)})
       True)
 Instance Writeable{List T}<Writeable T>(
   Write_Brackets x =

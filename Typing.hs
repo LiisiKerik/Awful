@@ -1,5 +1,4 @@
 {-
-protection against duplicate file loading - what happens now? if crashes - fix, give a nice error/warning. if nothing - warn?
 tests
 topelt-esindajate kontroll nimekontrolliga kokku? move duplicate instance control into Naming module?
 internal: do something with old/new status tags. check where exactly they're necessary. get rid of them where they're useless
@@ -11,9 +10,8 @@ allow to hide (prevent exporting) constructors and field accessors which can pot
 syntactic sugar for lists, vectors, matrices... allow writing (tiny, limited to expression parsing) language extensions?
 boolean function library
 implement map and set (AVL trees?)
-different ways of folding lists, vectors, sets, maps etc
+different ways of folding lists, vectors etc
 module system related functions into a separate file?
-make command line arguments nicer
 todo: make a function writing operator/function. For printing stuff like "Complex (Fraction 0 1) (Fraction 1 1)"
 checki abil võiks saada tüübikontrollida korraga mitut moodulit, andes ette nimekirja
 süntaktiline suhkur (listide sün.suhk.) standard moodulisse?
@@ -39,6 +37,7 @@ move modular checks to parser, std or namer?
 special type (with special constructor for flexible type variables) for type equations?
 not give equations as argument; instead, compose equations with ++
 check in Naming module that all pattern constructors are valid
+special class for countable/enumerable things (like Integer). Stronger than Ord, weaker than Finite
 -}
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}

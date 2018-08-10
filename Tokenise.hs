@@ -34,9 +34,11 @@ module Tokenise where
     Branching_token |
     Case_token |
     Char_token Char |
+    Check_token |
     Class_token |
     Comma_token |
     Def_token |
+    Eval_token |
     In_token |
     Instance_token |
     Int_token Integer |
@@ -266,8 +268,10 @@ module Tokenise where
       "Branch" -> Branch_token
       "Branching" -> Branching_token
       "Case" -> Case_token
+      "Check" -> Check_token
       "Class" -> Class_token
       "Def" -> Def_token
+      "Eval" -> Eval_token
       "In" -> In_token
       "Instance" -> Instance_token
       "Let" -> Let_token

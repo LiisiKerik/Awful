@@ -137,9 +137,12 @@ Instance Writeable{List T}<Writeable T>(
     Match x {
       Empty_List -> Pair (List ("L", "i", "s", "t")) False,
       Construct_List y z ->
-        Pair
-          (Cat (List ("L", "i", "s", "t", " ", "(")) (Cat (Interleave (List (",", " ")) (Write . x)) (Lift ")")))
-          True})
+        Match z {
+          Empty_List -> Pair (Cat (List ("L", "i", "f", "t", " ")) (Brackets y)) True,
+          Construct_List _ _ ->
+            Pair
+              (Cat (List ("L", "i", "s", "t", " ", "(")) (Cat (Interleave (List (",", " ")) (Write . x)) (Lift ")")))
+              True}})
 Instance Writeable{Logical}(
   Write_Brackets x = Pair (Match x {False -> List ("F", "a", "l", "s", "e"), True -> List ("T", "r", "u", "e")}) False)
 Instance Writeable{Maybe T}<Writeable T>(

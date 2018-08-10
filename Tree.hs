@@ -47,6 +47,7 @@ module Tree where
     Op_expression_0 Expression_0 [(Name, Expression_0)]
       deriving Show
   data Form_0 = Form_0 Name [Type_7] deriving Show
+  data Input = Check [Name] | Eval [Name] Expression_0 deriving Show
   data Kind_0 = Arrow_kind_0 Kind_0 Kind_0 | Nat_kind_0 | Star_kind_0 deriving (Eq, Show)
   data Method = Method Name [(Name, Kind_0)] [Constraint_0] Type_7 deriving Show
   data Modular = Modular Location_0 Integer Integer deriving Show
@@ -233,6 +234,8 @@ module Tree where
   parse_char_alg_pattern = Char_alg_pat <$> parse_char
   parse_char_expression :: Parser' Expression_0
   parse_char_expression = Char_expression_0 <$> parse_char
+  parse_check :: Parser' Input
+  parse_check = Check <$ parse_token Check_token <*> parse_files
   parse_class :: Parser' Class_0
   parse_class =
     (
@@ -301,14 +304,20 @@ module Tree where
   parse_eq' = Eqq <$> parse_name' <*> parse_many parse_brack_pat <* parse_eq <*> parse_expression'
   parse_error :: (Location_0 -> Location_1) -> Location_0 -> Err t
   parse_error a b = Left ("Parse error" ++ location' (a b))
-  parse_expression :: String -> Err Expression_0
-  parse_expression = parse parse_expression' (Location_1 "input")
+  parse_eval :: Parser' Input
+  parse_eval = Eval <$ parse_token Eval_token <*> parse_optional parse_round parse_file <*> parse_expression'
   parse_expression' :: Parser' Expression_0
   parse_expression' = parse_comp_expr <+> parse_mid_expr <+> parse_elementary_expression
+  parse_file :: Parser' Name
+  parse_file = (\(Name x y) -> Name x (y ++ ".awf")) <$> parse_name' <* parse_operator "." <* parse_name_4 "awf"
+  parse_files :: Parser' [Name]
+  parse_files = parse_round (parse_list 1 parse_file)
   parse_form :: Parser' Form_0
   parse_form = Form_0 <$> parse_name' <*> parse_many (Type_7 <&> parse_br_type)
   parse_function :: Parser' Expression_0
   parse_function = parse_arrow' (Function_expression_0 <$> parse_pat)
+  parse_input :: String -> Err Input
+  parse_input = parse (parse_check <+> parse_eval) (Location_1 "input")
   parse_instance :: Parser' Def_0
   parse_instance =
     (
@@ -356,8 +365,6 @@ module Tree where
       _ -> (:) <$> p <* parse_comma <*> parse_list (i - 1) p
   parse_list_expr :: Parser' Expression_0
   parse_list_expr = mk_list <& parse_name_4 "List" <*> parse_round (parse_list 1 parse_expression')
-  parse_load :: Parser' Name
-  parse_load = parse_name_3 Load_token ((flip (++) ".awf" <$> parse_name) <* parse_operator "." <* parse_name_4 "awf")
   parse_location :: Parser' Location_0
   parse_location = Parser (\a -> Right (state_location a, a))
   parse_many :: Parser' t -> Parser' [t]
@@ -473,7 +480,7 @@ module Tree where
   parse_tree' =
     (
       Tree_1 <$>
-      parse_many parse_load <*>
+      parse_optional' (parse_token Load_token *> parse_files) <*>
       (Tree_0 <$> parse_many parse_data <*> parse_many parse_class <*> parse_many parse_opdecl <*> parse_many parse_def))
   parse_type :: Parser' Type_7
   parse_type = Type_7 <&> (parse_op_type <+> parse_ap_type <+> parse_elementary_type)

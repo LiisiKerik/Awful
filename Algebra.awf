@@ -1,13 +1,12 @@
 `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
-Load Standard.awf
-Branching Array[!Nat][T : Star](!Zr -> Empty_Array, !Next N -> Construct_Array(Head : T, Tail : Array N T))
+Load (Standard.awf)
+Branching Array[T : Star]{Zero -> Empty_Array, Next N -> Construct_Array(Head : T, Tail : Array N T)}
 Struct Complex[T : Star](Real : T, Imaginary : T)
 Struct Fraction(Num : Int, Den : Int)
 Struct Quaternion[T : Star](Qr : T, Qx : T, Qy : T, Qz : T)
-Branching Square[!Nat][T : Star](
-  !Zr -> Empty_Square,
-  !Next N ->
-    Construct_Square(Fst_Square : T, Top_row_Square : Array N T, Left_column_Square : Array N T, Square' : Square N T))
+Branching Square[T : Star]{
+  Zr -> Empty_Square,
+  Next N -> Construct_Square(Fst_Square : T, Top_row_Square : Array N T, Left_column_Square : Array N T, Square' : Square N T)}
 Struct Toeplitz[N : !Nat, T : Star](Toeplitz' : Array N T)
 Branching Triangle[!Nat][T : Star](
   !Zr -> Empty_Triangle,

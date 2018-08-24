@@ -171,7 +171,7 @@ module Eval where
               let
                 (k, l) = typestring i []
               in
-                Data.Map.lookup (d ++ k) a >>= \(Expr_2 f g h) ->
+                Data.Map.lookup (d ++ " " ++ k) a >>= \(Expr_2 f g h) ->
                   case f of
                     Nothing -> undefined
                     Just m -> j (m ++ g) (l ++ e) h

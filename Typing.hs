@@ -1,5 +1,4 @@
 {-
-tests
 topelt-esindajate kontroll nimekontrolliga kokku? move duplicate instance control into Naming module?
 internal: do something with old/new status tags. check where exactly they're necessary. get rid of them where they're useless
 change semantics of missing pattern-match variables from blank to lambda? (Left -> e is not Left _ -> e but Left x -> e x)
@@ -38,6 +37,9 @@ special type (with special constructor for flexible type variables) for type equ
 not give equations as argument; instead, compose equations with ++
 check in Naming module that all pattern constructors are valid
 special class for countable/enumerable things (like Integer). Stronger than Ord, weaker than Finite
+tests
+make Integer counter part of Eqtns and construct the set after all flexi type variables have been generated, in the end
+write long types and kinds in error messages?
 -}
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
@@ -1612,7 +1614,7 @@ module Typing where
               (r a7)
               (\(Basic_type_1 i x0 a' j, b3) ->
                 let
-                  g7 k2 d3 e4 s' r' d5 e8 =
+                  g7 k2 d3 e4 s' r' =
                     (
                       (\((s, p, n), n9) ->
                         (
@@ -1625,8 +1627,8 @@ module Typing where
                           s,
                           [])) <$>
                       case k of
-                        [] -> Right (typevars d3 (s', e4, f))
-                        _ -> first (\f9 -> (s', f9, r')) <$> typevars' r r7 e5 d5 k e8)
+                        [] -> Right (typevars d3 (s', e4, r'))
+                        _ -> first (\f9 -> (s', f9, r')) <$> typevars' r r7 e5 d3 k e4)
                 in
                   case g of
                     Just t3 ->
@@ -1637,16 +1639,8 @@ module Typing where
                             (d5, k3) : d' ->
                               (
                                 type_typ r t3 r7 k3 >>=
-                                \t7 ->
-                                  g7
-                                    (Glob_expression_2 c (Just t7))
-                                    d'
-                                    (Data.Map.singleton d5 t7)
-                                    o
-                                    f
-                                    d'
-                                    (Data.Map.singleton d5 t7))
-                        Nothing -> Left ("Invalid class argument for variable " ++ c ++ x' a7)
+                                \t7 -> g7 (Glob_expression_2 c (Just t7)) d' (Data.Map.singleton d5 t7) o f)
+                        Nothing -> Left ("Invalid instance argument for variable " ++ c ++ x' a7)
                     Nothing ->
                       case x0 of
                         Just (Constraint_1 _ _) ->
@@ -1655,12 +1649,10 @@ module Typing where
                             (d5, _) : d' ->
                               g7
                                 (Glob_expression_2 c (Just (Name_type_1 (show o))))
-                                i
-                                Data.Map.empty
-                                (o + 1)
-                                (Data.Set.insert (show o) f)
                                 d'
                                 (Data.Map.singleton d5 (Name_type_1 (show o)))
+                                (o + 1)
+                                (Data.Set.insert (show o) f)
                         Nothing ->
                           g7
                             (\t9 ->
@@ -1670,9 +1662,7 @@ module Typing where
                             i
                             Data.Map.empty
                             o
-                            f
-                            i
-                            Data.Map.empty)
+                            f)
   type_exprs ::
     (
       (Name -> String) ->

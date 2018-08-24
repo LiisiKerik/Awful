@@ -15,11 +15,11 @@ type Files = Map' (File, Map' Op)
 check ::
   (
     [String] ->
-    (Files, ((Set String, Set String), Locations, Locations), Map' Expr_2, Map' (Map' Location')) ->
+    (Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2) ->
     Location_1 ->
     String ->
-    IO (Err ((Files, ((Set String, Set String), Locations, Locations), Map' Expr_2, Map' (Map' Location')), (File, Map' Op))))
-check b m' @ (f, _, _, _) j name_qc =
+    IO (Err ((Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2), (File, Map' Op))))
+check b m' @ (f, _, _) j name_qc =
   case Data.Map.lookup name_qc f of
     Just a -> return (Right (m', a))
     Nothing ->
@@ -38,10 +38,10 @@ check b m' @ (f, _, _, _) j name_qc =
                     return
                       (
                         g >>=
-                        \((h, i, l, p'), m) ->
+                        \((h, i, l), m) ->
                           (
-                            (\(k, n, o, s) -> ((Data.Map.insert name_qc n h, k, o, s), n)) <$>
-                            standard_naming_typing name_qc d (i, m, l, p')))
+                            (\(k, n, o) -> ((Data.Map.insert name_qc n h, k, o), n)) <$>
+                            standard_naming_typing name_qc d (i, m, l)))
               Nothing -> err ("Failed to find file " ++ name_qc ++ " requested" ++ location' j)
 check' :: String -> [String] -> Maybe [String]
 check' a b =
@@ -52,10 +52,10 @@ check_imports ::
   (
     String ->
     [String] ->
-    ((Files, ((Set String, Set String), Locations, Locations), Map' Expr_2, Map' (Map' Location')), (File, Map' Op)) ->
+    ((Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2), (File, Map' Op)) ->
     [Name] ->
     Map' Location_0 ->
-    IO (Err ((Files, ((Set String, Set String), Locations, Locations), Map' Expr_2, Map' (Map' Location')), (File, Map' Op))))
+    IO (Err ((Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2), (File, Map' Op))))
 check_imports j a b @ (f, k) c h =
   case c of
     [] -> return (Right b)
@@ -99,8 +99,8 @@ eval'' :: [Name] -> Expression_0 -> IO (Err String)
 eval'' a b = do
   c <- check_imports "input" [] (init', init_type_context) a Data.Map.empty
   return
-    (c >>= \((_, (e, t, _), f, _), (File j g h i _ _ m _, u)) -> tokenise_parse_naming_typing_eval (e, t) j (g, h, i) f b m u)
-init' :: (Files, ((Set String, Set String), Locations, Locations), Map' Expr_2, Map' (Map' Location'))
+    (c >>= \((_, (e, t, _, _), f), (File j g h i _ _ m _, u)) -> tokenise_parse_naming_typing_eval (e, t) j (g, h, i) f b m u)
+init' :: (Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2)
 init' =
   (
     Data.Map.empty,
@@ -110,15 +110,15 @@ init' =
         Data.Set.fromList
           ["Construct_List", "EQ", "Empty_List", "False", "GT", "Left", "LT", "Nothing", "Pair", "Right", "True", "Wrap"]),
       locations,
-      Data.Map.fromList ((\x -> (x, Language)) <$> ["#", "->", "="])),
-    defs,
-    Data.Map.fromList
-      [
-        ("Field", Data.Map.fromList [("Modular", Language)]),
-        ("Nonzero", Data.Map.fromList [("Next", Language)]),
-        ("Ord", Data.Map.fromList [("Char", Language), ("Int", Language), ("Modular", Language)]),
-        ("Ring", Data.Map.fromList [("Int", Language), ("Modular", Language)]),
-        ("Writeable", Data.Map.fromList [("Int", Language), ("Modular", Language)])])
+      Data.Map.fromList ((\x -> (x, Language)) <$> ["#", "->", "="]),
+      Data.Map.fromList
+        [
+          ("Field", Data.Map.fromList [("Modular", Language)]),
+          ("Nonzero", Data.Map.fromList [("Next", Language)]),
+          ("Ord", Data.Map.fromList [("Char", Language), ("Int", Language), ("Modular", Language)]),
+          ("Ring", Data.Map.fromList [("Int", Language), ("Modular", Language)]),
+          ("Writeable", Data.Map.fromList [("Int", Language), ("Modular", Language)])]),
+    defs)
 main :: IO ()
 main =
   do

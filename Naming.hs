@@ -73,22 +73,23 @@ module Naming where
     (
       String ->
       Tree_2 ->
-      ((Set String, Set String), Locations, Locations) ->
-      Err (((Set String, Set String), Locations, Locations), Tree_5))
-  naming f a b = naming_1 f a b >>= \((c, e, g), d) -> (,) (c, e, g) <$> naming_2 f d (c, e)
+      ((Set String, Set String), Locations, Locations, Map' (Map' Location')) ->
+      Err (((Set String, Set String), Locations, Locations, Map' (Map' Location')), Tree_5))
+  naming f a b = naming_1 f a b >>= \((c, e, g, h), d) -> (,) (c, e, g, h) <$> naming_2 f d (c, e)
   naming_1 ::
     (
       String ->
       Tree_2 ->
-      ((Set String, Set String), Locations, Locations) ->
-      Err (((Set String, Set String), Locations, Locations), Tree_4))
-  naming_1 f (Tree_2 a g j b) (c, k, l) =
+      ((Set String, Set String), Locations, Locations, Map' (Map' Location')) ->
+      Err (((Set String, Set String), Locations, Locations, Map' (Map' Location')), Tree_4))
+  naming_1 f (Tree_2 a g j b) (c, k, l, x) =
     (
       naming_datas_1 f a (c, k) >>=
       \((t, d), e) ->
         (
           naming_classes_0 f g d >>=
-          \(d', e') -> (\(m, n) -> \(h, i) -> ((t, i, m), Tree_4 e e' n h)) <$> naming_ops f l j <*> naming_defs_1 f b d'))
+          \(d', e') ->
+            (\(m, n) -> \(h, (i, y)) -> ((t, i, m, y), Tree_4 e e' n h)) <$> naming_ops f l j <*> naming_defs_1 f b (d', x)))
   naming_2 :: String -> Tree_4 -> ((Set String, Set String), Locations) -> Err Tree_5
   naming_2 e (Tree_4 a f c b) (h, i) =
     naming_datas_2 e a i >>= \d -> naming_classes_1 e f i >>= \g -> Tree_5 d g c <$> naming_defs_2 e b (h, i)
@@ -183,18 +184,28 @@ module Naming where
     case a of
       [] -> Right []
       c : d -> naming_data_2 f c b >>= \e -> (:) e <$> naming_datas_2 f d b
-  naming_def_1 :: String -> Def_1 -> Locations -> Err (Def_2, Locations)
-  naming_def_1 i a g =
+  naming_def_1 :: String -> Def_1 -> (Locations, Map' (Map' Location')) -> Err (Def_2, (Locations, Map' (Map' Location')))
+  naming_def_1 i a (g, z) =
     case a of
-      Basic_def_1 c @ (Name h j) b x d e -> (\(f, _) -> (Basic_def_2 h j b x d e, f)) <$> naming_name i c g
-      Instance_1 b c d f h e -> Right (Instance_2 b c d f h e, g)
+      Basic_def_1 c @ (Name h j) b x d e -> (\(f, _) -> (Basic_def_2 h j b x d e, (f, z))) <$> naming_name i c g
+      Instance_1 b c @ (Name _ k) d @ (Name _ l) f h e -> -- Right (Instance_2 b c d f h e, g)
+        let
+          u = Library (Location_1 i b)
+          m n = Right (Instance_2 b c d f h e, (g, n z))
+        in
+          case Data.Map.lookup k z of
+            Nothing -> m (Data.Map.insert k (Data.Map.singleton l u))
+            Just w ->
+              case Data.Map.lookup l w of
+                Nothing -> m (Data.Map.insert k (Data.Map.insert l u w))
+                Just t -> Left (location_err ("instances of " ++ k ++ " " ++ l) t (Location_1 i b))
   naming_def_2 :: String -> Def_2 -> ((Set String, Set String), Locations) -> Err Def_3
   naming_def_2 j a (m, b) =
     case a of
       Basic_def_2 k c d t f g ->
         naming_arguments naming_name j d b >>= \(h, i) -> Basic_def_3 k c i t f <$> naming_expression j g (m, h)
       Instance_2 f c d g k e -> naming_patterns j g b >>= \(h, i) -> Instance_3 f c d i k <$> naming_nameexprs j (m, h) e
-  naming_defs_1 :: String -> [Def_1] -> Locations -> Err ([Def_2], Locations)
+  naming_defs_1 :: String -> [Def_1] -> (Locations, Map' (Map' Location')) -> Err ([Def_2], (Locations, Map' (Map' Location')))
   naming_defs_1 a b c =
     case b of
       [] -> Right ([], c)

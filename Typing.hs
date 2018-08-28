@@ -40,6 +40,9 @@ special class for countable/enumerable things (like Integer). Stronger than Ord,
 tests
 make Integer counter part of Eqtns and construct the set after all flexi type variables have been generated, in the end
 write long types and kinds in error messages?
+"requires instance or constraint" -> "requires instance" / "requires constraint"
+syntax: allow writing List[sometype] to disambiguate type of list when using list syntactic sugar
+teha eraldi algebraline andmetüüp juba väärtustatud avaldise jaoks et undef-e vähemaks saada?
 -}
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}

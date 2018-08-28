@@ -41,8 +41,7 @@ Instance Braided{Pair}(
   Commute (Pair x y) = Pair y x)
 Def Brackets[T : Star]<Writeable T>(x : T) : List Char =
   Let Pair y z = Write_Brackets x In Match z {False -> y, True -> Cat (Lift "(") (Cat y (Lift ")"))}
-Def Cat[T : Star](x : List T, y : List T) : List T =
-  Match x {Empty_List -> y, Construct_List z a -> Construct_List z (Cat a y)}
+Def Cat[T : Star](x : List T, y : List T) : List T = Match x {Empty_List -> y, Construct_List z a -> Construct_List z (Cat a y)}
 Instance Container{List}(
   Empty = List,
   Filter f x =

@@ -245,14 +245,19 @@ module Eval where
         Branch_expression_2 d e g h -> Branch_expression_2 d (f e) g (f h)
         Function_expression_2 d e -> Function_expression_2 d (if subst_pat a d then e else f e)
         Loc_expression_2 d -> if d == a then c else b
-        Match_expression_2 d e -> Match_expression_2 (f d) ((\(Case_3 g h) -> Case_3 g (f h)) <$> e)
+        Match_expression_2 d e ->
+          Match_expression_2 (f d) ((\(Case_3 g h) -> Case_3 g (if subst_help a g then h else f h)) <$> e)
         _ -> b
-  subst_help :: String -> [Pat_1] -> Bool
-  subst_help a b = or (subst_pat a <$> b)
+  subst_help :: String -> Alg_pat_2 -> Bool
+  subst_help a b =
+    case b of
+      Application_alg_pat_2 _ c -> or (subst_help a <$> c)
+      Name_alg_pat_2 c -> c == a
+      _ -> False
   subst_pat :: String -> Pat_1 -> Bool
   subst_pat a b =
     case b of
-      Application_pat_1 c -> subst_help a c
+      Application_pat_1 c -> or (subst_pat a <$> c)
       Blank_pat_1 -> False
       Name_pat_1 c -> c == a
   subst_pat' :: Pat_1 -> Expression_2 -> Expression_2 -> Expression_2
@@ -285,7 +290,7 @@ module Eval where
   tostr :: Expression_2 -> String
   tostr x =
     case x of
-      Algebraic_expression_2 "Empty_List" [] -> []
+      Algebraic_expression_2 "Empty_List" [] -> ""
       Algebraic_expression_2 "Construct_List" [Char_expression_2 y, z] -> y : tostr z
       _ -> undefined
   wrap_algebraic :: Expression_2 -> Expression_2

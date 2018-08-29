@@ -1,6 +1,4 @@
 {-
-topelt-esindajate kontroll nimekontrolliga kokku? move duplicate instance control into Naming module?
-internal: do something with old/new status tags. check where exactly they're necessary. get rid of them where they're useless
 change semantics of missing pattern-match variables from blank to lambda? (Left -> e is not Left _ -> e but Left x -> e x)
 internal: make the system of specifying built-in algebraic data types and things better and safer
 Allow hiding things to functions outside module - so that helper functions are not exported from the module?
@@ -1554,7 +1552,7 @@ module Typing where
         Function_expression_1 c g ->
           (
             type_pat r (v, w) c (Name_type_1 (show o)) d (o + 1) (Data.Set.insert (show o) f) h >>=
-            \(a6, b6, c6, d6, f6) ->
+            \(a6, b6, c6, d6, f6, m8) ->
               (
                 (\(a', b', d', d2) -> (Function_expression_2 a6 a', b', d', d2)) <$>
                 type_expression
@@ -1568,7 +1566,12 @@ module Typing where
                     c'
                     h9)
                   b6
-                  g
+                  (Prelude.foldl
+                    (\t1 -> \t2 -> Application_expression_1 t1 (Name_expression_1 (Name (Location_0 0 0) t2) Nothing []))
+                    g
+                    (case m8 of
+                      Nothing -> []
+                      Just (_, m7) -> m7))
                   (Name_type_1 (show c6))
                   r7))
         Int_expression_1 c -> Right (Int_expression_2 c, Eqtns f ((e, int_type) : h) c' h9, o, [])
@@ -1743,7 +1746,7 @@ module Typing where
       Integer ->
       Set String ->
       [(Type_1, Type_1)] ->
-      Err (Pat_1, Map' (Type_2, Globloc), Integer, Set String, [(Type_1, Type_1)]))
+      Err (Pat_1, Map' (Type_2, Globloc), Integer, Set String, [(Type_1, Type_1)], Maybe (Name, [String])))
   type_pat k (h, h') (Pat g b) c d l n o =
     case b of
       Application_pat e f ->
@@ -1755,11 +1758,11 @@ module Typing where
           case m of
             [_] ->
               (
-                (\(s, t, u, v, w) -> (Application_pat_1 s, t, u, v, w)) <$>
+                (\(s, t, u, v, w, x') -> (Application_pat_1 s, t, u, v, w, x')) <$>
                 type_pats k (h, h') f (repl' q <$> g') d p r ((c, repl' q j) : o) (Name g e))
             _ -> Left ("Constructor " ++ e ++ location (k g) ++ " is not a struct constructor.")
-      Blank_pat -> Right (Blank_pat_1, d, l, n, o)
-      Name_pat e -> Right (Name_pat_1 e, Data.Map.insert e (Basic_type_1 [] Nothing [] c, Loc) d, l, n, o)
+      Blank_pat -> Right (Blank_pat_1, d, l, n, o, Nothing)
+      Name_pat e -> Right (Name_pat_1 e, Data.Map.insert e (Basic_type_1 [] Nothing [] c, Loc) d, l, n, o, Nothing)
   type_pats ::
     (
       (Location_0 -> Location_1) ->
@@ -1771,23 +1774,33 @@ module Typing where
       Set String ->
       [(Type_1, Type_1)] ->
       Name ->
-      Err ([Pat_1], Map' (Type_2, Globloc), Integer, Set String, [(Type_1, Type_1)]))
+      Err ([Pat_1], Map' (Type_2, Globloc), Integer, Set String, [(Type_1, Type_1)], Maybe (Name, [String])))
   type_pats a b d e f g h i (Name x y) =
-    let
-      z a' = Left ("Constructor " ++ y ++ location (a x) ++ " has been given too " ++ a' ++ " arguments.")
-    in
-      case d of 
-        [] ->
-          case e of
-            [] -> Right ([], f, g, h, i)
-            _ -> z "few"
-        j : k ->
-          case e of
-            [] -> z "many"
-            m : n ->
-              (
-                type_pat a b j m f g h i >>=
-                \(c, o, p, q, r) -> (\(s, t, u, v, w) -> (c : s, t, u, v, w)) <$> type_pats a b k n o p q r (Name x y))
+    case d of 
+      [] ->
+        let
+          n = show <$> [0 .. length e - 1]
+        in
+          Right
+            (
+              Name_pat_1 <$> n,
+              Prelude.foldl (\j -> \(k, m) -> Data.Map.insert k (Basic_type_1 [] Nothing [] m, Loc) j) f (zip n e),
+              g,
+              h,
+              i,
+              case e of
+                [] -> Nothing
+                _ -> Just (Name x y, n))
+      j : k ->
+        case e of
+          [] -> Left ("Constructor " ++ y ++ location (a x) ++ " has been given too many arguments.")
+          m : n ->
+            (
+              type_pat a b j m f g h i >>=
+              \(c, o, p, q, r, r') ->
+                case r' of
+                  Nothing -> (\(s, t, u, v, w, a') -> (c : s, t, u, v, w, a')) <$> type_pats a b k n o p q r (Name x y)
+                  Just (Name s t, _) -> Left ("Constructor " ++ t ++ location (a s) ++ " has been given too many arguments."))
   type_typ :: (Location_0 -> Location_1) -> Type_8 -> Map' Kind_0 -> Kind_0 -> Err Type_1
   type_typ a (Type_8 b c) d e = type_eqs a 0 c d (kind_0_to_1 e) [] >>= \(_, h, i) -> i <$ solve_type_eqs (a b) h
   type_types :: (Location_0 -> Location_1) -> [Type_8] -> Map' Kind_0 -> Err [Type_1]

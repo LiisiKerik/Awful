@@ -412,7 +412,7 @@ module Typing where
       (Integer, Set String, [(Type_1, Type_1)], Map' (Type_2, Globloc)) ->
       Alg_pat_1 ->
       Type_1 ->
-      Err ((Integer, Set String, [(Type_1, Type_1)], Map' (Type_2, Globloc)), (Alg_pat_2, Alg_pat_3)))
+      Err ((Integer, Set String, [(Type_1, Type_1)], Map' (Type_2, Globloc)), (Alg_pat_2, Alg_pat_3, Maybe (Name, [String]))))
   get_pattern_type a b c (d, e, f, n) g h =
     case g of
       Application_alg_pat_1 o i j ->
@@ -422,17 +422,17 @@ module Typing where
           ((q, r, s), _) = typevars k (d, Data.Map.empty, e)
         in
           (
-            second (bimap (Application_alg_pat_2 i) (Struct_alg_pat_3 i)) <$>
+            second (\(a0, b0, c0) -> (Application_alg_pat_2 i a0, Struct_alg_pat_3 i b0, c0)) <$>
             get_pattern_types a b c (q, s, (h, repl' r m) : f, n) j (repl' r <$> y) (Name o i))
-      Blank_alg_pat_1 -> Right ((d, e, f, n), (Blank_alg_pat_2, Blank_alg_pat_3))
-      Char_alg_pat_1 i -> Right ((d, e, (h, char_type) : f, n), (Char_alg_pat_2 i, Char_alg_pat_3 i))
-      Int_alg_pat_1 i -> Right ((d, e, (h, int_type) : f, n), (Int_alg_pat_2 i, Int_alg_pat_3 i))
+      Blank_alg_pat_1 -> Right ((d, e, f, n), (Blank_alg_pat_2, Blank_alg_pat_3, Nothing))
+      Char_alg_pat_1 i -> Right ((d, e, (h, char_type) : f, n), (Char_alg_pat_2 i, Char_alg_pat_3 i, Nothing))
+      Int_alg_pat_1 i -> Right ((d, e, (h, int_type) : f, n), (Int_alg_pat_2 i, Int_alg_pat_3 i, Nothing))
       Modular_alg_pat_1 i ->
         (
-          (\(Modular' j z, k) -> ((d, e, (h, k) : f, n), (Modular_alg_pat_2 z, Modular_alg_pat_3 (Modular' j z)))) <$>
+          (\(Modular' j z, k) -> ((d, e, (h, k) : f, n), (Modular_alg_pat_2 z, Modular_alg_pat_3 (Modular' j z), Nothing))) <$>
           check_mod a i)
       Name_alg_pat_1 i ->
-        Right ((d, e, f, Data.Map.insert i (Basic_type_1 [] Nothing [] h, Loc) n), (Name_alg_pat_2 i, Blank_alg_pat_3))
+        Right ((d, e, f, Data.Map.insert i (Basic_type_1 [] Nothing [] h, Loc) n), (Name_alg_pat_2 i, Blank_alg_pat_3, Nothing))
   get_pattern_types ::
     (
       (Location_0 -> Location_1) ->
@@ -442,16 +442,38 @@ module Typing where
       [Alg_pat_1] ->
       [Type_1] ->
       Name ->
-      Err ((Integer, Set String, [(Type_1, Type_1)], Map' (Type_2, Globloc)), ([Alg_pat_2], [Alg_pat_3])))
-  get_pattern_types a b c d e f (Name m n) =
-    case (e, f) of
-      ([], []) -> Right (d, ([], []))
-      ([], _) -> Left ("Constructor " ++ n ++ location (a m) ++ " has been given too few arguments.")
-      (_, []) -> Left ("Constructor " ++ n ++ location (a m) ++ " has been given too many arguments.")
-      (g : h, i : j) ->
-        (
-          get_pattern_type a b c d g i >>=
-          \(k, (l, p)) -> second (bimap ((:) l) ((:) p)) <$> get_pattern_types a b c k h j (Name m n))
+      Err
+        ((Integer, Set String, [(Type_1, Type_1)], Map' (Type_2, Globloc)), ([Alg_pat_2], [Alg_pat_3], Maybe (Name, [String]))))
+  get_pattern_types a b c (d0, d1, d2, d3) e f (Name m n) =
+    let
+      t = show <$> [0 .. length f - 1]
+    in
+      case e of
+        [] ->
+          Right
+            (
+              (
+                d0,
+                d1,
+                d2,
+                Prelude.foldl (\u -> \(m', v) -> Data.Map.insert m' (Basic_type_1 [] Nothing [] v, Loc) u) d3 (zip t f)),
+              (
+                [],
+                [],
+                case t of
+                  [] -> Nothing
+                  _ -> Just (Name m n, t)))
+        g : h ->
+          case f of
+            [] -> Left ("Constructor " ++ n ++ location (a m) ++ " has been given too many arguments.")
+            i : j ->
+              (
+                get_pattern_type a b c (d0, d1, d2, d3) g i >>=
+                \(k, (l, p, q)) ->
+                  case q of
+                    Nothing -> second (\(v, w, u1) -> (l : v, p : w, u1)) <$> get_pattern_types a b c k h j (Name m n)
+                    Just (Name f0 f1, _) ->
+                      Left ("Constructor " ++ f1 ++ location (a f0) ++ " has been given too few arguments."))
   init_type_context :: (File, Map' Op)
   init_type_context = (File kinds algebraics constrs types classes_0 classes_1 instances classes_2, Data.Map.empty)
   instances :: Map' (Map' [[String]])
@@ -922,8 +944,24 @@ module Typing where
   type_case a b c d (Eqtns e p q r) f (Case_2 g h) i j k =
     (
       get_pattern_type c a b (d, e, p, f) g (Name_type_1 (show i)) >>=
-      \((m, n, s, t), (o, y)) ->
-        (\(u, v, w, r0) -> (Case_3 o u, v, w, r0, y)) <$> type_expression a b c m (Eqtns n s q r) t h j k)
+      \((m, n, s, t), (o, y, w')) ->
+        (
+          (\(u, v, w, r0) -> (Case_3 o u, v, w, r0, y)) <$>
+          type_expression
+            a
+            b
+            c
+            m
+            (Eqtns n s q r)
+            t
+            (Prelude.foldl
+              (\t0 -> \t1 -> Application_expression_1 t0 (Name_expression_1 (Name (Location_0 0 0) t1) Nothing []))
+              h
+              (case w' of
+                Nothing -> []
+                Just (_, w0) -> w0))
+            j
+            k))
   type_cases ::
     (
       Map' Alg ->
@@ -1586,7 +1624,7 @@ module Typing where
           (\(Modular' _ g1, g3) -> (Modular_expression_2 g1, Eqtns f ((e, g3) : h) c' h9, o, [])) <$> check_mod r c
         Name_expression_1 (Name a7 c) g k ->
           let
-            e5 a' = Left ("Too " ++ a' ++ " type arguments for variable " ++ c ++ x' a7)
+            e5 a' = Left ("Variable " ++ c ++ x' a7 ++ " has been given too " ++ a' ++ " type arguments.")
           in
             und_err
               c
@@ -1800,7 +1838,7 @@ module Typing where
               \(c, o, p, q, r, r') ->
                 case r' of
                   Nothing -> (\(s, t, u, v, w, a') -> (c : s, t, u, v, w, a')) <$> type_pats a b k n o p q r (Name x y)
-                  Just (Name s t, _) -> Left ("Constructor " ++ t ++ location (a s) ++ " has been given too many arguments."))
+                  Just (Name s t, _) -> Left ("Constructor " ++ t ++ location (a s) ++ " has been given too few arguments."))
   type_typ :: (Location_0 -> Location_1) -> Type_8 -> Map' Kind_0 -> Kind_0 -> Err Type_1
   type_typ a (Type_8 b c) d e = type_eqs a 0 c d (kind_0_to_1 e) [] >>= \(_, h, i) -> i <$ solve_type_eqs (a b) h
   type_types :: (Location_0 -> Location_1) -> [Type_8] -> Map' Kind_0 -> Err [Type_1]

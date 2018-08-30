@@ -1199,7 +1199,7 @@ module Typing where
             (
               (second (Expr_2 Nothing (fst <$> c)) <$> type_br_0 i) ++
               (second (Expr_2 Nothing ("!" : (fst <$> c))) <$> type_br_0 k))
-        Struct_data_2 i -> s (type_br_0 (Data_br_1 b i))
+        Struct_data_2 _ i -> s (type_br_0 (Data_br_1 b i))
   type_data_2 ::
     (
       (Location_0 -> Location_1) ->
@@ -1241,13 +1241,13 @@ module Typing where
                   ins_new k (Constructor (g ++ " Next") t4) (ins_new i (Constructor (g ++ " Zero") s4) m3))) <$>
               type_branching a l s0 (Data_br_1 i i') <*>
               type_branching a (Data.Map.insert j Nat_kind_0 l) t0 (Data_br_1 k k'))
-        Struct_data_2 i ->
+        Struct_data_2 j2 i ->
           (
             (\(u, w) ->
               (
-                ins_new g (Alg h x [g]) d,
-                Prelude.foldl (\w' -> \(k, r) -> ins_new k (t' r) w') e u,
-                ins_new g (Constructor g w) m3)) <$>
+                Data.Map.insert g (Alg h x [g], j2) d,
+                Prelude.foldl (\w' -> \(k, r) -> Data.Map.insert k (t' r, j2) w') e u,
+                Data.Map.insert g (Constructor g w, j2) m3)) <$>
             type_branching a l x (Data_br_1 g i))
   type_datas ::
     (

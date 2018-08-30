@@ -13,8 +13,9 @@ module Standard where
       deriving Show
   data Data_6 = Data_6 Location_0 String [(Name, Kind_0)] Data_branch_6 deriving Show
   data Data_br_6 = Data_br_6 Name [(Name, Type_8)] deriving Show
-  data Data_branch_6 = Algebraic_data_6 [Form_6] | Branching_data_6 Data_br_6 Name Data_br_6 | Struct_data_6 [(Name, Type_8)]
-    deriving Show
+  data Data_branch_6 =
+    Algebraic_data_6 [Form_6] | Branching_data_6 Data_br_6 Name Data_br_6 | Struct_data_6 Status [(Name, Type_8)]
+      deriving Show
   data Eqq' = Eqq' Name [Pat] Expression_9 deriving Show
   data Expression_9 =
     Application_expression_9 Expression_9 Expression_9 |
@@ -34,7 +35,6 @@ module Standard where
   data Op = Op Integer Assoc String deriving Show
   data Op' = Op' Location_0 Op deriving Show
   data Opdecl_1 = Opdecl_1 Location_0 String Name deriving Show
-  data Status = New | Old deriving (Eq, Show)
   data Tree_2 = Tree_2 [Data_6] [Class_7] [Opdecl_1] [Def_1] deriving Show
   data Tree_3 = Tree_3 [Name] Tree_2 deriving Show
   data Type_5 = Application_type_5 Type_5 Type_5 | Name_type_5 Name deriving Show
@@ -139,7 +139,7 @@ module Standard where
       Algebraic_data_0 a b c d ->
         (\e -> Data_6 a b c (Algebraic_data_6 e)) <$> traverse (\(Form_0 g h) -> Form_6 g <$> traverse (std_type x) h) d
       Branching_data_0 a b c d e f -> (\g -> \h -> Data_6 a b c (Branching_data_6 g e h)) <$> std_br x d <*> std_br x f
-      Struct_data_0 a b c d -> (\e -> Data_6 a b c (Struct_data_6 e)) <$> traverse (\(g, h) -> (,) g <$> std_type x h) d
+      Struct_data_0 a f b c d -> (\e -> Data_6 a b c (Struct_data_6 f e)) <$> traverse (\(g, h) -> (,) g <$> std_type x h) d
   std_default ::
     (Location_0 -> Location_1) -> Map' Op -> Maybe (Location_0, Expression_0)  -> Err (Maybe (Location_0, Expression_9))
   std_default a f b =

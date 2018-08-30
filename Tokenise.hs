@@ -51,6 +51,7 @@ module Tokenise where
     Name_token String |
     Opdecl_token |
     Operator_token String |
+    Restricted_token |
     Right_curly_token |
     Right_round_token |
     Right_square_token |
@@ -279,6 +280,7 @@ module Tokenise where
       "Match" -> Match_token
       "Newline" -> Char_token '\n'
       "Operator" -> Opdecl_token
+      "Restricted" -> Restricted_token
       "Struct" -> Struct_token
       _ -> Name_token a
 -----------------------------------------------------------------------------------------------------------------------------

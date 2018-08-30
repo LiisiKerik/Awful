@@ -1,5 +1,4 @@
 {-
-change semantics of missing pattern-match variables from blank to lambda? (Left -> e is not Left _ -> e but Left x -> e x)
 internal: make the system of specifying built-in algebraic data types and things better and safer
 Allow hiding things to functions outside module - so that helper functions are not exported from the module?
 normalising constructors for some data types (polynomial, fraction) which assume a certain normal form of fields?
@@ -56,6 +55,7 @@ module Typing where
   import Tokenise
   import Tree
   data Alg = Alg [(String, Kind_0)] Type_1 [String] deriving Show
+  data Alg' = Alg' [(String, Kind_0)] Type_1 [(String, [Type_1])] deriving Show
   data Alg_pat_2 =
     Application_alg_pat_2 String [Alg_pat_2] |
     Blank_alg_pat_2 |
@@ -167,17 +167,31 @@ module Typing where
   data Type_2 = Basic_type_1 [(String, Kind_0)] (Maybe Constraint_1) [Constraint_1] Type_1 deriving Show
   type Types = Map' (Type_2, Status)
   algebraics :: Map' Alg
-  algebraics =
-    Data.Map.fromList
-      [
-        ("Comparison", Alg [] comparison_type ["LT", "EQ", "GT"]),
-        (
-          "Either",
-          Alg [("T", Star_kind_0), ("U", Star_kind_0)] (either_type (Name_type_1 "T") (Name_type_1 "U")) ["Left", "Right"]),
-        ("List", Alg [("T", Star_kind_0)] (list_type (Name_type_1 "T")) ["Empty_List", "Construct_List"]),
-        ("Logical", Alg [] logical_type ["False", "True"]),
-        ("Pair", Alg [("T", Star_kind_0), ("U", Star_kind_0)] (pair_type (Name_type_1 "T") (Name_type_1 "U")) ["Pair"]),
-        ("Maybe", Alg [("T", Star_kind_0)] (maybe_type (Name_type_1 "T")) ["Nothing", "Wrap"])]
+  algebraics = (\(Alg' a b c) -> Alg a b (fst <$> c)) <$> Data.Map.fromList algebraics'
+  algebraics' :: [(String, Alg')]
+  algebraics' =
+    [
+      ("Comparison", Alg' [] comparison_type [("LT", []), ("EQ", []), ("GT", [])]),
+      (
+        "Either",
+        Alg'
+          [("T", Star_kind_0), ("U", Star_kind_0)]
+          (either_type (Name_type_1 "T") (Name_type_1 "U"))
+          [("Left", [Name_type_1 "T"]), ("Right", [Name_type_1 "U"])]),
+      (
+        "List",
+        Alg'
+          [("T", Star_kind_0)]
+          (list_type (Name_type_1 "T"))
+          [("Empty_List", []), ("Construct_List", [Name_type_1 "T", list_type (Name_type_1 "T")])]),
+      ("Logical", Alg' [] logical_type [("False", []), ("True", [])]),
+      ("Maybe", Alg' [("T", Star_kind_0)] (maybe_type (Name_type_1 "T")) [("Nothing", []), ("Wrap", [Name_type_1 "T"])]),
+      (
+        "Pair",
+        Alg'
+          [("T", Star_kind_0), ("U", Star_kind_0)]
+          (pair_type (Name_type_1 "T") (Name_type_1 "U"))
+          [("Pair", [Name_type_1 "T", Name_type_1 "U"])])]
   chain_constraints :: Maybe String -> Map' Class_5 -> Map' (Map' [String]) -> String -> Map' (Map' [String])
   chain_constraints a b c e =
     case a of
@@ -309,22 +323,8 @@ module Typing where
         case m ! y of
           Just y' -> constr_check_3 m x y'
           Nothing -> False
-  constrs :: Map' Constructor
-  constrs =
-    Data.Map.fromList
-      [
-        ("Construct_List", Constructor "List" [Name_type_1 "T", list_type (Name_type_1 "T")]),
-        ("EQ", Constructor "Comparison" []),
-        ("Empty_List", Constructor "List" []),
-        ("False", Constructor "Logical" []),
-        ("GT", Constructor "Comparison" []),
-        ("LT", Constructor "Comparison" []),
-        ("Left", Constructor "Either" [Name_type_1 "T"]),
-        ("Nothing", Constructor "Maybe" []),
-        ("Pair", Constructor "Pair" [Name_type_1 "T", Name_type_1 "U"]),
-        ("Right", Constructor "Either" [Name_type_1 "U"]),
-        ("True", Constructor "Logical" []),
-        ("Wrap", Constructor "Maybe" [Name_type_1 "T"])]
+  constrs :: [(String, Constructor)]
+  constrs = join ((\(a, Alg' _ _ b) -> (\(c, d) -> (c, Constructor a d)) <$> b) <$> algebraics')
   context_union :: (File, Map' Op) -> (File, Map' Op) -> (File, Map' Op)
   context_union (File b i j d e q t g, t0) (File f k l h m r u n, t2) =
     (
@@ -341,63 +341,36 @@ module Typing where
   defs :: Map' Expr_2
   defs =
     Data.Map.fromList
-      [
-        ("Add Int", Expr_2 (Just []) [] Add_Int_0_expression_2),
-        ("Compare Char", Expr_2 (Just []) [] Compare_Char_0_expression_2),
-        ("Compare Int", Expr_2 (Just []) [] Compare_Int_0_expression_2),
-        (
-          "Construct_List",
-          Expr_2
-            Nothing
-            ["T"]
-            (Function_expression_2
-              (Name_pat_1 "x")
-              (Function_expression_2
-                (Name_pat_1 "y")
-                (Algebraic_expression_2 "Construct_List" [Loc_expression_2 "x", Loc_expression_2 "y"])))),
-        ("Convert Int", Expr_2 (Just []) [] Convert_Int_expression_2),
-        ("Div", Expr_2 Nothing [] Div_0_expression_2),
-        ("EQ", Expr_2 Nothing [] (Algebraic_expression_2 "EQ" [])),
-        ("Empty_List", Expr_2 Nothing ["T"] (Algebraic_expression_2 "Empty_List" [])),
-        ("False", Expr_2 Nothing [] (Algebraic_expression_2 "False" [])),
-        ("First", Expr_2 Nothing ["T", "U"] (Field_expression_2 0)),
-        ("GT", Expr_2 Nothing [] (Algebraic_expression_2 "GT" [])),
-        ("LT", Expr_2 Nothing [] (Algebraic_expression_2 "LT" [])),
-        (
-          "Left",
-          Expr_2
-            Nothing
-            ["T", "U"]
-            (Function_expression_2 (Name_pat_1 "x") (Algebraic_expression_2 "Left" [Loc_expression_2 "x"]))),
-        ("Mod", Expr_2 Nothing [] Mod_0_expression_2),
-        ("Multiply Int", Expr_2 (Just []) [] Multiply_Int_0_expression_2),
-        ("Negate Int", Expr_2 (Just []) [] Negate_Int_expression_2),
-        ("Nothing", Expr_2 Nothing ["T"] (Algebraic_expression_2 "Nothing" [])),
-        (
-          "Pair",
-          Expr_2
-            Nothing
-            ["T", "U"]
-            (Function_expression_2
-              (Name_pat_1 "x")
-              (Function_expression_2
-                (Name_pat_1 "y")
-                (Algebraic_expression_2 "Pair" [Loc_expression_2 "x", Loc_expression_2 "y"])))),
-        (
-          "Right",
-          Expr_2
-            Nothing
-            ["T", "U"]
-            (Function_expression_2 (Name_pat_1 "x") (Algebraic_expression_2 "Right" [Loc_expression_2 "x"]))),
-        ("Second", Expr_2 Nothing ["T", "U"] (Field_expression_2 1)),
-        ("True", Expr_2 Nothing [] (Algebraic_expression_2 "True" [])),
-        (
-          "Wrap",
-          Expr_2
-            Nothing
-            ["T"]
-            (Function_expression_2 (Name_pat_1 "x") (Algebraic_expression_2 "Wrap" [Loc_expression_2 "x"]))),
-        ("Write_Brackets Int", Expr_2 (Just []) [] Write_Brackets_Int_expression_2)]
+      (
+        join
+          (
+            (\(_, Alg' a _ c) ->
+              (\(d, e) ->
+                let
+                  f = show <$> [0 .. length e - 1]
+                in
+                  (
+                    d,
+                    Expr_2
+                      Nothing
+                      (fst <$> a)
+                      (Prelude.foldr
+                        (\g -> Function_expression_2 (Name_pat_1 g))
+                        (Algebraic_expression_2 d (Loc_expression_2 <$> f))
+                        f))) <$> c) <$>
+            algebraics') ++
+        [
+          ("Add Int", Expr_2 (Just []) [] Add_Int_0_expression_2),
+          ("Compare Char", Expr_2 (Just []) [] Compare_Char_0_expression_2),
+          ("Compare Int", Expr_2 (Just []) [] Compare_Int_0_expression_2),
+          ("Convert Int", Expr_2 (Just []) [] Convert_Int_expression_2),
+          ("Div", Expr_2 Nothing [] Div_0_expression_2),
+          ("First", Expr_2 Nothing ["T", "U"] (Field_expression_2 0)),
+          ("Mod", Expr_2 Nothing [] Mod_0_expression_2),
+          ("Multiply Int", Expr_2 (Just []) [] Multiply_Int_0_expression_2),
+          ("Negate Int", Expr_2 (Just []) [] Negate_Int_expression_2),
+          ("Second", Expr_2 Nothing ["T", "U"] (Field_expression_2 1)),
+          ("Write_Brackets Int", Expr_2 (Just []) [] Write_Brackets_Int_expression_2)])
   either_type :: Type_1 -> Type_1 -> Type_1
   either_type x = Application_type_1 (Application_type_1 (Name_type_1 "Either") x)
   find_and_delete :: Ord t => Map t u -> t -> Maybe (u, Map t u)
@@ -475,7 +448,7 @@ module Typing where
                     Just (Name f0 f1, _) ->
                       Left ("Constructor " ++ f1 ++ location (a f0) ++ " has been given too few arguments."))
   init_type_context :: (File, Map' Op)
-  init_type_context = (File kinds algebraics constrs types classes_0 classes_1 instances classes_2, Data.Map.empty)
+  init_type_context = (File kinds algebraics (Data.Map.fromList constrs) types classes_0 classes_1 instances classes_2, Data.Map.empty)
   instances :: Map' (Map' [[String]])
   instances =
     Data.Map.fromList
@@ -532,48 +505,38 @@ module Typing where
     Data.Map.fromList
       (
         (\x -> (x, Language)) <$>
-        [
-          "Add",
-          "Char",
-          "Compare",
-          "Comparison",
-          "Construct_List",
-          "Convert",
-          "Crash",
-          "Div",
-          "Div'",
-          "EQ",
-          "Either",
-          "Empty_List",
-          "False",
-          "Field",
-          "First",
-          "Function",
-          "GT",
-          "Int",
-          "Inverse",
-          "LT",
-          "Left",
-          "List",
-          "Logical",
-          "Maybe",
-          "Mod",
-          "Modular",
-          "Multiply",
-          "Negate",
-          "Next",
-          "Nonzero",
-          "Nothing",
-          "Ord",
-          "Pair",
-          "Right",
-          "Ring",
-          "Second",
-          "True",
-          "Wrap",
-          "Write_Brackets",
-          "Writeable",
-          "Zero"])
+        (
+          (fst <$> constrs) ++
+          [
+            "Add",
+            "Char",
+            "Compare",
+            "Comparison",
+            "Convert",
+            "Crash",
+            "Div",
+            "Div'",
+            "Either",
+            "Field",
+            "First",
+            "Function",
+            "Int",
+            "Inverse",
+            "List",
+            "Logical",
+            "Maybe",
+            "Mod",
+            "Modular",
+            "Multiply",
+            "Negate",
+            "Next",
+            "Nonzero",
+            "Ord",
+            "Ring",
+            "Second",
+            "Write_Brackets",
+            "Writeable",
+            "Zero"]))
   logical_type :: Type_1
   logical_type = Name_type_1 "Logical"
   maybe_type :: Type_1 -> Type_1

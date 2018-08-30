@@ -1,5 +1,4 @@
 {-
-internal: make the system of specifying built-in algebraic data types and things better and safer
 Allow hiding things to functions outside module - so that helper functions are not exported from the module?
 normalising constructors for some data types (polynomial, fraction) which assume a certain normal form of fields?
 allow to hide (prevent exporting) constructors and field accessors which can potentially have bad behavior
@@ -40,6 +39,8 @@ write long types and kinds in error messages?
 "requires instance or constraint" -> "requires instance" / "requires constraint"
 syntax: allow writing List[sometype] to disambiguate type of list when using list syntactic sugar
 teha eraldi algebraline andmetüüp juba väärtustatud avaldise jaoks et undef-e vähemaks saada?
+internal: make the system of specifying built-in algebraic data types and things better and safer
+make syntactic sugar for x -> Match x {...}
 -}
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
@@ -448,7 +449,8 @@ module Typing where
                     Just (Name f0 f1, _) ->
                       Left ("Constructor " ++ f1 ++ location (a f0) ++ " has been given too few arguments."))
   init_type_context :: (File, Map' Op)
-  init_type_context = (File kinds algebraics (Data.Map.fromList constrs) types classes_0 classes_1 instances classes_2, Data.Map.empty)
+  init_type_context =
+    (File kinds algebraics (Data.Map.fromList constrs) types classes_0 classes_1 instances classes_2, Data.Map.empty)
   instances :: Map' (Map' [[String]])
   instances =
     Data.Map.fromList
@@ -883,9 +885,9 @@ module Typing where
             (Algebraic_expression_2 a ((\d -> Loc_expression_2 ('!' : d)) <$> c))
             c) :
         type_brs_0 0 c)
-  type_branching :: (Location_0 -> Location_1) -> Map' Kind_0 -> Type_1 -> Data_br_1 -> Err [(String, Type_1)]
+  type_branching :: (Location_0 -> Location_1) -> Map' Kind_0 -> Type_1 -> Data_br_1 -> Err ([(String, Type_1)], [Type_1])
   type_branching a b c (Data_br_1 d e) =
-    (\f -> (d, Prelude.foldr function_type c (snd <$> f)) : (second (function_type c) <$> f)) <$> type_fields a e b
+    (\f -> ((d, Prelude.foldr function_type c (snd <$> f)) : (second (function_type c) <$> f), snd <$> f)) <$> type_fields a e b
   type_brs_0 :: Integer -> [String] -> [(String, Expression_2)]
   type_brs_0 a b =
     case b of
@@ -1229,32 +1231,23 @@ module Typing where
             t0 = x2 (Application_type_1 (Name_type_1 "Next") (Name_type_1 j))
           in
             (
-              (\s -> \t ->
-                case (s, t) of
-                  (_ : s1, _ : t1) ->
-                    (
-                      ins_new (g ++ " Next") (Alg (("!", Nat_kind_0) : h) t0 [k]) (ins_new (g ++ " Zero") (Alg h s0 [i]) d),
-                      Prelude.foldl
-                        (\w' -> \(m, u) -> ins_new m u w')
-                        e
-                        ((second t' <$> s) ++ (second (Basic_type_1 ((j, Nat_kind_0) : h) Nothing []) <$> t)),
-                      ins_new
-                        k
-                        (Constructor (g ++ " Next") (snd <$> t1))
-                        (ins_new i (Constructor (g ++ " Zero") (snd <$> s1)) m3))
-                  _ -> undefined) <$>
+              (\(s, s4) -> \(t, t4) ->
+                (
+                  ins_new (g ++ " Next") (Alg (("!", Nat_kind_0) : h) t0 [k]) (ins_new (g ++ " Zero") (Alg h s0 [i]) d),
+                  Prelude.foldl
+                    (\w' -> \(m, u) -> ins_new m u w')
+                    e
+                    ((second t' <$> s) ++ (second (Basic_type_1 ((j, Nat_kind_0) : h) Nothing []) <$> t)),
+                  ins_new k (Constructor (g ++ " Next") t4) (ins_new i (Constructor (g ++ " Zero") s4) m3))) <$>
               type_branching a l s0 (Data_br_1 i i') <*>
               type_branching a (Data.Map.insert j Nat_kind_0 l) t0 (Data_br_1 k k'))
         Struct_data_2 i ->
           (
-            (\u ->
-              case u of
-                _ : u' ->
-                  (
-                    ins_new g (Alg h x [g]) d,
-                    Prelude.foldl (\w' -> \(k, r) -> ins_new k (t' r) w') e u,
-                    ins_new g (Constructor g (snd <$> u')) m3)
-                _ -> undefined) <$>
+            (\(u, w) ->
+              (
+                ins_new g (Alg h x [g]) d,
+                Prelude.foldl (\w' -> \(k, r) -> ins_new k (t' r) w') e u,
+                ins_new g (Constructor g w) m3)) <$>
             type_branching a l x (Data_br_1 g i))
   type_datas ::
     (
@@ -1413,7 +1406,7 @@ module Typing where
         (
           (\f -> (f, e, u)) <$
           type_ops h (fst <$> e) a2 <*>
-          type_defs_2 (Location_1 h) g (i, j, fst <$> e) c ((<$>) fst <$> u) b y))
+          type_defs_2 (Location_1 h) g (i, j, fst <$> e) c (fmap fst <$> u) b y))
   type_defs_1 ::
     String ->
     [Def_3] ->

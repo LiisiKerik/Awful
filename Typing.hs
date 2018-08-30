@@ -1817,120 +1817,89 @@ module Typing where
   types :: Map' Type_2
   types =
     Data.Map.fromList
-      [
+      (
         (
-          "Add",
-          Basic_type_1
-            [("T", Star_kind_0)]
-            (Just (Constraint_1 "Ring" "T"))
-            [Constraint_1 "Ring" "T"]
-            (function_type (Name_type_1 "T") (function_type (Name_type_1 "T") (Name_type_1 "T")))),
-        (
-          "Compare",
-          Basic_type_1
-            [("T", Star_kind_0)]
-            (Just (Constraint_1 "Ord" "T"))
-            [Constraint_1 "Ord" "T"]
-            (function_type (Name_type_1 "T") (function_type (Name_type_1 "T") comparison_type))),
-        (
-          "Construct_List",
-          Basic_type_1
-            [("T", Star_kind_0)]
-            Nothing
-            []
-            (function_type (Name_type_1 "T") (function_type (list_type (Name_type_1 "T")) (list_type (Name_type_1 "T"))))),
-        (
-          "Convert",
-          Basic_type_1
-            [("T", Star_kind_0)]
-            (Just (Constraint_1 "Ring" "T"))
-            [Constraint_1 "Ring" "T"]
-            (function_type int_type (Name_type_1 "T"))),
-        ("Crash", Basic_type_1 [("T", Star_kind_0)] Nothing [] (Name_type_1 "T")),
-        ("Div", Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type (maybe_type int_type)))),
-        (
-          "Div'",
-          Basic_type_1
-            [("N", Nat_kind_0)]
-            (Just (Constraint_1 "Nonzero" "N"))
-            [Constraint_1 "Nonzero" "N"]
-            (function_type int_type int_type)),
-        ("EQ", Basic_type_1 [] Nothing [] comparison_type),
-        ("Empty_List", Basic_type_1 [("T", Star_kind_0)] Nothing [] (list_type (Name_type_1 "T"))),
-        ("False", Basic_type_1 [] Nothing [] logical_type),
-        (
-          "First",
-          Basic_type_1
-            [("T", Star_kind_0), ("U", Star_kind_0)]
-            Nothing
-            []
-            (function_type (pair_type (Name_type_1 "T") (Name_type_1 "U")) (Name_type_1 "T"))),
-        ("GT", Basic_type_1 [] Nothing [] comparison_type),
-        (
-          "Inverse",
-          Basic_type_1
-            [("T", Star_kind_0)]
-            (Just (Constraint_1 "Field" "T"))
-            [Constraint_1 "Field" "T", Constraint_1 "Ring" "T"]
-            (function_type (Name_type_1 "T") (maybe_type (Name_type_1 "T")))),
-        (
-          "Left",
-          Basic_type_1
-            [("T", Star_kind_0), ("U", Star_kind_0)]
-            Nothing
-            []
-            (function_type (Name_type_1 "T") (either_type (Name_type_1 "T") (Name_type_1 "U")))),
-        ("LT", Basic_type_1 [] Nothing [] comparison_type),
-        ("Mod", Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type (maybe_type int_type)))),
-        (
-          "Multiply",
-          Basic_type_1
-            [("T", Star_kind_0)]
-            (Just (Constraint_1 "Ring" "T"))
-            [Constraint_1 "Ring" "T"]
-            (function_type (Name_type_1 "T") (function_type (Name_type_1 "T") (Name_type_1 "T")))),
-        (
-          "Negate",
-          Basic_type_1
-            [("T", Star_kind_0)]
-            (Just (Constraint_1 "Ring" "T"))
-            [Constraint_1 "Ring" "T"]
-            (function_type (Name_type_1 "T") (Name_type_1 "T"))),
-        ("Nothing", Basic_type_1 [("T", Star_kind_0)] Nothing [] (maybe_type (Name_type_1 "T"))),
-        (
-          "Pair",
-          Basic_type_1
-            [("T", Star_kind_0), ("U", Star_kind_0)]
-            Nothing
-            []
-            (function_type
-              (Name_type_1 "T")
-              (function_type (Name_type_1 "U") (pair_type (Name_type_1 "T") (Name_type_1 "U"))))),
-        (
-          "Right",
-          Basic_type_1
-            [("T", Star_kind_0), ("U", Star_kind_0)]
-            Nothing
-            []
-            (function_type (Name_type_1 "U") (either_type (Name_type_1 "T") (Name_type_1 "U")))),
-        (
-          "Second",
-          Basic_type_1
-            [("T", Star_kind_0), ("U", Star_kind_0)]
-            Nothing
-            []
-            (function_type (pair_type (Name_type_1 "T") (Name_type_1 "U")) (Name_type_1 "U"))),
-        ("True", Basic_type_1 [] Nothing [] logical_type),
-        (
-          "Wrap",
-          Basic_type_1 [("T", Star_kind_0)] Nothing [] (function_type (Name_type_1 "T") (maybe_type (Name_type_1 "T")))),
-        (
-          "Write_Brackets",
-          Basic_type_1
-            [("T", Star_kind_0)]
-            (Just (Constraint_1 "Writeable" "T"))
-            [Constraint_1 "Writeable" "T"]
-            (function_type (Name_type_1 "T") (pair_type (list_type char_type) logical_type)))]
+          second
+            (\(Constructor a b) ->
+              let
+                Alg c d _ = algebraics ! a
+              in
+                Basic_type_1 c Nothing [] (Prelude.foldr function_type d b)) <$>
+          constrs) ++
+        [
+          (
+            "Add",
+            Basic_type_1
+              [("T", Star_kind_0)]
+              (Just (Constraint_1 "Ring" "T"))
+              [Constraint_1 "Ring" "T"]
+              (function_type (Name_type_1 "T") (function_type (Name_type_1 "T") (Name_type_1 "T")))),
+          (
+            "Compare",
+            Basic_type_1
+              [("T", Star_kind_0)]
+              (Just (Constraint_1 "Ord" "T"))
+              [Constraint_1 "Ord" "T"]
+              (function_type (Name_type_1 "T") (function_type (Name_type_1 "T") comparison_type))),
+          (
+            "Convert",
+            Basic_type_1
+              [("T", Star_kind_0)]
+              (Just (Constraint_1 "Ring" "T"))
+              [Constraint_1 "Ring" "T"]
+              (function_type int_type (Name_type_1 "T"))),
+          ("Crash", Basic_type_1 [("T", Star_kind_0)] Nothing [] (Name_type_1 "T")),
+          ("Div", Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type (maybe_type int_type)))),
+          (
+            "Div'",
+            Basic_type_1
+              [("N", Nat_kind_0)]
+              (Just (Constraint_1 "Nonzero" "N"))
+              [Constraint_1 "Nonzero" "N"]
+              (function_type int_type int_type)),
+          (
+            "First",
+            Basic_type_1
+              [("T", Star_kind_0), ("U", Star_kind_0)]
+              Nothing
+              []
+              (function_type (pair_type (Name_type_1 "T") (Name_type_1 "U")) (Name_type_1 "T"))),
+          (
+            "Inverse",
+            Basic_type_1
+              [("T", Star_kind_0)]
+              (Just (Constraint_1 "Field" "T"))
+              [Constraint_1 "Field" "T", Constraint_1 "Ring" "T"]
+              (function_type (Name_type_1 "T") (maybe_type (Name_type_1 "T")))),
+          ("Mod", Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type (maybe_type int_type)))),
+          (
+            "Multiply",
+            Basic_type_1
+              [("T", Star_kind_0)]
+              (Just (Constraint_1 "Ring" "T"))
+              [Constraint_1 "Ring" "T"]
+              (function_type (Name_type_1 "T") (function_type (Name_type_1 "T") (Name_type_1 "T")))),
+          (
+            "Negate",
+            Basic_type_1
+              [("T", Star_kind_0)]
+              (Just (Constraint_1 "Ring" "T"))
+              [Constraint_1 "Ring" "T"]
+              (function_type (Name_type_1 "T") (Name_type_1 "T"))),
+          (
+            "Second",
+            Basic_type_1
+              [("T", Star_kind_0), ("U", Star_kind_0)]
+              Nothing
+              []
+              (function_type (pair_type (Name_type_1 "T") (Name_type_1 "U")) (Name_type_1 "U"))),
+          (
+            "Write_Brackets",
+            Basic_type_1
+              [("T", Star_kind_0)]
+              (Just (Constraint_1 "Writeable" "T"))
+              [Constraint_1 "Writeable" "T"]
+              (function_type (Name_type_1 "T") (pair_type (list_type char_type) logical_type)))])
   typestring :: Type_1 -> [Type_1] -> (String, [Type_1])
   typestring a d =
     case a of

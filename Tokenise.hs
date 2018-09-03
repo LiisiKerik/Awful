@@ -32,7 +32,6 @@ module Tokenise where
     Blank_token |
     Branch_token |
     Branching_token |
-    Case_token |
     Char_token Char |
     Check_token |
     Class_token |
@@ -268,7 +267,6 @@ module Tokenise where
       "Algebraic" -> Algebraic_token
       "Branch" -> Branch_token
       "Branching" -> Branching_token
-      "Case" -> Case_token
       "Check" -> Check_token
       "Class" -> Class_token
       "Def" -> Def_token

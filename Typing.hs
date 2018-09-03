@@ -41,6 +41,10 @@ syntax: allow writing List[sometype] to disambiguate type of list when using lis
 teha eraldi algebraline andmetüüp juba väärtustatud avaldise jaoks et undef-e vähemaks saada?
 internal: make the system of specifying built-in algebraic data types and things better and safer
 make syntactic sugar for x -> Match x {...}
+generalise Branching data type to branch from any of the type variables?
+    Branching Array[! : Nat, T : Star]{Zero -> ..., Next N -> ...}
+syntactic sugar for multiple variable lambdas? (x, y) -> ...
+remove special semantics of missing pattern match arguments?
 -}
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}

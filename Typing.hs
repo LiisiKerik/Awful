@@ -1403,7 +1403,7 @@ module Typing where
   type_defs ::
     (
       String ->
-      [Def_3] ->
+      ([Normaliser_0], [Def_3]) ->
       [Name] ->
       (Map' Kind_0, Map' Alg, Map' Constructor) ->
       (Map' Expr_2, Types) ->
@@ -1411,7 +1411,7 @@ module Typing where
       Map' Class_5 ->
       Map' (Map' ([[String]], Status)) ->
       Err (Map' Expr_2, Types, Map' (Map' ([[String]], Status))))
-  type_defs h a a2 (b, i, j) (c, d) y y0 t =
+  type_defs h (a', a) a2 (b, i, j) (c, d) y y0 t =
     (
       type_defs_1 h a b d y y0 t >>=
       \(g, e, u) ->
@@ -1959,7 +1959,7 @@ module Typing where
                   i)) <$>
               type_defs
                 k
-                c
+                (f4, c)
                 x7
                 (fst <$> e, fst <$> b, fst <$> h)
                 (f, g0)

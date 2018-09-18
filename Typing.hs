@@ -158,7 +158,7 @@ module Typing where
   data Method_3 = Method_3 String [(String, Kind_0)] [Constraint_0] Type_1 deriving Show
   data Method_4 = Method_4 String [(String, Kind_0)] [Constraint_1] Type_1 deriving Show
   data Modular' = Modular' Integer Integer deriving Show
-  data Normaliser_0 = Normaliser_0 [(String, Kind_0)] [(String, Type_1)] Expression_1 deriving Show
+  data Normaliser_0 = Normaliser_0 String [(String, Kind_0)] [(String, Type_1)] Location_0 Expression_1 deriving Show
   data Pattern_5 =
     Blank_pattern_5 |
     Char_blank_pattern_5 (Set Char) |
@@ -1259,7 +1259,7 @@ module Typing where
                   ins_new g (Alg h x [g]) d,
                   Prelude.foldl (\w' -> \(k, r) -> ins_new k (t' r) w') e u,
                   ins_new g (Constructor g w) m3),
-                Normaliser_0 h (tail u) <$> m4)) <$>
+                (\(t0, t1) -> Normaliser_0 g h (tail u) t0 t1) <$> m4)) <$>
             type_branching a l x (Data_br_1 g i))
   type_datas ::
     (
@@ -1417,7 +1417,8 @@ module Typing where
       \(g, e, u) ->
         (
           (\f -> (f, e, u)) <$
-          type_ops h (fst <$> e) a2 <*>
+          type_ops h (fst <$> e) a2 <*
+          type_normalisers (Location_1 h) a' (i, j, fst <$> e) (fmap fst <$> u) b <*>
           type_defs_2 (Location_1 h) g (i, j, fst <$> e) c (fmap fst <$> u) b y))
   type_defs_1 ::
     String ->
@@ -1725,6 +1726,36 @@ module Typing where
     case a of
       [] -> Right []
       b : c -> type_method_1 e f b >>= \d -> (:) d <$> type_methods_1 e f c
+  type_normaliser ::
+    (
+      (Location_0 -> Location_1) ->
+      Normaliser_0 ->
+      (Map' Alg, Map' Constructor, Map' Type_2) ->
+      Map' (Map' [[String]]) ->
+      Map' Kind_0 ->
+      Err Expression_2)
+  type_normaliser a (Normaliser_0 m b c n d) (e, f, g) l h =
+    type_expr
+      (m ++ " checker" ++ location' (a n))
+      (Name_type_1 "Logical")
+      a
+      (e, f, Prelude.foldl (\i -> \(j, k) -> Data.Map.insert j (Basic_type_1 b Nothing [] k) i) g c)
+      d
+      l
+      0
+      (Prelude.foldl (\i -> \(j, k) -> Data.Map.insert j k i) h b)
+  type_normalisers ::
+    (
+      (Location_0 -> Location_1) ->
+      [Normaliser_0] ->
+      (Map' Alg, Map' Constructor, Map' Type_2) ->
+      Map' (Map' [[String]]) ->
+      Map' Kind_0 ->
+      Err ())
+  type_normalisers a b c d f =
+    case b of
+      [] -> Right ()
+      g : h -> type_normaliser a g c d f *> type_normalisers a h c d f
   type_ops :: String -> Map' Type_2 -> [Name] -> Err ()
   type_ops a b c =
     case c of

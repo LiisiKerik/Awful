@@ -26,7 +26,7 @@ module Tree where
   data Data_0 =
     Algebraic_data_0 Location_0 String [(Name, Kind_0)] [Form_0] |
     Branching_data_0 Location_0 String [(Name, Kind_0)] Data_br_0 Name Data_br_0 |
-    Struct_data_0 Location_0 Status String [(Name, Kind_0)] [(Name, Type_7)]
+    Struct_data_0 Location_0 Stat String [(Name, Kind_0)] [(Name, Type_7)] (Maybe (Location_0, Expression_0))
       deriving Show
   data Data_br_0 = Data_br_0 Name [(Name, Type_7)] deriving Show
   data Def_0 =
@@ -60,7 +60,7 @@ module Tree where
   newtype Parser s f t = Parser {parser :: s -> f (t, s)}
   type Parser' = Parser State (Either Location_0)
   data State = State Tokens Location_0 deriving Show
-  data Status = New | Old deriving (Eq, Show)
+  data Stat = Standard | Restricted deriving Show
   data Tree_0 = Tree_0 [Data_0] [Class_0] [Opdecl_0] [Def_0] deriving Show
   data Tree_1 = Tree_1 [Name] Tree_0 deriving Show
   data Type_0 = Application_type_0 Type_0 [Type_0] | Name_type_0 Name | Nat_type_0 Integer | Op_type_0 Type_0 [(Name, Type_0)]
@@ -479,9 +479,10 @@ module Tree where
       parse_token Struct_token <*>
       parse_name <*>
       parse_kinds <*>
-      parse_arguments' parse_name')
-  parse_struct_status :: Parser' Status
-  parse_struct_status = Old <$ parse_token Restricted_token <+> return New
+      parse_arguments' parse_name' <*>
+      parse_optional' ((\a -> \b -> Just (a, b)) <& parse_operator "=" <*> parse_expression'))
+  parse_struct_status :: Parser' Stat
+  parse_struct_status = Restricted <$ parse_token Restricted_token <+> return Standard
   parse_token :: Token_0 -> Parser' ()
   parse_token a = parse_elementary (\b -> if b == a then Just () else Nothing)
   parse_tree :: (Location_0 -> Location_1) -> String -> Err Tree_1

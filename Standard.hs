@@ -14,7 +14,7 @@ module Standard where
   data Data_6 = Data_6 Location_0 String [(Name, Kind_0)] Data_branch_6 deriving Show
   data Data_br_6 = Data_br_6 Name [(Name, Type_8)] deriving Show
   data Data_branch_6 =
-    Algebraic_data_6 [Form_6] | Branching_data_6 Data_br_6 Name Data_br_6 | Struct_data_6 Status [(Name, Type_8)]
+    Algebraic_data_6 [Form_6] | Branching_data_6 Data_br_6 Name Data_br_6 | Struct_data_6 [(Name, Type_8)] (Maybe Expression_9)
       deriving Show
   data Eqq' = Eqq' Name [Pat] Expression_9 deriving Show
   data Expression_9 =
@@ -35,6 +35,7 @@ module Standard where
   data Op = Op Integer Assoc String deriving Show
   data Op' = Op' Location_0 Op deriving Show
   data Opdecl_1 = Opdecl_1 Location_0 String Name deriving Show
+  data Status = New | Old deriving (Eq, Show)
   data Tree_2 = Tree_2 [Data_6] [Class_7] [Opdecl_1] [Def_1] deriving Show
   data Tree_3 = Tree_3 [Name] Tree_2 deriving Show
   data Type_5 = Application_type_5 Type_5 Type_5 | Name_type_5 Name deriving Show
@@ -104,7 +105,7 @@ module Standard where
       in
         (
           (\g -> \h -> \k -> (rem_old i, Tree_2 g h j k)) <$>
-          traverse (std_dat d) a <*>
+          traverse (std_dat d f) a <*>
           traverse (std_cls d) b <*>
           standard_defs d (fst <$> i) c)
   standard_arguments ::
@@ -133,13 +134,14 @@ module Standard where
   std_case a b (Case_0 c e) = Case_1 c <$> std_expr a b e
   std_cls :: (Location_0 -> Location_1) -> Class_0 -> Err Class_7
   std_cls e (Class_0 a b c d) = Class_7 a b c <$> traverse (std_mthd e) d
-  std_dat :: (Location_0 -> Location_1) -> Data_0 -> Err Data_6
-  std_dat x y =
+  std_dat :: (Location_0 -> Location_1) -> Map' Op -> Data_0 -> Err Data_6
+  std_dat x z y =
     case y of
       Algebraic_data_0 a b c d ->
         (\e -> Data_6 a b c (Algebraic_data_6 e)) <$> traverse (\(Form_0 g h) -> Form_6 g <$> traverse (std_type x) h) d
       Branching_data_0 a b c d e f -> (\g -> \h -> Data_6 a b c (Branching_data_6 g e h)) <$> std_br x d <*> std_br x f
-      Struct_data_0 a f b c d -> (\e -> Data_6 a b c (Struct_data_6 f e)) <$> traverse (\(g, h) -> (,) g <$> std_type x h) d
+      Struct_data_0 a f b c d j ->
+        (\i -> \e -> Data_6 a b c (Struct_data_6 e i)) <$> std_stat x z a f j <*> traverse (\(g, h) -> (,) g <$> std_type x h) d
   std_default ::
     (Location_0 -> Location_1) -> Map' Op -> Maybe (Location_0, Expression_0)  -> Err (Maybe (Location_0, Expression_9))
   std_default a f b =
@@ -168,6 +170,14 @@ module Standard where
   std_matches a b = traverse (std_case a b)
   std_mthd :: (Location_0 -> Location_1) -> Method -> Err Method_9
   std_mthd a (Method b c d e) = Method_9 b c d <$> std_type a e
+  std_stat ::
+    (Location_0 -> Location_1) -> Map' Op -> Location_0 -> Stat -> Maybe (Location_0, Expression_0) -> Err (Maybe Expression_9)
+  std_stat a f b c d =
+    case (c, d) of
+      (Standard, Nothing) -> Right Nothing
+      (Standard, Just (e, _)) -> Left ("Parse error" ++ location' (a e))
+      (Restricted, Nothing) -> Left ("Restricted struct" ++ location' (a b) ++ "should have a checker.")
+      (Restricted, Just (_, e)) -> Just <$> std_expr a f e
   std_type :: (Location_0 -> Location_1) -> Type_7 -> Err Type_8
   std_type c (Type_7 a b) = Type_8 a <$> std_type' c b
   std_type' :: (Location_0 -> Location_1) -> Type_0 -> Err Type_5

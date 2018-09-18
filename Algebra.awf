@@ -2,7 +2,14 @@
 Load (Standard.awf)
 Branching Array[T : Star]{Zero -> Empty_Array, Next N -> Construct_Array(Head : T, Tail : Array N T)}
 Struct Complex[T : Star](Real : T, Imaginary : T)
-Struct Fraction(Num : Int, Den : Int)
+Struct Fraction(Num : Int, Den : Int) =
+  Let
+    Pair Sign_Num Num' = Separate Num, Pair Sign_Den Den' = Separate Den, GCD_Num_Den = GCD Num_0 Den_0, 
+  In
+    Fraction () (Div' GCD_Num_Den}
+`Restricted Struct Polynomial[T : Star]<Ring T>(Coefficients : List T) = 
+`Normalised Struct [T : Star]<Ring T>(Coefficients : List T) = Polynomial
+`Normalised Struct Polynomial[T : Star]<Ring T>(Coefficients : List T) -> 
 Struct Quaternion[T : Star](Qr : T, Qx : T, Qy : T, Qz : T)
 Branching Square[T : Star]{
   Zero -> Empty_Square,
@@ -57,6 +64,7 @@ Instance Functor{Complex}(Compose f (Complex x y) = Complex (f x) (f y))
 Instance Functor{Quaternion}(Compose f (Quaternion x y z a) = Quaternion (f x) (f y) (f z) (f a))
 Instance Functor_Array{Zero}(Fmap_Array _ _ = Empty_Array)
 Instance Functor_Array{Next N}<Functor_Array N>(Fmap_Array f a = Construct_Array (f (Head a)) (f . Tail a))
+Def GCD(x : Int, y : Int) : Int =
 Def Multiply_left[T : Star, F : Star -> Star]<Functor F, Ring T>(x : T, y : F T) : F T = Multiply x . y
 Def Multiply_right[F : Star -> Star, T : Star]<Functor F, Ring T>(x : F T, y : T) : F T = (z -> z * y) . x
 Instance Ord{Array N T}<Ord T, Ord_Array N>(Compare = Compare_Array)
@@ -80,6 +88,7 @@ Instance Ring{Quaternion T}<Ring T>(
       (Minus (x * d + y * e + z * b) (a * c))
       (Minus (x * e) (y * d) + z * c + a * b),
   Negate = Negate')
+Def Separate(x : Int) : Int * Int = Match Compare x 0 {LT -> Pair -1 (Negate x), EQ -> Pair 0 0, GT -> Pair 1 x}
 Def Sqr[T : Star]<Ring T>(x : T) : T = x * x
 Def Sum[F : Star -> Star, T : Star]<Foldable F, Ring T> : F T -> T = Fold_right Add Zr
 Def Sum_squares[F : Star -> Star, T : Star]<Foldable F, Functor F, Ring T>(x : F T) : T = Sum (Sqr . x)

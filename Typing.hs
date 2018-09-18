@@ -54,6 +54,7 @@ module Typing where
   import Data.Foldable
   import Data.List
   import Data.Map
+  import Data.Maybe
   import Data.Set
   import Naming
   import Standard
@@ -157,6 +158,7 @@ module Typing where
   data Method_3 = Method_3 String [(String, Kind_0)] [Constraint_0] Type_1 deriving Show
   data Method_4 = Method_4 String [(String, Kind_0)] [Constraint_1] Type_1 deriving Show
   data Modular' = Modular' Integer Integer deriving Show
+  data Normaliser_0 = Normaliser_0 [(String, Kind_0)] [(String, Type_1)] Expression_1 deriving Show
   data Pattern_5 =
     Blank_pattern_5 |
     Char_blank_pattern_5 (Set Char) |
@@ -1203,14 +1205,14 @@ module Typing where
             (
               (second (Expr_2 Nothing (fst <$> c)) <$> type_br_0 i) ++
               (second (Expr_2 Nothing ("!" : (fst <$> c))) <$> type_br_0 k))
-        Struct_data_2 i d4 -> s (type_br_0 (Data_br_1 b i))
+        Struct_data_2 i _ -> s (type_br_0 (Data_br_1 b i))
   type_data_2 ::
     (
       (Location_0 -> Location_1) ->
       Data_2 ->
       Map' Kind_0 ->
       (Algebraics, Types, Map' (Constructor, Status)) ->
-      Err (Algebraics, Types, Map' (Constructor, Status)))
+      Err ((Algebraics, Types, Map' (Constructor, Status)), Maybe Normaliser_0))
   type_data_2 a (Data_2 g h b) c (d, e, m3) =
     let
       l = type_kinds h c
@@ -1225,9 +1227,11 @@ module Typing where
           (
             (\q ->
               (
-                ins_new g (Alg h x ((\(Form_2 u _) -> u) <$> q)) d,
-                Prelude.foldl (\w' -> \(Form_2 u m) -> ins_new u (t' (Prelude.foldr function_type x m)) w') e q,
-                Prelude.foldl (\w' -> \(Form_2 u m) -> ins_new u (Constructor g m) w') m3 q)) <$>
+                (
+                  ins_new g (Alg h x ((\(Form_2 u _) -> u) <$> q)) d,
+                  Prelude.foldl (\w' -> \(Form_2 u m) -> ins_new u (t' (Prelude.foldr function_type x m)) w') e q,
+                  Prelude.foldl (\w' -> \(Form_2 u m) -> ins_new u (Constructor g m) w') m3 q),
+                Nothing)) <$>
             type_forms a i l)
         Branching_data_2 (Data_br_1 i i') j (Data_br_1 k k') ->
           let
@@ -1237,33 +1241,37 @@ module Typing where
             (
               (\(s, s4) -> \(t, t4) ->
                 (
-                  ins_new (g ++ " Next") (Alg (("!", Nat_kind_0) : h) t0 [k]) (ins_new (g ++ " Zero") (Alg h s0 [i]) d),
-                  Prelude.foldl
-                    (\w' -> \(m, u) -> ins_new m u w')
-                    e
-                    ((second t' <$> s) ++ (second (Basic_type_1 ((j, Nat_kind_0) : h) Nothing []) <$> t)),
-                  ins_new k (Constructor (g ++ " Next") t4) (ins_new i (Constructor (g ++ " Zero") s4) m3))) <$>
+                  (
+                    ins_new (g ++ " Next") (Alg (("!", Nat_kind_0) : h) t0 [k]) (ins_new (g ++ " Zero") (Alg h s0 [i]) d),
+                    Prelude.foldl
+                      (\w' -> \(m, u) -> ins_new m u w')
+                      e
+                      ((second t' <$> s) ++ (second (Basic_type_1 ((j, Nat_kind_0) : h) Nothing []) <$> t)),
+                    ins_new k (Constructor (g ++ " Next") t4) (ins_new i (Constructor (g ++ " Zero") s4) m3)),
+                  Nothing)) <$>
               type_branching a l s0 (Data_br_1 i i') <*>
               type_branching a (Data.Map.insert j Nat_kind_0 l) t0 (Data_br_1 k k'))
         Struct_data_2 i m4 ->
           (
             (\(u, w) ->
               (
-                ins_new g (Alg h x [g]) d,
-                Prelude.foldl (\w' -> \(k, r) -> ins_new k (t' r) w') e u,
-                ins_new g (Constructor g w) m3)) <$>
+                (
+                  ins_new g (Alg h x [g]) d,
+                  Prelude.foldl (\w' -> \(k, r) -> ins_new k (t' r) w') e u,
+                  ins_new g (Constructor g w) m3),
+                Normaliser_0 h (tail u) <$> m4)) <$>
             type_branching a l x (Data_br_1 g i))
   type_datas ::
     (
       (Location_0 -> Location_1) ->
       [Data_2] ->
       (Map' (Kind_0, Status), Algebraics, Map' (Constructor, Status), Types, Map' Expr_2) ->
-      Err (Map' (Kind_0, Status), Algebraics, Map' (Constructor, Status), Types, Map' Expr_2))
+      Err ((Map' (Kind_0, Status), Algebraics, Map' (Constructor, Status), Types, Map' Expr_2), [Normaliser_0]))
   type_datas h a (b, i, j, d, c) =
     let
       (u, w) = type_datas_1 a (b, c)
     in
-      (\(b', c', v) -> (u, b', v, c', w)) <$> type_datas_2 h a (fst <$> u) (i, d, j)
+      first (\(b', c', v) -> (u, b', v, c', w)) <$> type_datas_2 h a (fst <$> u) (i, d, j)
   type_datas_1 :: [Data_2] -> (Map' (Kind_0, Status), Map' Expr_2) -> (Map' (Kind_0, Status), Map' Expr_2)
   type_datas_1 b c = Prelude.foldl (\a -> \d -> type_data_1 d a) c b
   type_datas_2 ::
@@ -1272,11 +1280,11 @@ module Typing where
       [Data_2] ->
       Map' Kind_0 ->
       (Algebraics, Types, Map' (Constructor, Status)) ->
-      Err (Algebraics, Types, Map' (Constructor, Status)))
+      Err ((Algebraics, Types, Map' (Constructor, Status)), [Normaliser_0]))
   type_datas_2 f a b c =
     case a of
-      [] -> Right c
-      d : e -> type_data_2 f d b c >>= type_datas_2 f e b
+      [] -> Right (c, [])
+      d : e -> type_data_2 f d b c >>= \(g, h) -> second ((++) (maybeToList h)) <$> type_datas_2 f e b g
   type_def_1 ::
     (
       String ->
@@ -1940,7 +1948,7 @@ module Typing where
   typing k (Tree_5 a a' x7 c) (File d t u v b' c5 x t2, l) =
     (
       type_datas (Location_1 k) a (old d, old t, old u, old v, l) >>=
-      \(e, b, h, g, f) ->
+      \((e, b, h, g, f), f4) ->
         (
           type_classes k (fst <$> e) a' (old b', g, old t2, old c5) >>=
           \(c', g0, x2, t3) ->

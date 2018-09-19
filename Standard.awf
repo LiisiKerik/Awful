@@ -2,32 +2,40 @@
 Class Applicative{F : Star -> Star}<Functor>(Compose[T : Star, U : Star] : F (T -> U) -> F T -> F U, Lift[T : Star] : T -> F T)
 Class Braided{F : Star -> Star -> Star}(
   Apply'[T : Star, U : Star, V : Star, W : Star] : (T -> U) -> (V -> W) -> F T V -> F U W,
-  Associate[T : Star, U : Star, V : Star] : F (F T U) V -> F T (F U V),
+  Associate_left[T : Star, U : Star, V : Star] : F T (F U V) -> F (F T U) V,
+  Associate_right[T : Star, U : Star, V : Star] : F (F T U) V -> F T (F U V),
   Commute[T : Star, U : Star] : F T U -> F U T)
 Class Container{F : Star -> Star}(Empty[T : Star] : F T, Filter[T : Star] : (T -> Logical) -> F T -> F T)
 Class Finite{T : Star}<Ord>(All : List T)
 Class Functor{F : Star -> Star}(Apply[T : Star, U : Star] : (T -> U) -> F T -> F U)
 Class Monad{F : Star -> Star}<Applicative>(Bind[T : Star, U : Star] : F T -> (T -> F U) -> F U)
-Operator ! Compose 3 Left
+Operator ! Compose 5 Left
+Operator & Pair 6 Right
 Operator % Mod 0 Left
 Operator * Multiply 0 Left
 Operator + Add 1 Left
 Operator - Minus 1 Left
-Operator . Apply 3 Left
-Operator .. Apply' 3 Right
+Operator . Apply 5 Left
+Operator .. Apply' 5 Right
 Operator / Div_right 0 Left
+Operator /\ Max 3 Left
+Operator /-\ Nand 3 Left
+Operator : Construct_List 7 Right
 Operator < Less 2 Left
 Operator <= Less_or_equal 2 Left
 Operator =/ Not_equal 2 Left
 Operator == Equal 2 Left
+Operator =?= Compare 2 Left
 Operator > Greater 2 Left
 Operator >= Greater_or_equal 2 Left
-Operator ? Filter 3 Right
+Operator ? Filter 5 Right
 Operator \ Div_left 0 Left
+Operator \/ Min 4 Left
+Operator \-/ Nor 4 Left
 Operator | Div 0 Left
-Operator ~ Bind 3 Right
-Def All_Modular[N : Nat]<Nonzero N>(x : Modular N, y : List (Modular N)) : List (Modular N) =
-  Let z = Construct_List x y In Match Is_Zero x {False -> All_Modular (x - Id) z, True -> z}
+Operator ~ Bind 5 Right
+Def All_Modular[N : Nat]<Nonzero N>(x : Modular N) : List (Modular N) =
+  Let y = x + Id In Construct_List x (Match Is_Zero y {False -> All_Modular y, True -> Empty_List})
 Instance Applicative{Either _}(Compose x y = Match x {Left z -> Left z, Right f -> f . y}, Lift = Right)
 Instance Applicative{Function _}(Compose f g x = f x (g x), Lift x _ = x)
 Instance Applicative{List}(
@@ -36,11 +44,13 @@ Instance Applicative{List}(
 Instance Applicative{Maybe}(Compose x y = Match x {Nothing -> Nothing, Wrap f -> f . y}, Lift = Wrap)
 Instance Braided{Either}(
   Apply' f g x = Match x {Left y -> Left (f y), Right y -> Right (g y)},
-  Associate x = Match x {Left y -> Match y {Left z -> Left z, Right z -> Right (Left z)}, Right y -> Right (Right y)},
+  Associate_left x = Match x {Left y -> Left (Left y), Right y -> Match y {Left z -> Left (Right z), Right z -> Right z}},
+  Associate_right x = Match x {Left y -> Match y {Left z -> Left z, Right z -> Right (Left z)}, Right y -> Right (Right y)},
   Commute x = Match x {Left y -> Right y, Right y -> Left y})
 Instance Braided{Pair}(
   Apply' f g (Pair x y) = Pair (f x) (g y),
-  Associate (Pair (Pair x y) z) = Pair x (Pair y z),
+  Associate_left (Pair x (Pair y z)) = Pair (Pair x y) z,
+  Associate_right (Pair (Pair x y) z) = Pair x (Pair y z),
   Commute (Pair x y) = Pair y x)
 Def Brackets[T : Star]<Writeable T>(x : T) : List Char =
   Let Pair y z = Write_Brackets x In Match z {False -> y, True -> Cat (Lift "(") (Cat y (Lift ")"))}
@@ -63,7 +73,7 @@ Instance Finite{Comparison}(All = List (LT,  EQ,  GT))
 Instance Finite{Either T U}<Finite T, Finite U>(All = Cat (Left . All) (Right . All))
 Instance Finite{Logical}(All = List (False, True))
 Instance Finite{Maybe T}<Finite T>(All = Construct_List Nothing (Wrap . All))
-Instance Finite{Modular N}(All = Branch N {Zero -> List, Next N' -> All_Modular (Convert -1) List})
+Instance Finite{Modular N}(All = Branch N {Zero -> List, Next N' -> All_Modular Zr})
 Instance Finite{Pair T U}<Finite T, Finite U>(All = Zip Pair All All)
 Def Flatten[F : Star -> Star, T : Star]<Monad F>(x : F (F T)) : F T = Bind x Identity
 Instance Functor{Either _}(Apply = Map_right)
@@ -90,7 +100,9 @@ Instance Monad{Function _}(Bind f g x = g (f x) x)
 Instance Monad{List}(Bind x f = Match x {Empty_List -> List, Construct_List y z -> Cat (f y) (Bind z f)})
 Instance Monad{Maybe}(Bind x f = Match x {Nothing -> Nothing, Wrap y -> f y})
 Def Multiply'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Multiply
+Def Nand(x : Logical, y : Logical) : Logical = Not (Min x y)
 Def Negate'[F : Star -> Star, T : Star]<Functor F, Ring T> : F T -> F T = Apply Negate
+Def Nor(x : Logical, y : Logical) : Logical = Not (Max x y)
 Def Not(x : Logical) : Logical = Match x {False -> True, True -> False}
 Def Not_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> False, _ -> True}
 Instance Ord{Comparison}(

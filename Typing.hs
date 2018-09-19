@@ -1,5 +1,4 @@
 {-
-allow to hide (prevent exporting) constructors and field accessors which can potentially have bad behavior
 syntactic sugar for lists, vectors, matrices... allow writing (tiny, limited to expression parsing) language extensions?
 boolean function library
 implement map and set (AVL trees?)
@@ -44,6 +43,7 @@ generalise Branching data type to branch from any of the type variables?
 syntactic sugar for multiple variable lambdas? (x, y) -> ...
 remove special semantics of missing pattern match arguments?
 Allow hiding things to functions outside module - so that helper functions are not exported from the module?
+use operators in patternmatch?
 -}
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}

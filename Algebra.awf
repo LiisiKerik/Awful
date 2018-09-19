@@ -43,10 +43,8 @@ Instance Commutative{Complex T}<Commutative T>
 Instance Commutative{Int}
 Instance Commutative{Logical}
 Instance Commutative{Pair T U}<Commutative T, Commutative U>
-Def Div_left[T : Star]<Field T>(x : T, y : T) : Maybe T = (z -> z * y) . Inverse x
 Def Div_left'[F : Star -> Star, T : Star]<Functor F, Field T>(x : T, y : F T) : Maybe (F T) =
   (z -> Multiply_left z y) . Inverse x
-Def Div_right[T : Star]<Field T>(x : T, y : T) : Maybe T = Multiply x . Inverse y
 Def Div_right'[F : Star -> Star, T : Star]<Functor F, Field T>(x : F T, y : T) : Maybe (F T) = Multiply_right x . Inverse y
 Instance Field{Complex T}<Commutative T, Field T>(
   Inverse (Complex x y) = Div_right' (Complex x (Negate y)) (Sum_squares (List (x, y))))

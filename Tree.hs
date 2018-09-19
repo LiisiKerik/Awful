@@ -384,7 +384,7 @@ module Tree where
   parse_mid_expr :: Parser' Expression_0
   parse_mid_expr = parse_ap_expr <+> Modular_expression_0 <$> parse_modular
   parse_modular :: Parser' Modular
-  parse_modular = (\x -> flip (Modular x)) <&> parse_int' <* parse_token (Operator_token "#") <*> parse_int'
+  parse_modular = (\x -> flip (Modular x)) <&> parse_int' <* parse_token Number_token <*> parse_int'
   parse_modular_alg_pattern :: Parser' Alg_pat
   parse_modular_alg_pattern = Modular_alg_pat <$> parse_modular
   parse_name :: Parser' String

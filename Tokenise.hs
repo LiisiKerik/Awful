@@ -20,6 +20,7 @@ module Tokenise where
     Left_curly_delimiter |
     Left_round_delimiter |
     Left_square_delimiter |
+    Number_delimiter |
     Right_curly_delimiter |
     Right_round_delimiter |
     Right_square_delimiter
@@ -49,6 +50,7 @@ module Tokenise where
     Load_token |
     Match_token |
     Name_token String |
+    Number_token |
     Opdecl_token |
     Operator_token String |
     Restricted_token |
@@ -80,6 +82,7 @@ module Tokenise where
       '\n' -> Newline_char
       ' ' -> Space_char
       '"' -> Quote_char
+      '#' -> Delimiter_char Number_delimiter
       '(' -> Delimiter_char Left_round_delimiter
       ')' -> Delimiter_char Right_round_delimiter
       ',' -> Delimiter_char Comma_delimiter
@@ -97,7 +100,7 @@ module Tokenise where
             (
               flip
                 elem
-                ['!', '#', '$', '%', '&', '*', '+', '-', '.', ':', ';', '|', '<', '=', '>', '?', '@', '\\', '^'],
+                ['!', '$', '%', '&', '*', '+', '-', '.', ':', ';', '|', '<', '=', '>', '?', '@', '\\', '^'],
               Operator_char),
             (isDigit, Int_char)]
           Name_char)
@@ -160,6 +163,7 @@ module Tokenise where
                     Left_curly_delimiter -> Left_curly_token
                     Left_round_delimiter -> Left_round_token
                     Left_square_delimiter -> Left_square_token
+                    Number_delimiter -> Number_token
                     Right_curly_delimiter -> Right_curly_token
                     Right_round_delimiter -> Right_round_token
                     Right_square_delimiter -> Right_square_token) <$>
@@ -249,6 +253,7 @@ module Tokenise where
           Left_curly_delimiter -> '{'
           Left_round_delimiter -> '('
           Left_square_delimiter -> '['
+          Number_delimiter -> '#'
           Right_curly_delimiter -> '}'
           Right_round_delimiter -> ')'
           Right_square_delimiter -> ']'

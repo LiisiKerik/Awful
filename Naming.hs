@@ -22,14 +22,10 @@ module Naming where
   data Data_2 = Data_2 String [(String, Kind_0)] Data_branch_2 deriving Show
   data Data_br_1 = Data_br_1 String [(String, Type_8)] deriving Show
   data Data_branch_1 =
-    Algebraic_data_1 [Form_1] |
-    Branching_data_1 Data_br_1 Name Data_br_1 |
-    Struct_data_1 [(String, Type_8)] (Maybe (Location_0, Expression_9))
+    Algebraic_data_1 [Form_1] | Branching_data_1 Data_br_1 Name Data_br_1 | Struct_data_1 [(String, Type_8)] Struct_status
       deriving Show
   data Data_branch_2 =
-    Algebraic_data_2 [Form_1] |
-    Branching_data_2 Data_br_1 String Data_br_1 |
-    Struct_data_2 [(String, Type_8)] (Maybe (Location_0, Expression_1))
+    Algebraic_data_2 [Form_1] | Branching_data_2 Data_br_1 String Data_br_1 | Struct_data_2 [(String, Type_8)] Struct_status'
       deriving Show
   data Def_2 =
     Basic_def_2 Location_0 String [(Name, Kind_0)] [Constraint_0] Type_8 Expression_9 |
@@ -53,6 +49,7 @@ module Naming where
   type Locations = Map' Location'
   data Method_1 = Method_1 String [(Name, Kind_0)] [Constraint_0] Type_8 deriving Show
   data Method_2 = Method_2 String [(String, Kind_0)] [Constraint_0] Type_8 deriving Show
+  data Struct_status' = Hidden_str' | Restricted_str' (Location_0, Expression_1) | Standard_str' deriving Show
   data Tree_4 = Tree_4 [Data_1] [Class_1] [Name] [Def_2] deriving Show
   data Tree_5 = Tree_5 [Data_2] [Class_2] [Name] [Def_3] deriving Show
   add :: Ord t => Map t u -> t -> u -> Either u (Map t u)
@@ -184,8 +181,9 @@ module Naming where
         (
           Struct_data_2 e <$>
           case d of
-            Nothing -> Right Nothing
-            Just (g, f) -> (\i -> Just (g, i)) <$> naming_expression a f (h, c))
+            Hidden_str -> Right Hidden_str'
+            Restricted_str (g, f) -> (\i -> Restricted_str' (g, i)) <$> naming_expression a f (h, c)
+            Standard_str -> Right Standard_str')
   naming_datas_1 ::
     String -> [Data_6] -> ((Set String, Set String), Locations) -> Err (((Set String, Set String), Locations), [Data_1])
   naming_datas_1 = naming_list naming_data_1

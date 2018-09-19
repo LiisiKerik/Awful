@@ -38,6 +38,7 @@ module Tokenise where
     Comma_token |
     Def_token |
     Eval_token |
+    Hidden_token |
     In_token |
     Instance_token |
     Int_token Integer |
@@ -271,6 +272,7 @@ module Tokenise where
       "Class" -> Class_token
       "Def" -> Def_token
       "Eval" -> Eval_token
+      "Hidden" -> Hidden_token
       "In" -> In_token
       "Instance" -> Instance_token
       "Let" -> Let_token

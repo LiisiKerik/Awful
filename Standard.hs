@@ -14,9 +14,7 @@ module Standard where
   data Data_6 = Data_6 Location_0 String [(Name, Kind_0)] Data_branch_6 deriving Show
   data Data_br_6 = Data_br_6 Name [(Name, Type_8)] deriving Show
   data Data_branch_6 =
-    Algebraic_data_6 [Form_6] |
-    Branching_data_6 Data_br_6 Name Data_br_6 |
-    Struct_data_6 [(Name, Type_8)] (Maybe (Location_0, Expression_9))
+    Algebraic_data_6 [Form_6] | Branching_data_6 Data_br_6 Name Data_br_6 | Struct_data_6 [(Name, Type_8)] Struct_status
       deriving Show
   data Eqq' = Eqq' Name [Pat] Expression_9 deriving Show
   data Expression_9 =
@@ -38,6 +36,7 @@ module Standard where
   data Op' = Op' Location_0 Op deriving Show
   data Opdecl_1 = Opdecl_1 Location_0 String Name deriving Show
   data Status = New | Old deriving (Eq, Show)
+  data Struct_status = Hidden_str | Restricted_str (Location_0, Expression_9) | Standard_str deriving Show
   data Tree_2 = Tree_2 [Data_6] [Class_7] [Opdecl_1] [Def_1] deriving Show
   data Tree_3 = Tree_3 [Name] Tree_2 deriving Show
   data Type_5 = Application_type_5 Type_5 Type_5 | Name_type_5 Name deriving Show
@@ -173,19 +172,14 @@ module Standard where
   std_mthd :: (Location_0 -> Location_1) -> Method -> Err Method_9
   std_mthd a (Method b c d e) = Method_9 b c d <$> std_type a e
   std_stat ::
-    (
-      (Location_0 -> Location_1) ->
-      Map' Op ->
-      Location_0 ->
-      Stat ->
-      Maybe (Location_0, Expression_0) ->
-      Err (Maybe (Location_0, Expression_9)))
+    (Location_0 -> Location_1) -> Map' Op -> Location_0 -> Stat -> Maybe (Location_0, Expression_0) -> Err Struct_status
   std_stat a f b c d =
     case (c, d) of
-      (Standard, Nothing) -> Right Nothing
-      (Standard, Just (e, _)) -> Left ("Parse error" ++ location' (a e))
+      (Hidden, Nothing) -> Right Hidden_str
       (Restricted, Nothing) -> Left ("Restricted struct" ++ location' (a b) ++ "should have a checker.")
-      (Restricted, Just (g, e)) -> (\h -> Just (g, h)) <$> std_expr a f e
+      (Restricted, Just (g, e)) -> (\h -> Restricted_str (g, h)) <$> std_expr a f e
+      (Standard, Nothing) -> Right Standard_str
+      (_, Just (e, _)) -> Left ("Parse error" ++ location' (a e))
   std_type :: (Location_0 -> Location_1) -> Type_7 -> Err Type_8
   std_type c (Type_7 a b) = Type_8 a <$> std_type' c b
   std_type' :: (Location_0 -> Location_1) -> Type_0 -> Err Type_5

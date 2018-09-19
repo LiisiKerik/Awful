@@ -1,6 +1,4 @@
 {-
-Allow hiding things to functions outside module - so that helper functions are not exported from the module?
-normalising constructors for some data types (polynomial, fraction) which assume a certain normal form of fields?
 allow to hide (prevent exporting) constructors and field accessors which can potentially have bad behavior
 syntactic sugar for lists, vectors, matrices... allow writing (tiny, limited to expression parsing) language extensions?
 boolean function library
@@ -45,6 +43,7 @@ generalise Branching data type to branch from any of the type variables?
     Branching Array[! : Nat, T : Star]{Zero -> ..., Next N -> ...}
 syntactic sugar for multiple variable lambdas? (x, y) -> ...
 remove special semantics of missing pattern match arguments?
+Allow hiding things to functions outside module - so that helper functions are not exported from the module?
 -}
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
@@ -1255,15 +1254,23 @@ module Typing where
               type_branching a l s0 (Data_br_1 i i') <*>
               type_branching a (Data.Map.insert j Nat_kind_0 l) t0 (Data_br_1 k k'))
         Struct_data_2 i m4 ->
-          (
-            (\(u, w) ->
-              (
+          let
+            n4 =
+              case m4 of
+                Hidden_str' -> Old
+                _ -> New
+          in
+            (
+              (\(u, w) ->
                 (
-                  ins_new g (Alg h x [g]) d,
-                  Prelude.foldl (\w' -> \(k, r) -> ins_new k (t' r) w') e u,
-                  ins_new g (Constructor g w) m3),
-                (\(t0, t1) -> Normaliser_0 g h (tail u) t0 t1) <$> m4)) <$>
-            type_branching a l x (Data_br_1 g i))
+                  (
+                    Data.Map.insert g (Alg h x [g], n4) d,
+                    Prelude.foldl (\w' -> \(k, r) -> Data.Map.insert k (t' r, n4) w') e u,
+                    Data.Map.insert g (Constructor g w, n4) m3),
+                  case m4 of
+                    Restricted_str' (t0, t1) -> Just (Normaliser_0 g h (tail u) t0 t1)
+                    _ -> Nothing)) <$>
+              type_branching a l x (Data_br_1 g i))
   type_datas ::
     (
       (Location_0 -> Location_1) ->

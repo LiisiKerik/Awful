@@ -1,5 +1,5 @@
 ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
-Syntax !List(x :: [Expr]) :: Expr = case x of [] -> Empty_List, y : z -> y : !List z
+Syntax !List(!x :: [Expr]) :: Expr = case !x of [] -> Empty_List, y : z -> y : !List z
 Class Applicative{F : Star -> Star}<Functor>(Compose[T : Star, U : Star] : F (T -> U) -> F T -> F U, Lift[T : Star] : T -> F T)
 Class Braided{F : Star -> Star -> Star}(
   Apply'[T : Star, U : Star, V : Star, W : Star] : (T -> U) -> (V -> W) -> F T V -> F U W,

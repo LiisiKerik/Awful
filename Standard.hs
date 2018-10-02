@@ -383,7 +383,6 @@ module Standard where
                   [] -> f
                   k : l -> synrepl h (List_expression_6 l) (synrepl g k i)
               _ -> undefined)
-        Function_expression_6 f g -> Function_expression_6 f (e g)
         Let_expression_6 f g h i -> Let_expression_6 f g (e h) (e i)
         List_expression_6 f -> List_expression_6 (e <$> f)
         Match_expression_6 f g h -> Match_expression_6 f (e g) ((\(Case_6 c i) -> Case_6 c (e i)) <$> h)

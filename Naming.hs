@@ -46,30 +46,11 @@ module Naming where
     Name_expression_1 Name (Maybe Type_8) [Type_8]
       deriving Show
   data Form_1 = Form_1 String [Type_8] deriving Show
-  type Locations = Map' Location'
   data Method_1 = Method_1 String [(Name, Kind_0)] [Constraint_0] Type_8 deriving Show
   data Method_2 = Method_2 String [(String, Kind_0)] [Constraint_0] Type_8 deriving Show
   data Struct_status' = Hidden_str' | Restricted_str' (Location_0, Expression_1) | Standard_str' deriving Show
   data Tree_4 = Tree_4 [Data_1] [Class_1] [Name] [Def_2] deriving Show
   data Tree_5 = Tree_5 [Data_2] [Class_2] [Name] [Def_3] deriving Show
-  add :: Ord t => Map t u -> t -> u -> Either u (Map t u)
-  add x y z =
-    let
-      (w, x') = insertLookupWithKey (return return) y z x
-    in
-      case w of
-        Just z' -> Left z'
-        Nothing -> Right x'
-  location_err :: String -> Location' -> Location_1 -> String
-  location_err a c d =
-    (
-      "Conflicting " ++
-      a ++
-      (case c of
-        Language -> " in the language"
-        Library e -> location e) ++
-      " and" ++
-      location' d)
   naming ::
     (
       String ->
@@ -232,7 +213,7 @@ module Naming where
       Char_expression_9 c -> Right (Char_expression_1 c)
       Function_expression_9 c d -> naming_fun g ((f0, f1), b) c d
       Int_expression_9 c -> Right (Int_expression_1 c)
-      Let_expression_9 (Eqq' (Name l c) d e) h ->
+      Let_expression_9 (Name l c) d e h ->
         let
           i j = naming_application g ((f0, f1), b) (naming_fun g ((f0, f1), b) (Pat l j) h)
         in
@@ -276,9 +257,6 @@ module Naming where
     case b of
       [] -> Right []
       d : e -> naming_method_1 a d c >>= \g -> (:) g <$> naming_methods_1 a e c
-  naming_name :: String -> Name -> Locations -> Err (Locations, String)
-  naming_name f (Name a c) d =
-    bimap (flip (location_err ("definitions of " ++ c)) (Location_1 f a)) (flip (,) c) (add d c (Library (Location_1 f a)))
   naming_nameexprs :: String -> ((Set String, Set String), Locations) -> [(Name, Expression_9)] -> Err [(Name, Expression_1)]
   naming_nameexprs a b c =
     case c of
@@ -326,4 +304,4 @@ module Naming where
       Name_pattern e -> second Name_pattern <$> naming_name f (Name a e) d
   naming_patterns :: String -> [Pattern_1] -> Locations -> Err (Locations, [Pattern_0])
   naming_patterns = naming_list naming_pattern
------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------

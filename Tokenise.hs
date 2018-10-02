@@ -33,12 +33,14 @@ module Tokenise where
     Blank_token |
     Branch_token |
     Branching_token |
+    Case_token |
     Char_token Char |
     Check_token |
     Class_token |
     Comma_token |
     Def_token |
     Eval_token |
+    Expr_token |
     Hidden_token |
     In_token |
     Instance_token |
@@ -51,13 +53,15 @@ module Tokenise where
     Match_token |
     Name_token String |
     Number_token |
+    Of_token |
     Opdecl_token |
     Operator_token String |
     Restricted_token |
     Right_curly_token |
     Right_round_token |
     Right_square_token |
-    Struct_token
+    Struct_token |
+    Syntax_token
       deriving (Eq, Show)
   data Token_1 = Token_1 Location_0 Token_0 deriving Show
   data Tokens = Tokens [Token_1] Location_0 deriving Show
@@ -277,6 +281,7 @@ module Tokenise where
       "Class" -> Class_token
       "Def" -> Def_token
       "Eval" -> Eval_token
+      "Expr" -> Expr_token
       "Hidden" -> Hidden_token
       "In" -> In_token
       "Instance" -> Instance_token
@@ -287,5 +292,8 @@ module Tokenise where
       "Operator" -> Opdecl_token
       "Restricted" -> Restricted_token
       "Struct" -> Struct_token
+      "Syntax" -> Syntax_token
+      "case" -> Case_token
+      "of" -> Of_token
       _ -> Name_token a
 --------------------------------------------------------------------------------------------------------------------------------

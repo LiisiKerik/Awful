@@ -44,6 +44,11 @@ syntactic sugar for multiple variable lambdas? (x, y) -> ...
 remove special semantics of missing pattern match arguments?
 Allow hiding things to functions outside module - so that helper functions are not exported from the module?
 use operators in patternmatch?
+make arrow a special token, so that arrow is not a legal operator (handle special case in tokenise instead of parser). also =
+issues with unary minus and ! before syntactic sugar... fix tokeniser or parser
+allow mathing expressions instead of just variables in syntactic sugar case
+move modular checking to parser?
+make syntax case more general (full expression, not just variable, as argument)
 -}
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
@@ -335,8 +340,8 @@ module Typing where
           Nothing -> False
   constrs :: [(String, Constructor)]
   constrs = join ((\(a, Alg' _ _ b) -> (\(c, d) -> (c, Constructor a d)) <$> b) <$> algebraics')
-  context_union :: (File, Map' Op) -> (File, Map' Op) -> (File, Map' Op)
-  context_union (File b i j d e q t g, t0) (File f k l h m r u n, t2) =
+  context_union :: (File, Map' Syntax_type, Map' Op) -> (File, Map' Syntax_type, Map' Op) -> (File, Map' Syntax_type, Map' Op)
+  context_union (File b i j d e q t g, x0, t0) (File f k l h m r u n, x1, t2) =
     (
       File
         (Data.Map.union b f)
@@ -347,6 +352,7 @@ module Typing where
         (Data.Map.union q r)
         (unionWith Data.Map.union t u)
         (Data.Map.union g n),
+      Data.Map.union x0 x1,
       Data.Map.union t0 t2)
   defs :: Map' Expr_2
   defs =
@@ -463,9 +469,12 @@ module Typing where
                     Nothing -> second (\(v, w, u1) -> (l : v, p : w, u1)) <$> get_pattern_types a b c k h j (Name m n)
                     Just (Name f0 f1, _) ->
                       Left ("Constructor " ++ f1 ++ location (a f0) ++ " has been given too few arguments."))
-  init_type_context :: (File, Map' Op)
+  init_type_context :: (File, Map' Syntax_type, Map' Op)
   init_type_context =
-    (File kinds algebraics (Data.Map.fromList constrs) types classes_0 classes_1 instances classes_2, Data.Map.empty)
+    (
+      File kinds algebraics (Data.Map.fromList constrs) types classes_0 classes_1 instances classes_2,
+      Data.Map.empty,
+      Data.Map.empty)
   instances :: Map' (Map' [[String]])
   instances =
     Data.Map.fromList
@@ -1091,7 +1100,7 @@ module Typing where
       [] ->
         case b of
           [] -> Right []
-          (Method_4 e _ _ _) : _ -> Left ("Missing definition " ++ e ++ " in " ++ m ++ " " ++ a ++ location' (l n))
+          (Method_4 e _ _ _) : _ -> Left ("Missing definition " ++ e ++ " in instance " ++ m ++ " " ++ a ++ location' (l n))
       (p' @ (Name h i), j) : k ->
         let
           o p = Left ("Definition " ++ i ++ location (l h) ++ " is not a component of class " ++ m ++ p)
@@ -1767,7 +1776,7 @@ module Typing where
     (
       first (\t -> (m, (fst <$> c, t))) <$>
       type_expr
-        (m ++ " checker" ++ location' (a n))
+        ("checker for " ++ m ++ location' (a n))
         (Name_type_1 "Logical")
         a
         (e, f, Prelude.foldl (\i -> \(j, k) -> Data.Map.insert j (Basic_type_1 b Nothing [] k Nothing) i) g c)

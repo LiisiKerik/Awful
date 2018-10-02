@@ -4,22 +4,33 @@ import Data.List
 import Data.Map
 import Data.Set
 import Eval
-import Naming
 import Standard
 import System.Directory
 import System.Environment
 import Tokenise
 import Tree
 import Typing
-type Files = Map' (File, Map' Op)
+type Files = Map' (File, Map' Syntax_type, Map' Op)
 check ::
   (
     [String] ->
-    (Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2) ->
+    (
+      Files,
+      ((Set String, Set String), Locations, Locations, Map' (Map' Location')),
+      Map' Expr_2,
+      (Locations, Map' Expression_6)) ->
     Location_1 ->
     String ->
-    IO (Err ((Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2), (File, Map' Op))))
-check b m' @ (f, _, _) j name_qc =
+    IO
+      (Err
+        (
+          (
+            Files,
+            ((Set String, Set String), Locations, Locations, Map' (Map' Location')),
+            Map' Expr_2,
+            (Locations, Map' Expression_6)),
+          (File, Map' Syntax_type, Map' Op))))
+check b m' @ (f, _, _, _) j name_qc =
   case Data.Map.lookup name_qc f of
     Just a -> return (Right (m', a))
     Nothing ->
@@ -38,10 +49,10 @@ check b m' @ (f, _, _) j name_qc =
                     return
                       (
                         g >>=
-                        \((h, i, l), m) ->
+                        \((h, i, l, l5), m) ->
                           (
-                            (\(k, n, o) -> ((Data.Map.insert name_qc n h, k, o), n)) <$>
-                            standard_naming_typing name_qc d (i, m, l)))
+                            (\(k, n, o, o1) -> ((Data.Map.insert name_qc n h, k, o, o1), n)) <$>
+                            standard_naming_typing name_qc d (i, m, l, l5)))
               Nothing -> err ("Failed to find file " ++ name_qc ++ " requested" ++ location' j)
 check' :: String -> [String] -> Maybe [String]
 check' a b =
@@ -52,10 +63,24 @@ check_imports ::
   (
     String ->
     [String] ->
-    ((Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2), (File, Map' Op)) ->
+    (
+      (
+        Files,
+        ((Set String, Set String), Locations, Locations, Map' (Map' Location')),
+        Map' Expr_2,
+        (Locations, Map' Expression_6)),
+      (File, Map' Syntax_type, Map' Op)) ->
     [Name] ->
     Map' Location_0 ->
-    IO (Err ((Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2), (File, Map' Op))))
+    IO
+      (Err
+        (
+          (
+            Files,
+            ((Set String, Set String), Locations, Locations, Map' (Map' Location')),
+            Map' Expr_2,
+            (Locations, Map' Expression_6)),
+          (File, Map' Syntax_type, Map' Op))))
 check_imports j a b @ (f, k) c h =
   case c of
     [] -> return (Right b)
@@ -99,8 +124,12 @@ eval'' :: [Name] -> Expression_0 -> IO (Err String)
 eval'' a b = do
   c <- check_imports "input" [] (init', init_type_context) a Data.Map.empty
   return
-    (c >>= \((_, (e, t, _, _), f), (File j g h i _ _ m _, u)) -> tokenise_parse_naming_typing_eval (e, t) j (g, h, i) f b m u)
-init' :: (Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2)
+    (
+      c >>=
+      \((_, (e, t, _, _), f, (_, u1)), (File j g h i _ _ m _, u0, u)) ->
+        tokenise_parse_naming_typing_eval (e, t) j (g, h, i) f b m (u0, u1, u))
+init' ::
+  (Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2, (Locations, Map' Expression_6))
 init' =
   (
     Data.Map.empty,
@@ -118,7 +147,8 @@ init' =
           ("Ord", Data.Map.fromList [("Char", Language), ("Int", Language), ("Modular", Language)]),
           ("Ring", Data.Map.fromList [("Int", Language), ("Modular", Language)]),
           ("Writeable", Data.Map.fromList [("Int", Language), ("Modular", Language)])]),
-    defs)
+    defs,
+    (Data.Map.empty, Data.Map.empty))
 main :: IO ()
 main =
   do

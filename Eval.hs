@@ -305,13 +305,24 @@ module Eval where
     (
       String ->
       Tree_0 ->
-      (((Set String, Set String), Locations, Locations, Map' (Map' Location')), (File, Map' Op), Map' Expr_2) ->
-      Err (((Set String, Set String), Locations, Locations, Map' (Map' Location')), (File, Map' Op), Map' Expr_2))
-  standard_naming_typing f a (b, (c, t), g) =
+      (
+        ((Set String, Set String), Locations, Locations, Map' (Map' Location')),
+        (File, Map' Syntax_type, Map' Op),
+        Map' Expr_2,
+        (Locations, Map' Expression_6)) ->
+      Err
+        (
+          ((Set String, Set String), Locations, Locations, Map' (Map' Location')),
+          (File, Map' Syntax_type, Map' Op),
+          Map' Expr_2,
+          (Locations, Map' Expression_6)))
+  standard_naming_typing f a (b, (c, t, u), g, (g0, g')) =
     (
-      standard_1 (Location_1 f) t a >>=
-      \(v, n') ->
-        naming f n' b >>= \(d, e) -> typing f e (c, g) >>= \(h, i, j) -> (d, (h, v), i) <$ do_checks (Location_1 f, i) j)
+      standard_1 f (g0, t, g', u) a >>=
+      \((v0, v1, v2, v3), n') ->
+        (
+          naming f n' b >>=
+          \(d, e) -> typing f e (c, g) >>= \(h, i, j) -> (d, (h, v1, v3), i, (v0, v2)) <$ do_checks (Location_1 f, i) j))
   subst_expr :: String -> Expression_2 -> Expression_2 -> Expression_2
   subst_expr a b c =
     let
@@ -359,11 +370,11 @@ module Eval where
     Map' Expr_2 ->
     Expression_0 ->
     Map' (Map' [[String]]) ->
-    Map' Op ->
+    (Map' Syntax_type, Map' Expression_6, Map' Op) ->
     Err String
   tokenise_parse_naming_typing_eval c f (g, h, i) l e u q =
     (
-      std_expr (Location_1 "input") q e >>=
+      std_expr (Location_1 "input") "input" q e >>=
       \e' ->
         (
           naming_expression "input" e' c >>=

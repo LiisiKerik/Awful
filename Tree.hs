@@ -1,9 +1,4 @@
 --------------------------------------------------------------------------------------------------------------------------------
-{-
-expr op op expr - esimene op on binaarne operaator, teine op on unaarne miinus
-expr op expr - op on binaarne operaator
-op expr - op on unaarne miinus
--}
 {-# OPTIONS_GHC -Wall #-}
 module Tree where
   import Control.Applicative
@@ -334,7 +329,7 @@ module Tree where
         ((\x -> \y -> \z -> (x, (y, z))) <$> parse_name' <*> parse_many parse_brack_pat <* parse_eq <*> parse_expression'))
   parse_int :: Parser' Integer
   parse_int =
-    parse_int' <+> (negate <$ parse_operator "-" <*> parse_int' >>= \x -> if x == 0 then empty_parser else return x)
+    parse_int' <+> (negate <$ parse_token Negate_token <*> parse_int' >>= \x -> if x == 0 then empty_parser else return x)
   parse_int' :: Parser' Integer
   parse_int' =
     parse_elementary
@@ -351,11 +346,11 @@ module Tree where
     (
       flip (foldr (\(a, b, c) -> Let_expression_0 a b c)) <$
       parse_token Let_token <*>
-      parse_list 0 ((,,) <$> parse_name' <*> parse_many parse_brack_pat <* parse_eq <*> parse_expression') <*
+      parse_list 1 ((,,) <$> parse_name' <*> parse_many parse_brack_pat <* parse_eq <*> parse_expression') <*
       parse_token In_token <*>
       parse_expression')
   parse_list_expression :: Parser' Expression_0
-  parse_list_expression = List_expression_0 <$> parse_square (parse_list 1 parse_expression')
+  parse_list_expression = List_expression_0 <$ parse_operator "!" <*> parse_square (parse_list 1 parse_expression')
   parse_kind :: Parser' Kind_0
   parse_kind = parse_arrow_kind <+> parse_name_kind
   parse_kinds :: Parser' [(Name, Kind_0)]
@@ -537,7 +532,7 @@ module Tree where
   parse_syntax_type_0 :: Parser' Syntax_type
   parse_syntax_type_0 = Expr_syntax <$ parse_token Expr_token <+> List_syntax <$> parse_square parse_syntax_type
   parse_syntax_type_1 :: Parser' Syntax_type
-  parse_syntax_type_1 = parse_round parse_syntax_arrow <+> parse_syntax_type_1
+  parse_syntax_type_1 = parse_round parse_syntax_arrow <+> parse_syntax_type_0
   parse_token :: Token_0 -> Parser' ()
   parse_token a = parse_elementary (\b -> if b == a then Just () else Nothing)
   parse_tree :: (Location_0 -> Location_1) -> String -> Err Tree_1

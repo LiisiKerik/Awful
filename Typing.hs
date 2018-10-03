@@ -49,6 +49,7 @@ issues with unary minus and ! before syntactic sugar... fix tokeniser or parser
 allow mathing expressions instead of just variables in syntactic sugar case
 move modular checking to parser?
 make syntax case more general (full expression, not just variable, as argument)
+polymorphism and type derivation in syntax specification language
 -}
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}

@@ -1,5 +1,5 @@
 ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
-Syntax !List(!x :: [Expr]) :: Expr = case !x of [] -> Empty_List, y : z -> y : !List z
+Syntax !List(!x :: [Expr]) :: Expr = case !x of [] -> Empty_List, !y : !z -> !y : !List !z
 Class Applicative{F : Star -> Star}<Functor>(Compose[T : Star, U : Star] : F (T -> U) -> F T -> F U, Lift[T : Star] : T -> F T)
 Class Braided{F : Star -> Star -> Star}(
   Apply'[T : Star, U : Star, V : Star, W : Star] : (T -> U) -> (V -> W) -> F T V -> F U W,
@@ -41,7 +41,7 @@ Instance Applicative{Either _}(Compose x y = Match x {Left z -> Left z, Right f 
 Instance Applicative{Function _}(Compose f g x = f x (g x), Lift x _ = x)
 Instance Applicative{List}(
   Compose x y = Match x {Empty_List -> List, Construct_List f z -> Cat (f . y) (z ! y)},
-  Lift x = List (x))
+  Lift x = !List ![x])
 Instance Applicative{Maybe}(Compose x y = Match x {Nothing -> Nothing, Wrap f -> f . y}, Lift = Wrap)
 Instance Braided{Either}(
   Apply' f g x = Match x {Left y -> Left (f y), Right y -> Right (g y)},
@@ -70,9 +70,9 @@ Def Equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> Tr
 Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, _ -> Nothing})
 Instance Field{Logical}(Inverse x = Match x {False -> Nothing, True -> Wrap True})
 Instance Field{Pair T U}<Field T, Field U>(Inverse (Pair x y) = Zip Pair (Inverse x) (Inverse y))
-Instance Finite{Comparison}(All = List (LT,  EQ,  GT))
+Instance Finite{Comparison}(All = !List ![LT,  EQ,  GT])
 Instance Finite{Either T U}<Finite T, Finite U>(All = Cat (Left . All) (Right . All))
-Instance Finite{Logical}(All = List (False, True))
+Instance Finite{Logical}(All = !List ![False, True])
 Instance Finite{Maybe T}<Finite T>(All = Construct_List Nothing (Wrap . All))
 Instance Finite{Modular N}(All = Branch N {Zero -> List, Next N' -> All_Modular Zr})
 Instance Finite{Pair T U}<Finite T, Finite U>(All = Zip Pair All All)
@@ -139,36 +139,36 @@ Def Write[T : Star]<Writeable T>(x : T) : List Char = First (Write_Brackets x)
 Def Write'(x : List Char, y : List (List Char)) : List Char = Interleave (Lift " ") (Construct_List x y)
 Instance Writeable{Char}(
   Write_Brackets c =
-    Pair (Match c {Newline -> List ("N", "e", "w", "l", "i", "n", "e"), _ -> List (""", c, """)}) False)
+    Pair (Match c {Newline -> !List !["N", "e", "w", "l", "i", "n", "e"], _ -> !List ![""", c, """]}) False)
 Instance Writeable{Comparison}(
-  Write_Brackets x = Pair (Match x {LT -> List ("L", "T"), EQ -> List ("E", "Q"), GT -> List ("G", "T")}) False)
+  Write_Brackets x = Pair (Match x {LT -> !List !["L", "T"], EQ -> !List !["E", "Q"], GT -> !List !["G", "T"]}) False)
 Instance Writeable{Either T U}<Writeable T, Writeable U>(
   Write_Brackets x =
     Pair
       (Match x {
-        Left y -> Cat (List ("L", "e", "f", "t", " ")) (Brackets y),
-        Right y -> Cat (List ("R", "i", "g", "h", "t", " ")) (Brackets y)})
+        Left y -> Cat (!List !["L", "e", "f", "t", " "]) (Brackets y),
+        Right y -> Cat (!List !["R", "i", "g", "h", "t", " "]) (Brackets y)})
       True)
 Instance Writeable{List T}<Writeable T>(
   Write_Brackets x =
     Match x {
-      Empty_List -> Pair (List ("L", "i", "s", "t")) False,
+      Empty_List -> Pair (!List !["L", "i", "s", "t"]) False,
       Construct_List y z ->
         Match z {
-          Empty_List -> Pair (Cat (List ("L", "i", "f", "t", " ")) (Brackets y)) True,
+          Empty_List -> Pair (Cat (!List !["L", "i", "f", "t", " "]) (Brackets y)) True,
           Construct_List _ _ ->
             Pair
-              (Cat (List ("L", "i", "s", "t", " ", "(")) (Cat (Interleave (List (",", " ")) (Write . x)) (Lift ")")))
+              (Cat (!List !["L", "i", "s", "t", " ", "("]) (Cat (Interleave (!List ![",", " "]) (Write . x)) (Lift ")")))
               True}})
 Instance Writeable{Logical}(
-  Write_Brackets x = Pair (Match x {False -> List ("F", "a", "l", "s", "e"), True -> List ("T", "r", "u", "e")}) False)
+  Write_Brackets x = Pair (Match x {False -> !List !["F", "a", "l", "s", "e"], True -> !List !["T", "r", "u", "e"]}) False)
 Instance Writeable{Maybe T}<Writeable T>(
   Write_Brackets x =
     Match x {
-      Nothing -> Pair (List ("N", "o", "t", "h", "i", "n", "g")) False,
-      Wrap y -> Pair (Cat (List ("W", "r", "a", "p", " ")) (Brackets y)) True})
+      Nothing -> Pair (!List !["N", "o", "t", "h", "i", "n", "g"]) False,
+      Wrap y -> Pair (Cat (!List !["W", "r", "a", "p", " "]) (Brackets y)) True})
 Instance Writeable{Pair T U}<Writeable T, Writeable U>(
-  Write_Brackets (Pair x y) = Pair (Write' (List ("P", "a", "i", "r")) (List (Brackets x, Brackets y))) True)
+  Write_Brackets (Pair x y) = Pair (Write' (!List !["P", "a", "i", "r"]) (!List ![Brackets x, Brackets y])) True)
 Def Zip[F : Star -> Star, T : Star, U : Star, V : Star]<Applicative F>(f : T -> U -> V, x : F T) : F U -> F V = Compose (f . x)
 Def Zr[T : Star]<Ring T> : T = Convert 0
 ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

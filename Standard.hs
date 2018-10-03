@@ -125,7 +125,7 @@ module Standard where
       Case_syntax_1 d e (f, g) h ->
         (
           (\i -> \(k, l) -> Case_syntax_2 d i k l) <$>
-          (naming_name a d b >>= \(i, _) -> naming_syntax_expr a i e) <*>
+          naming_syntax_expr a b e <*>
           (naming_name a f b >>= \(i, j) -> naming_name a g i >>= \(k, l) -> (,) (j, l) <$> naming_syntax_expr a k h))
       Function_syntax_1 d e -> naming_name a d b >>= \(f, g) -> Function_syntax_2 g <$> naming_syntax_expr a f e
       Name_syntax_1 d -> Right (Name_syntax_2 d)

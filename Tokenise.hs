@@ -5,7 +5,9 @@ module Tokenise where
   import Data.Char
   data Char' =
     Delimiter_char Delimiter |
+    Exclamation_char |
     Int_char Char |
+    Minus_char |
     Name_char Char |
     Newline_char |
     Operator_char Char |
@@ -52,6 +54,7 @@ module Tokenise where
     Load_token |
     Match_token |
     Name_token String |
+    Negate_token |
     Number_token |
     Of_token |
     Opdecl_token |
@@ -61,7 +64,8 @@ module Tokenise where
     Right_round_token |
     Right_square_token |
     Struct_token |
-    Syntax_token
+    Syntax_token |
+    Synvar_token
       deriving (Eq, Show)
   data Token_1 = Token_1 Location_0 Token_0 deriving Show
   data Tokens = Tokens [Token_1] Location_0 deriving Show
@@ -85,11 +89,13 @@ module Tokenise where
     case a of
       '\n' -> Newline_char
       ' ' -> Space_char
+      '!' -> Exclamation_char
       '"' -> Quote_char
       '#' -> Delimiter_char Number_delimiter
       '(' -> Delimiter_char Left_round_delimiter
       ')' -> Delimiter_char Right_round_delimiter
       ',' -> Delimiter_char Comma_delimiter
+      '-' -> Minus_char
       '/' -> Slash_char
       '[' -> Delimiter_char Left_square_delimiter
       ']' -> Delimiter_char Right_square_delimiter
@@ -101,11 +107,7 @@ module Tokenise where
         (if_sequence
           a
           [
-            (
-              flip
-                elem
-                ['!', '$', '%', '&', '*', '+', '-', '.', ':', ';', '|', '<', '=', '>', '?', '@', '\\', '^'],
-              Operator_char),
+            (flip elem ['$', '%', '&', '*', '+', '.', ':', ';', '|', '<', '=', '>', '?', '@', '\\', '^'], Operator_char),
             (isDigit, Int_char)]
           Name_char)
             a
@@ -172,7 +174,15 @@ module Tokenise where
                     Right_round_delimiter -> Right_round_token
                     Right_square_delimiter -> Right_square_token) <$>
                 tokenise' e d)
+            Exclamation_char ->
+              case d of
+                Name_char _ : _ -> add_token a Synvar_token <$> accumulate word_token name_char e d
+                _ -> f
             Int_char _ -> accumulate (Int_token <$> read) int_char a b
+            Minus_char ->
+              case d of
+                Int_char _ : _ -> add_token a Negate_token <$> accumulate (Int_token <$> read) int_char e d
+                _ -> f
             Name_char _ -> accumulate word_token name_char a b
             Newline_char -> tokenise' (next_line a) d
             Operator_char _ -> f
@@ -180,7 +190,10 @@ module Tokenise where
             Slash_char -> f
             Space_char -> tokenise' e d
             Tick_char -> tokenise_single e d
-            Tilde_char -> tokenise_tilde a b e d
+            Tilde_char ->
+              case d of
+                Slash_char : x -> tokenise_multiline 1 (next_char e) x
+                _ -> tokenise_operator a b
   tokenise_char :: Location_1 -> [Char'] -> Err (Char, Tokens)
   tokenise_char a b =
     case b of
@@ -243,11 +256,6 @@ module Tokenise where
             (next_char b)
             d
       _ -> tokenise_multiline a b c
-  tokenise_tilde :: Location_1 -> [Char'] -> Location_1 -> [Char'] -> Err Tokens
-  tokenise_tilde a b c d =
-    case d of
-      Slash_char : e -> tokenise_multiline 1 (next_char c) e
-      _ -> tokenise_operator a b
   char'_to_char :: Char' -> Char
   char'_to_char a =
     case a of
@@ -261,7 +269,9 @@ module Tokenise where
           Right_curly_delimiter -> '}'
           Right_round_delimiter -> ')'
           Right_square_delimiter -> ']'
+      Exclamation_char -> '!'
       Int_char b -> b
+      Minus_char -> '-'
       Name_char b -> b
       Newline_char -> '\n'
       Operator_char b -> b

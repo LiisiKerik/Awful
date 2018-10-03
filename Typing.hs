@@ -34,7 +34,7 @@ tests
 make Integer counter part of Eqtns and construct the set after all flexi type variables have been generated, in the end
 write long types and kinds in error messages?
 "requires instance or constraint" -> "requires instance" / "requires constraint"
-syntax: allow writing List[sometype] to disambiguate type of list when using list syntactic sugar
+syntax: allow writing List[sometype] to disambiguate type of list when using list syntactic sugar?
 teha eraldi algebraline andmetüüp juba väärtustatud avaldise jaoks et undef-e vähemaks saada?
 internal: make the system of specifying built-in algebraic data types and things better and safer
 make syntactic sugar for x -> Match x {...}

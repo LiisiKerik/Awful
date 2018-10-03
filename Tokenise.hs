@@ -144,6 +144,8 @@ module Tokenise where
   operator_char :: Char' -> Maybe Char
   operator_char a =
     case a of
+      Exclamation_char -> Just '!'
+      Minus_char -> Just '-'
       Operator_char b -> Just b
       Slash_char -> Just '/'
       Tilde_char -> Just '~'

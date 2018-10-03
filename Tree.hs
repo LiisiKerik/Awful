@@ -486,7 +486,7 @@ module Tree where
     (
       Syntax <&
       parse_token Syntax_token <*
-      parse_operator "!" <*>
+      parse_token Synvar_token <*>
       (((:) '!') <$> parse_name) <*>
       parse_optional parse_round ((,) <$> parse_syntax_name' <* parse_operator "::" <*> parse_syntax_type) <*
       parse_operator "::" <*>
@@ -524,7 +524,7 @@ module Tree where
   parse_syntax_name :: Parser' Syntax_expr
   parse_syntax_name = Name_syntax <$> parse_name <+> Syntax_syntax <$> parse_syntax_name'
   parse_syntax_name' :: Parser' Name
-  parse_syntax_name' = (\x -> \y -> Name x ('!' : y)) <& parse_operator "!" <*> parse_name
+  parse_syntax_name' = (\x -> \y -> Name x ('!' : y)) <& parse_token Synvar_token <*> parse_name
   parse_syntax_op :: Parser' Syntax_expr
   parse_syntax_op = Op_syntax <$> parse_syntax_br' <*> parse_some ((,) <$> parse_op_1 <*> parse_syntax_br')
   parse_syntax_type :: Parser' Syntax_type

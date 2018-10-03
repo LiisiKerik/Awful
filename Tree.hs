@@ -59,8 +59,13 @@ module Tree where
   data Stat = Hidden | Restricted | Standard deriving Show
   data Syntax = Syntax Location_0 String [(Name, Syntax_type)] Syntax_type Syntax_expr deriving Show
   data Syntax_expr =
-    Application_syntax Syntax_expr [Syntax_expr] |
+    Application_syntax Syntax_expr Syntax_expr |
     Case_syntax Name Syntax_expr (Name, Name) Syntax_expr |
+    Char_syntax Char |
+    Function_syntax Name Syntax_expr |
+    Int_syntax Integer |
+    Lst_syntax [Syntax_expr] |
+    Modular_syntax Modular |
     Name_syntax String |
     Op_syntax Syntax_expr [(String, Syntax_expr)] |
     Syntax_syntax Name
@@ -494,13 +499,13 @@ module Tree where
       parse_operator "=" <*>
       parse_syntax_expr)
   parse_syntax_ap :: Parser' Syntax_expr
-  parse_syntax_ap = Application_syntax <$> parse_syntax_br <*> parse_some parse_syntax_br
+  parse_syntax_ap = Prelude.foldl Application_syntax <$> parse_syntax_br <*> parse_some parse_syntax_br
   parse_syntax_arrow :: Parser' Syntax_type
   parse_syntax_arrow = Arrow_syntax <$> parse_syntax_type_1 <* parse_operator "->" <*> parse_syntax_type
   parse_syntax_br :: Parser' Syntax_expr
-  parse_syntax_br = parse_round (parse_syntax_comp <+> parse_syntax_ap) <+> parse_syntax_name
+  parse_syntax_br = parse_round (parse_syntax_comp <+> parse_syntax_mid) <+> parse_syntax_elem
   parse_syntax_br' :: Parser' Syntax_expr
-  parse_syntax_br' = parse_syntax_ap <+> parse_round parse_syntax_comp <+> parse_syntax_name
+  parse_syntax_br' = parse_syntax_mid <+> parse_round parse_syntax_comp <+> parse_syntax_elem
   parse_syntax_case :: Parser' Syntax_expr
   parse_syntax_case =
     (
@@ -517,10 +522,18 @@ module Tree where
       parse_syntax_expr)
   parse_syntax_comp :: Parser' Syntax_expr
   parse_syntax_comp = parse_syntax_case <+> parse_syntax_op
+  parse_syntax_elem :: Parser' Syntax_expr
+  parse_syntax_elem = Char_syntax <$> parse_char <+> parse_syntax_int <+> parse_syntax_list <+> parse_syntax_name
   parse_syntax_expr :: Parser' Syntax_expr
-  parse_syntax_expr = parse_syntax_comp <+> parse_syntax_ap <+> parse_syntax_name
+  parse_syntax_expr = parse_syntax_comp <+> parse_syntax_mid <+> parse_syntax_elem
   parse_syntax_expression :: Parser' Expression_0
   parse_syntax_expression = Syntax_expression_0 <$> parse_syntax_name'
+  parse_syntax_int :: Parser' Syntax_expr
+  parse_syntax_int = Int_syntax <$> parse_int
+  parse_syntax_list :: Parser' Syntax_expr
+  parse_syntax_list = Lst_syntax <$ parse_operator "!" <*> parse_square (parse_list 1 parse_syntax_expr)
+  parse_syntax_mid :: Parser' Syntax_expr
+  parse_syntax_mid = parse_syntax_mid <+> Modular_syntax <$> parse_modular
   parse_syntax_name :: Parser' Syntax_expr
   parse_syntax_name = Name_syntax <$> parse_name <+> Syntax_syntax <$> parse_syntax_name'
   parse_syntax_name' :: Parser' Name

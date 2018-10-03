@@ -1,5 +1,4 @@
 {-
-syntactic sugar for lists, vectors, matrices... allow writing (tiny, limited to expression parsing) language extensions?
 boolean function library
 implement map and set (AVL trees?)
 different ways of folding lists, vectors etc
@@ -50,6 +49,7 @@ allow mathing expressions instead of just variables in syntactic sugar case
 move modular checking to parser?
 make syntax case more general (full expression, not just variable, as argument)
 polymorphism and type derivation in syntax specification language
+allow empty lists in syntactic sugar
 -}
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}

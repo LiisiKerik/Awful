@@ -17,7 +17,6 @@ module Standard where
   data Data_branch_6 =
     Algebraic_data_6 [Form_6] | Branching_data_6 Data_br_6 Name Data_br_6 | Struct_data_6 [(Name, Type_8)] Struct_status
       deriving Show
--- TODO: do something with those locations; they're excessive
   data Expression_6 =
     Application_expression_6 Expression_6 Expression_6 |
     Branch_expression_6 Name Expression_6 Name Expression_6 |
@@ -57,20 +56,16 @@ module Standard where
   data Opdecl_1 = Opdecl_1 Location_0 String Name deriving Show
   data Status = New | Old deriving (Eq, Show)
   data Struct_status = Hidden_str | Restricted_str (Location_0, Expression_9) | Standard_str deriving Show
-  data Syntax_1 = Syntax_1 Location_0 String Syntax_type Syntax_expr_1 deriving Show
+  data Syntax_1 = Syntax_1 Location_0 String Syntax_type Syntax_expr deriving Show
   data Syntax_2 = Syntax_2 Location_0 String Syntax_type Syntax_expr_2 deriving Show
-  data Syntax_expr_1 =
-    Application_syntax_1 Syntax_expr_1 Syntax_expr_1 |
-    Case_syntax_1 Name Syntax_expr_1 (Name, Name) Syntax_expr_1 |
-    Function_syntax_1 Name Syntax_expr_1 |
-    Name_syntax_1 String |
-    Op_syntax_1 Syntax_expr_1 [(String, Syntax_expr_1)] |
-    Syntax_syntax_1 Name
-      deriving Show
   data Syntax_expr_2 =
     Application_syntax_2 Syntax_expr_2 Syntax_expr_2 |
     Case_syntax_2 Name Syntax_expr_2 (String, String) Syntax_expr_2 |
+    Char_syntax_2 Char |
     Function_syntax_2 String Syntax_expr_2 |
+    Int_syntax_2 Integer |
+    Lst_syntax_2 [Syntax_expr_2] |
+    Modular_syntax_2 Modular |
     Name_syntax_2 String |
     Op_syntax_2 Syntax_expr_2 [(String, Syntax_expr_2)] |
     Syntax_syntax_2 Name
@@ -118,19 +113,23 @@ module Standard where
   naming_syntax_0 a (Syntax_1 c d _ _) b = fst <$> naming_name a (Name c d) b
   naming_syntax_1 :: String -> Locations -> Syntax_1 -> Err Syntax_2
   naming_syntax_1 a b (Syntax_1 c d f g) = Syntax_2 c d f <$> naming_syntax_expr a b g
-  naming_syntax_expr :: String -> Locations -> Syntax_expr_1 -> Err Syntax_expr_2
+  naming_syntax_expr :: String -> Locations -> Syntax_expr -> Err Syntax_expr_2
   naming_syntax_expr a b c =
     case c of
-      Application_syntax_1 d e -> Application_syntax_2 <$> naming_syntax_expr a b d <*> naming_syntax_expr a b e
-      Case_syntax_1 d e (f, g) h ->
+      Application_syntax d e -> Application_syntax_2 <$> naming_syntax_expr a b d <*> naming_syntax_expr a b e
+      Case_syntax d e (f, g) h ->
         (
           (\i -> \(k, l) -> Case_syntax_2 d i k l) <$>
           naming_syntax_expr a b e <*>
           (naming_name a f b >>= \(i, j) -> naming_name a g i >>= \(k, l) -> (,) (j, l) <$> naming_syntax_expr a k h))
-      Function_syntax_1 d e -> naming_name a d b >>= \(f, g) -> Function_syntax_2 g <$> naming_syntax_expr a f e
-      Name_syntax_1 d -> Right (Name_syntax_2 d)
-      Op_syntax_1 d e -> Op_syntax_2 <$> naming_syntax_expr a b d <*> traverse (\(f, g) -> (,) f <$> naming_syntax_expr a b g) e
-      Syntax_syntax_1 d -> Right (Syntax_syntax_2 d)
+      Char_syntax d -> Right (Char_syntax_2 d)
+      Function_syntax d e -> naming_name a d b >>= \(f, g) -> Function_syntax_2 g <$> naming_syntax_expr a f e
+      Int_syntax d -> Right (Int_syntax_2 d)
+      Lst_syntax d -> Lst_syntax_2 <$> traverse (naming_syntax_expr a b) d
+      Modular_syntax d -> Right (Modular_syntax_2 d)
+      Name_syntax d -> Right (Name_syntax_2 d)
+      Op_syntax d e -> Op_syntax_2 <$> naming_syntax_expr a b d <*> traverse (\(f, g) -> (,) f <$> naming_syntax_expr a b g) e
+      Syntax_syntax d -> Right (Syntax_syntax_2 d)
   naming_syntaxes :: String -> (Locations, [Syntax_1]) -> Err (Locations, [Syntax_2])
   naming_syntaxes a (b, c) = naming_syntaxes_0 a c b >>= \d -> (,) d <$> naming_syntaxes_1 a d c
   naming_syntaxes_0 :: String -> [Syntax_1] -> Locations -> Err Locations
@@ -453,17 +452,9 @@ module Standard where
       (Restricted, Just (g, e)) -> (\h -> Restricted_str (g, h)) <$> std_expr a ("checker for " ++ x ++ location' (a g)) f e
       (Standard, Nothing) -> Right Standard_str
       (_, Just _) -> Left ("Non-restricted struct" ++ location (a b) ++ " should not have a checker.")
-  std_synexpr :: Syntax_expr -> Syntax_expr_1
-  std_synexpr a =
-    case a of
-      Application_syntax b c -> Prelude.foldl Application_syntax_1 (std_synexpr b) (std_synexpr <$> c)
-      Case_syntax b c d e -> Case_syntax_1 b (std_synexpr c) d (std_synexpr e)
-      Name_syntax b -> Name_syntax_1 b
-      Op_syntax b c -> Op_syntax_1 (std_synexpr b) (second std_synexpr <$> c)
-      Syntax_syntax b -> Syntax_syntax_1 b
   std_syntax :: Syntax -> Syntax_1
   std_syntax (Syntax a b c d e) =
-    Syntax_1 a b (Prelude.foldr Arrow_syntax d (snd <$> c)) (Prelude.foldr Function_syntax_1 (std_synexpr e) (fst <$> c))
+    Syntax_1 a b (Prelude.foldr Arrow_syntax d (snd <$> c)) (Prelude.foldr Function_syntax e (fst <$> c))
   std_type :: (Location_0 -> Location_1) -> Type_7 -> Err Type_8
   std_type c (Type_7 a b) = Type_8 a <$> std_type' c b
   std_type' :: (Location_0 -> Location_1) -> Type_0 -> Err Type_5
@@ -609,11 +600,18 @@ module Standard where
                       (l, List_syntax' (Var_syntax' (show e))) : n ++ q,
                       r)) <$>
                   type_synexpr a (insert j (List_syntax' (Var_syntax' (show e))) (insert i (Var_syntax' (show e)) b)) c k o)))
+      Char_syntax_2 f -> Right (Char_expression_6 f, [], e)
       Function_syntax_2 f g ->
         (
           (\(h, i, j) ->
             (Function_syn_expression_6 f h, (c, Arrow_syntax' (Var_syntax' (show e)) (Var_syntax' (show (e + 1)))) : i, j)) <$>
           type_synexpr a (Data.Map.insert f (Var_syntax' (show e)) b) (Var_syntax' (show (e + 1))) g (e + 2))
+      Int_syntax_2 f -> Right (Int_expression_6 f, [], e)
+      Lst_syntax_2 f ->
+        (
+          (\(g, h, i) -> (List_expression_6 g, (c, List_syntax' (Var_syntax' (show e))) : h, i)) <$>
+          type_synexprs a b (Var_syntax' (show e)) f (e + 1))
+      Modular_syntax_2 f -> Right (Modular_expression_6 f, [], e)
       Name_syntax_2 f -> Right (Name_expression_6 (Maybename Nothing f) Nothing [], [(c, Expr_syntax')], e)
       Op_syntax_2 f g ->
         (
@@ -635,6 +633,18 @@ module Standard where
         (
           type_synexpr a b Expr_syntax' g e >>=
           \(c, i, j) -> (\(k, l, m) -> ((Maybename Nothing f, c) : k, i ++ l, m)) <$> type_synexpr_ops a b h j)
+  type_synexprs ::
+    (
+      (Location_0 -> Location_1) ->
+      Map' Syntax_type' ->
+      Syntax_type' ->
+      [Syntax_expr_2] ->
+      Integer ->
+      Err ([Expression_6], [(Syntax_type', Syntax_type')], Integer))
+  type_synexprs a b c d e =
+    case d of
+      [] -> Right ([], [], e)
+      f : g -> type_synexpr a b c f e >>= \(h, i, j) -> (\(k, l, m) -> (h : k, i ++ l, m)) <$> type_synexprs a b c g j
   type_syntax_0 :: Map' (Syntax_type, Status) -> Syntax_2 -> Map' (Syntax_type, Status)
   type_syntax_0 a (Syntax_2 _ c d _) = ins_new c d a
   type_syntax_1 :: (Location_0 -> Location_1) -> Map' Syntax_type -> Syntax_2 -> Map' Expression_6 -> Err (Map' Expression_6)

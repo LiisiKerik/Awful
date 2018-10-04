@@ -4,52 +4,37 @@ implement map and set (AVL trees?)
 different ways of folding lists, vectors etc
 module system related functions into a separate file?
 todo: make a function writing operator/function. For printing stuff like "Complex (Fraction 0 1) (Fraction 1 1)"
-checki abil võiks saada tüübikontrollida korraga mitut moodulit, andes ette nimekirja
 süntaktiline suhkur (listide sün.suhk.) standard moodulisse?
 operaatorid struktuuride ja algebraliste andmetüüpide patternmatchides
-semantics of "Pair -> f" should be "Pair x y -> f x y"
 mis juhtub kui esimeses moodulis on kusagil tüübimuutuja T ja järgmises moodulis sama nimega globaalne tüüp?
 Let f = Crash, x = f f In 0 -- tüüpimine läheb lõpmatusse tsüklisse sest puudub occur check
 "./Awful eval "List (0)"" without importing Standard.awf - error message about Writeable class looks bad; fix
 let expr de-sugaring (and therefore struct name collection) completely to Standard.hs module
 all de-sugaring: remove from Tree.hs, put into Standard.hs
-simplify parsing of match expression and remove duplicate code from de-sugaring, name checking, typechecking & eval
-What happens with unary minus and binary minus during parsing?
 allow using operators in class method definitions? Instance Ring{Complex T}<Ring T>(..., Complex x y * Complex z w = ...)
 Match expression parsing has a bug. Match Foo{Int} vs Match x {False -> ...
 check that struct pattern matching for branching types never occurs in worng place: Branch N {Zero -> Construct_Array x y -> ...
 Ensure that <Nonzero N> constraint gets translated to N = Next N'.
 syntactic sugar in pattern matching. List (x, y, z) -> ...    and Array (x, y, z) in function argument
 move single-name-pattern disambiguation from Naming to Standard?
-unused variable warnings?
-eta reduction warnings?
-variable defined under let used in only one place warning?
 move modular checks to parser, std or namer?
 special type (with special constructor for flexible type variables) for type equations?
 not give equations as argument; instead, compose equations with ++
 check in Naming module that all pattern constructors are valid
-special class for countable/enumerable things (like Integer). Stronger than Ord, weaker than Finite
 tests
 make Integer counter part of Eqtns and construct the set after all flexi type variables have been generated, in the end
 write long types and kinds in error messages?
 "requires instance or constraint" -> "requires instance" / "requires constraint"
-syntax: allow writing List[sometype] to disambiguate type of list when using list syntactic sugar?
-teha eraldi algebraline andmetüüp juba väärtustatud avaldise jaoks et undef-e vähemaks saada?
 internal: make the system of specifying built-in algebraic data types and things better and safer
-make syntactic sugar for x -> Match x {...}
 generalise Branching data type to branch from any of the type variables?
     Branching Array[! : Nat, T : Star]{Zero -> ..., Next N -> ...}
-syntactic sugar for multiple variable lambdas? (x, y) -> ...
 remove special semantics of missing pattern match arguments?
 Allow hiding things to functions outside module - so that helper functions are not exported from the module?
 use operators in patternmatch?
 make arrow a special token, so that arrow is not a legal operator (handle special case in tokenise instead of parser). also =
-issues with unary minus and ! before syntactic sugar... fix tokeniser or parser
-allow mathing expressions instead of just variables in syntactic sugar case
 move modular checking to parser?
 make syntax case more general (full expression, not just variable, as argument)
-polymorphism and type derivation in syntax specification language
-allow empty lists in syntactic sugar
+polymorphism in syntax specification language
 -}
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}

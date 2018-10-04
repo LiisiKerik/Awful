@@ -309,13 +309,13 @@ module Eval where
         ((Set String, Set String), Locations, Locations, Map' (Map' Location')),
         (File, Map' Syntax_type, Map' Op),
         Map' Expr_2,
-        (Locations, Map' Expression_6)) ->
+        (Locations, Map' Syntax_3)) ->
       Err
         (
           ((Set String, Set String), Locations, Locations, Map' (Map' Location')),
           (File, Map' Syntax_type, Map' Op),
           Map' Expr_2,
-          (Locations, Map' Expression_6)))
+          (Locations, Map' Syntax_3)))
   standard_naming_typing f a (b, (c, t, u), g, (g0, g')) =
     (
       standard_1 f (g0, t, g', u) a >>=
@@ -370,7 +370,7 @@ module Eval where
     Map' Expr_2 ->
     Expression_0 ->
     Map' (Map' [[String]]) ->
-    (Map' Syntax_type, Map' Expression_6, Map' Op) ->
+    (Map' Syntax_type, Map' Syntax_3, Map' Op) ->
     Err String
   tokenise_parse_naming_typing_eval c f (g, h, i) l e u q =
     (

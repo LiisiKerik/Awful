@@ -60,13 +60,12 @@ module Tree where
   data Syntax = Syntax Location_0 String [(Name, Syntax_type)] Syntax_type Syntax_expr deriving Show
   data Syntax_expr =
     Application_syntax Syntax_expr Syntax_expr |
-    Case_syntax Name Syntax_expr (Name, Name) Syntax_expr |
+    Case_syntax Location_0 Name Syntax_expr (Name, Name) Syntax_expr |
     Char_syntax Char |
-    Function_syntax Name Syntax_expr |
     Int_syntax Integer |
     Lst_syntax [Syntax_expr] |
     Modular_syntax Modular |
-    Name_syntax String |
+    Name_syntax String (Maybe Type_0) [Type_0] |
     Op_syntax Syntax_expr [(String, Syntax_expr)] |
     Syntax_syntax Name
       deriving Show
@@ -509,17 +508,19 @@ module Tree where
   parse_syntax_case :: Parser' Syntax_expr
   parse_syntax_case =
     (
-      Case_syntax <$
+      Case_syntax <&
       parse_token Case_token <*>
       parse_syntax_name' <*
       parse_token Of_token <*
+      parse_token Left_curly_token <*
       parse_square (return ()) <*
       parse_operator "->" <*>
       parse_syntax_expr <*
       parse_comma <*>
       ((,) <$> parse_syntax_name' <* parse_operator ":" <*> parse_syntax_name') <*
       parse_operator "->" <*>
-      parse_syntax_expr)
+      parse_syntax_expr <*
+      parse_token Right_curly_token)
   parse_syntax_comp :: Parser' Syntax_expr
   parse_syntax_comp = parse_syntax_case <+> parse_syntax_op
   parse_syntax_elem :: Parser' Syntax_expr
@@ -533,9 +534,16 @@ module Tree where
   parse_syntax_list :: Parser' Syntax_expr
   parse_syntax_list = Lst_syntax <$ parse_operator "!" <*> parse_square (parse_list 1 parse_syntax_expr)
   parse_syntax_mid :: Parser' Syntax_expr
-  parse_syntax_mid = parse_syntax_mid <+> Modular_syntax <$> parse_modular
+  parse_syntax_mid = parse_syntax_ap <+> Modular_syntax <$> parse_modular
   parse_syntax_name :: Parser' Syntax_expr
-  parse_syntax_name = Name_syntax <$> parse_name <+> Syntax_syntax <$> parse_syntax_name'
+  parse_syntax_name = 
+    (
+      (
+        Name_syntax <$>
+        parse_name <*>
+        parse_optional' (Just <$> parse_brackets Left_curly_token parse_type' Right_curly_token) <*>
+        parse_optional' (parse_brackets Left_square_token (parse_list 1 parse_type') Right_square_token)) <+>
+      Syntax_syntax <$> parse_syntax_name')
   parse_syntax_name' :: Parser' Name
   parse_syntax_name' = (\x -> \y -> Name x ('!' : y)) <& parse_token Synvar_token <*> parse_name
   parse_syntax_op :: Parser' Syntax_expr
@@ -563,7 +571,9 @@ module Tree where
         parse_many parse_opdecl <*>
         parse_many parse_def))
   parse_type :: Parser' Type_7
-  parse_type = Type_7 <&> (parse_op_type <+> parse_ap_type <+> parse_elementary_type)
+  parse_type = Type_7 <&> parse_type'
+  parse_type' :: Parser' Type_0
+  parse_type' = parse_op_type <+> parse_ap_type <+> parse_elementary_type
   state_location :: State -> Location_0
   state_location (State (Tokens a b) _) =
     case a of

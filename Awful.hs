@@ -14,11 +14,7 @@ type Files = Map' (File, Map' Syntax_type, Map' Op)
 check ::
   (
     [String] ->
-    (
-      Files,
-      ((Set String, Set String), Locations, Locations, Map' (Map' Location')),
-      Map' Expr_2,
-      (Locations, Map' Expression_6)) ->
+    (Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2, (Locations, Map' Syntax_3)) ->
     Location_1 ->
     String ->
     IO
@@ -28,7 +24,7 @@ check ::
             Files,
             ((Set String, Set String), Locations, Locations, Map' (Map' Location')),
             Map' Expr_2,
-            (Locations, Map' Expression_6)),
+            (Locations, Map' Syntax_3)),
           (File, Map' Syntax_type, Map' Op))))
 check b m' @ (f, _, _, _) j name_qc =
   case Data.Map.lookup name_qc f of
@@ -64,11 +60,7 @@ check_imports ::
     String ->
     [String] ->
     (
-      (
-        Files,
-        ((Set String, Set String), Locations, Locations, Map' (Map' Location')),
-        Map' Expr_2,
-        (Locations, Map' Expression_6)),
+      (Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2, (Locations, Map' Syntax_3)),
       (File, Map' Syntax_type, Map' Op)) ->
     [Name] ->
     Map' Location_0 ->
@@ -79,7 +71,7 @@ check_imports ::
             Files,
             ((Set String, Set String), Locations, Locations, Map' (Map' Location')),
             Map' Expr_2,
-            (Locations, Map' Expression_6)),
+            (Locations, Map' Syntax_3)),
           (File, Map' Syntax_type, Map' Op))))
 check_imports j a b @ (f, k) c h =
   case c of
@@ -129,7 +121,7 @@ eval'' a b = do
       \((_, (e, t, _, _), f, (_, u1)), (File j g h i _ _ m _, u0, u)) ->
         tokenise_parse_naming_typing_eval (e, t) j (g, h, i) f b m (u0, u1, u))
 init' ::
-  (Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2, (Locations, Map' Expression_6))
+  (Files, ((Set String, Set String), Locations, Locations, Map' (Map' Location')), Map' Expr_2, (Locations, Map' Syntax_3))
 init' =
   (
     Data.Map.empty,

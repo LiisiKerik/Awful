@@ -532,7 +532,7 @@ module Standard where
     in
       (
         type_synexpr a l (Prelude.foldl (\h -> \(i, k) -> Data.Map.insert i k h) b j) f >>=
-        \(h, i) -> Data.Map.insert d h g <$ type_syn_check l e i)
+        \(h, i) -> Data.Map.insert d (Prelude.foldr Function_syntax_3 h (fst <$> j)) g <$ type_syn_check l e i)
   type_syntaxes ::
     (
       (Location_0 -> Location_1) ->

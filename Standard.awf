@@ -1,5 +1,6 @@
 ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
-Syntax !List(!x :: [Expr]) :: Expr = case !x of [] -> Empty_List, !y : !z -> !y : !List !z
+Syntax !List :: [Expr] -> Expr = !foldr Construct_List Empty_List
+Syntax !foldr(!f :: Expr, !x :: Expr, !y :: [Expr]) :: Expr = case !y of {[] -> !x, !z : !a -> !f !z (!foldr !f !x !a)}
 Class Applicative{F : Star -> Star}<Functor>(Compose[T : Star, U : Star] : F (T -> U) -> F T -> F U, Lift[T : Star] : T -> F T)
 Class Braided{F : Star -> Star -> Star}(
   Apply'[T : Star, U : Star, V : Star, W : Star] : (T -> U) -> (V -> W) -> F T V -> F U W,
@@ -40,7 +41,7 @@ Def All_Modular[N : Nat]<Nonzero N>(x : Modular N) : List (Modular N) =
 Instance Applicative{Either _}(Compose x y = Match x {Left z -> Left z, Right f -> f . y}, Lift = Right)
 Instance Applicative{Function _}(Compose f g x = f x (g x), Lift x _ = x)
 Instance Applicative{List}(
-  Compose x y = Match x {Empty_List -> List, Construct_List f z -> Cat (f . y) (z ! y)},
+  Compose x y = Match x {Empty_List -> Empty_List, Construct_List f z -> Cat (f . y) (z ! y)},
   Lift x = !List ![x])
 Instance Applicative{Maybe}(Compose x y = Match x {Nothing -> Nothing, Wrap f -> f . y}, Lift = Wrap)
 Instance Braided{Either}(
@@ -57,10 +58,10 @@ Def Brackets[T : Star]<Writeable T>(x : T) : List Char =
   Let Pair y z = Write_Brackets x In Match z {False -> y, True -> Cat (Lift "(") (Cat y (Lift ")"))}
 Def Cat[T : Star](x : List T, y : List T) : List T = Match x {Empty_List -> y, Construct_List z a -> Construct_List z (Cat a y)}
 Instance Container{List}(
-  Empty = List,
+  Empty = Empty_List,
   Filter f x =
     Match x {
-      Empty_List -> List,
+      Empty_List -> Empty_List,
       Construct_List y z -> Let a = Filter f z In Match f y {False -> a, True -> Construct_List y a}})
 Instance Container{Maybe}(Empty = Nothing, Filter f x = Bind x (y -> Match f y {False -> Nothing, True -> x}))
 Def Convert'[F : Star -> Star, T : Star]<Applicative F, Ring T>(x : Int) : F T = Lift (Convert x)
@@ -74,12 +75,12 @@ Instance Finite{Comparison}(All = !List ![LT,  EQ,  GT])
 Instance Finite{Either T U}<Finite T, Finite U>(All = Cat (Left . All) (Right . All))
 Instance Finite{Logical}(All = !List ![False, True])
 Instance Finite{Maybe T}<Finite T>(All = Construct_List Nothing (Wrap . All))
-Instance Finite{Modular N}(All = Branch N {Zero -> List, Next N' -> All_Modular Zr})
+Instance Finite{Modular N}(All = Branch N {Zero -> Empty_List, Next N' -> All_Modular Zr})
 Instance Finite{Pair T U}<Finite T, Finite U>(All = Zip Pair All All)
 Def Flatten[F : Star -> Star, T : Star]<Monad F>(x : F (F T)) : F T = Bind x Identity
 Instance Functor{Either _}(Apply = Map_right)
 Instance Functor{Function _}(Apply f g x = f (g x))
-Instance Functor{List}(Apply f x = Match x {Empty_List -> List, Construct_List y z -> Construct_List (f y) (f . z)})
+Instance Functor{List}(Apply f x = Match x {Empty_List -> Empty_List, Construct_List y z -> Construct_List (f y) (f . z)})
 Instance Functor{Maybe}(Apply f x = Match x {Nothing -> Nothing, Wrap y -> Wrap (f y)})
 Instance Functor{Pair _}(Apply = Map_right)
 Def Greater[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> True, _ -> False}
@@ -87,7 +88,7 @@ Def Greater_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x 
 Def Id[T : Star]<Ring T> : T = Convert 1
 Def Identity[T : Star](x : T) : T = x
 Def Interleave[T : Star](x : List T, y : List (List T)) : List T =
-  Match y {Empty_List -> List, Construct_List z a -> Cat z (Flatten (Cat x . a))}
+  Match y {Empty_List -> Empty_List, Construct_List z a -> Cat z (Flatten (Cat x . a))}
 Def Is_Zero[T : Star]<Ord T, Ring T> : T -> Logical = Equal Zr
 Def Less[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> True, _ -> False}
 Def Less_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> False, _ -> True}
@@ -98,7 +99,7 @@ Def Min[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> x, _ -> y}
 Def Minus[T : Star]<Ring T>(x : T, y : T) : T = x + Negate y
 Instance Monad{Either _}(Bind x f = Match x {Left y -> Left y, Right y -> f y})
 Instance Monad{Function _}(Bind f g x = g (f x) x)
-Instance Monad{List}(Bind x f = Match x {Empty_List -> List, Construct_List y z -> Cat (f y) (Bind z f)})
+Instance Monad{List}(Bind x f = Match x {Empty_List -> Empty_List, Construct_List y z -> Cat (f y) (Bind z f)})
 Instance Monad{Maybe}(Bind x f = Match x {Nothing -> Nothing, Wrap y -> f y})
 Def Multiply'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Multiply
 Def Nand(x : Logical, y : Logical) : Logical = Not (Min x y)
@@ -152,13 +153,15 @@ Instance Writeable{Either T U}<Writeable T, Writeable U>(
 Instance Writeable{List T}<Writeable T>(
   Write_Brackets x =
     Match x {
-      Empty_List -> Pair (!List !["L", "i", "s", "t"]) False,
+      Empty_List -> Pair (!List !["E", "m", "p", "t", "y", "_", "L", "i", "s", "t"]) False,
       Construct_List y z ->
         Match z {
           Empty_List -> Pair (Cat (!List !["L", "i", "f", "t", " "]) (Brackets y)) True,
           Construct_List _ _ ->
             Pair
-              (Cat (!List !["L", "i", "s", "t", " ", "("]) (Cat (Interleave (!List ![",", " "]) (Write . x)) (Lift ")")))
+              (Cat
+                (!List !["!", "L", "i", "s", "t", " ", "!", "["])
+                (Cat (Interleave (!List ![",", " "]) (Write . x)) (Lift ")")))
               True}})
 Instance Writeable{Logical}(
   Write_Brackets x = Pair (Match x {False -> !List !["F", "a", "l", "s", "e"], True -> !List !["T", "r", "u", "e"]}) False)

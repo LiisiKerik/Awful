@@ -1,5 +1,4 @@
 {-
-boolean function library
 implement map and set (AVL trees?)
 different ways of folding lists, vectors etc
 module system related functions into a separate file?

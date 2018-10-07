@@ -1,7 +1,10 @@
-`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
-Algebraic Tree[T : Star](Empty_Tree, Construct_Tree T (Tree T) (Tree T))
+````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+Load (Standard.awf)
+Algebraic Tree[T : Star]{Empty_Tree, Construct_Tree T (Tree T) (Tree T)}
+Hidden Struct Dictionary[T : Star, U : Star]<Ord T>(Entries : Tree ((T & Comparison) & U))
+Instance Functor{Dictionary T}<Ord T>(Apply f (Dictionary x) = Dictionary (f . x))
 Instance Functor{Tree}(
-  Fmap f x = Match x {Empty_Tree -> Empty_Tree, Construct_Tree y z a -> Construct_Tree (f y) (Fmap f z) (Fmap f a)})
+  Apply f x = Match x {Empty_Tree -> Empty_Tree, Construct_Tree y z a -> Construct_Tree (f y) (Fmap f z) (Fmap f a)})
 Instance Ord{Tree T}<Ord T>(
   Compare x y =
     Match x {
@@ -18,4 +21,4 @@ Instance Writeable{Tree T}<Writeable T>(
             (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "r", "e", "e"))
             (List (Brackets y, Brackets z, Brackets a)))
           True})
-`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

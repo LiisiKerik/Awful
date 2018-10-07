@@ -19,13 +19,13 @@ module Tree where
   data Class_0 = Class_0 Name (Name, Kind_0) (Maybe Name) [Method] deriving Show
   data Constraint_0 = Constraint_0 Name Name deriving Show
   data Data_0 =
-    Algebraic_data_0 Location_0 String [(Name, Kind_0)] [Form_0] |
-    Branching_data_0 Location_0 String [(Name, Kind_0)] Data_br_0 Name Data_br_0 |
-    Struct_data_0 Location_0 Stat String [(Name, Kind_0)] [(Name, Type_7)] (Maybe (Location_0, Expression_0))
+    Algebraic_data_0 Location_0 String Kinds_constraints [Form_0] |
+    Branching_data_0 Location_0 String Kinds_constraints Data_br_0 Name Data_br_0 |
+    Struct_data_0 Location_0 Stat String Kinds_constraints [(Name, Type_7)] (Maybe (Location_0, Expression_0))
       deriving Show
   data Data_br_0 = Data_br_0 Name [(Name, Type_7)] deriving Show
   data Def_0 =
-    Basic_def_0 Name [(Name, Kind_0)] [Constraint_0] [(Pat, Type_7)] Type_7 Expression_0 |
+    Basic_def_0 Name Kinds_constraints [(Pat, Type_7)] Type_7 Expression_0 |
     Instance_def_0 Location_0 Name Name [Pattern_1] [Constraint_0] [(Name, ([Pat], Expression_0))]
       deriving Show
   data Expression_0 =
@@ -45,7 +45,8 @@ module Tree where
   data Form_0 = Form_0 Name [Type_7] deriving Show
   data Input = Check [Name] | Eval [Name] Expression_0 deriving Show
   data Kind_0 = Arrow_kind_0 Kind_0 Kind_0 | Nat_kind_0 | Star_kind_0 deriving (Eq, Show)
-  data Method = Method Name [(Name, Kind_0)] [Constraint_0] Type_7 deriving Show
+  data Kinds_constraints = Kinds_constraints [(Name, Kind_0)] [Constraint_0] deriving Show
+  data Method = Method Name Kinds_constraints Type_7 deriving Show
   data Modular = Modular Location_0 Integer Integer deriving Show
   data Name = Name Location_0 String deriving Show
   data Opdecl_0 = Opdecl_0 Location_0 String Name Integer Assoc deriving Show
@@ -172,7 +173,6 @@ module Tree where
       Basic_def_0 <$>
       parse_name'' Def_token <*>
       parse_kinds <*>
-      parse_constraints <*>
       parse_arguments' parse_pat <*
       parse_colon <*>
       parse_type <*
@@ -357,8 +357,12 @@ module Tree where
   parse_list_expression = List_expression_0 <$ parse_operator "!" <*> parse_square (parse_list 1 parse_expression')
   parse_kind :: Parser' Kind_0
   parse_kind = parse_arrow_kind <+> parse_name_kind
-  parse_kinds :: Parser' [(Name, Kind_0)]
-  parse_kinds = parse_arguments (\a -> parse_brackets Left_square_token a Right_square_token) parse_name' parse_kind
+  parse_kinds :: Parser' Kinds_constraints
+  parse_kinds =
+    (
+      Kinds_constraints <$>
+      parse_arguments (\a -> parse_brackets Left_square_token a Right_square_token) parse_name' parse_kind <*>
+      parse_constraints)
   parse_list :: Integer -> Parser' t -> Parser' [t]
   parse_list i p =
     case i of
@@ -378,7 +382,7 @@ module Tree where
       parse_list 2 (parse_arrow' (Case_0 <$> parse_alg_pattern)) <*
       parse_token Right_curly_token)
   parse_method :: Parser' Method
-  parse_method = Method <$> parse_name' <*> parse_kinds <*> parse_constraints <* parse_colon <*> parse_type
+  parse_method = Method <$> parse_name' <*> parse_kinds <* parse_colon <*> parse_type
   parse_mid_expr :: Parser' Expression_0
   parse_mid_expr = parse_ap_expr <+> Modular_expression_0 <$> parse_modular
   parse_modular :: Parser' Modular

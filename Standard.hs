@@ -9,10 +9,10 @@ module Standard where
   data Case_6 = Case_6 Alg_pat Expression_6 deriving Show
   data Class_7 = Class_7 Name (Name, Kind_0) (Maybe Name) [Method_9] deriving Show
   data Def_1 =
-    Basic_def_1 Name [(Name, Kind_0)] [Constraint_0] Type_8 Expression_9 |
+    Basic_def_1 Name Kinds_constraints Type_8 Expression_9 |
     Instance_1 Location_0 Name Name [Pattern_1] [Constraint_0] [(Name, Expression_9)]
       deriving Show
-  data Data_6 = Data_6 Location_0 String [(Name, Kind_0)] Data_branch_6 deriving Show
+  data Data_6 = Data_6 Location_0 String Kinds_constraints Data_branch_6 deriving Show
   data Data_br_6 = Data_br_6 Name [(Name, Type_8)] deriving Show
   data Data_branch_6 =
     Algebraic_data_6 [Form_6] | Branching_data_6 Data_br_6 Name Data_br_6 | Struct_data_6 [(Name, Type_8)] Struct_status
@@ -49,7 +49,7 @@ module Standard where
   data Location' = Language | Library Location_1 deriving Show
   type Locations = Map' Location'
   type Map' t = Map String t
-  data Method_9 = Method_9 Name [(Name, Kind_0)] [Constraint_0] Type_8 deriving Show
+  data Method_9 = Method_9 Name Kinds_constraints Type_8 deriving Show
   data Op = Op Integer Assoc String deriving Show
   data Op' = Op' Location_0 Op deriving Show
   data Opdecl_1 = Opdecl_1 Location_0 String Name deriving Show
@@ -268,8 +268,8 @@ module Standard where
   standard_def :: (Location_0 -> Location_1) -> (Map' Syntax_type, Map' Syntax_3, Map' Op) -> Def_0 -> Err Def_1
   standard_def i j a =
     case a of
-      Basic_def_0 (Name b y) c g d e f ->
-        uncurry (Basic_def_1 (Name b y) c g) <$> standard_arguments i ("definition " ++ y ++ location' (i b)) j d e f
+      Basic_def_0 (Name b y) c d e f ->
+        uncurry (Basic_def_1 (Name b y) c) <$> standard_arguments i ("definition " ++ y ++ location' (i b)) j d e f
       Instance_def_0 b c (Name d y) f g e -> Instance_1 b c (Name d y) f g <$> traverse (std_inst i y j) e
   standard_defs :: (Location_0 -> Location_1) -> (Map' Syntax_type, Map' Syntax_3, Map' Op) -> [Def_0] -> Err [Def_1]
   standard_defs a b = traverse (standard_def a b)
@@ -363,7 +363,7 @@ module Standard where
       (\e -> (Name b z, Prelude.foldr Function_expression_9 e c)) <$>
       std_expr a ("definition " ++ z ++ "{" ++ y ++ "}" ++ location' (a b)) f d)
   std_mthd :: (Location_0 -> Location_1) -> Method -> Err Method_9
-  std_mthd a (Method b c d e) = Method_9 b c d <$> std_type a e
+  std_mthd a (Method b c e) = Method_9 b c <$> std_type a e
   std_stat ::
     (
       (Location_0 -> Location_1) ->

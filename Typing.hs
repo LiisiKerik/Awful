@@ -34,6 +34,11 @@ make arrow a special token, so that arrow is not a legal operator (handle specia
 move modular checking to parser?
 make syntax case more general (full expression, not just variable, as argument)
 polymorphism in syntax specification language
+allow to make algebraic data types and branching data types hidden
+expand restricted constructor thing to algebraic and branching data types and definitions (and class methods?)
+remove method Div' in favor of a function with statically checked argument (and do a similar Mod')
+distinguish betw full restriction (in and out of module - Div', Mod') and limited restriction (only outside module - Fraction)
+safe, restricted, statically checked division?
 -}
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
@@ -76,7 +81,7 @@ module Typing where
   data Constraint_1 = Constraint_1 String String deriving Show
   data Constructor = Constructor String [Type_1] deriving Show
   data Def_4 =
-    Basic_def_4 Location_0 String [(String, Kind_0)] [Constraint_1] Type_1 Expression_1 |
+    Basic_def_4 Location_0 String Kinds_constraints_2 Type_1 Expression_1 |
     Instance_4
       Location_0
       String
@@ -145,8 +150,9 @@ module Typing where
   data Form_2 = Form_2 String [Type_1] deriving Show
   data Globloc = Glob | Loc deriving Show
   data Kind_1 = Arrow_kind_1 Kind_1 Kind_1 | Nat_kind_1 | Star_kind_1 | Var_kind_1 Integer deriving (Eq, Show)
-  data Method_3 = Method_3 String [(String, Kind_0)] [Constraint_0] Type_1 deriving Show
-  data Method_4 = Method_4 String [(String, Kind_0)] [Constraint_1] Type_1 deriving Show
+  data Kinds_constraints_2 = Kinds_constraints_2 [(String, Kind_0)] [Constraint_1] deriving Show
+  data Method_3 = Method_3 String Kinds_constraints' Type_1 deriving Show
+  data Method_4 = Method_4 String Kinds_constraints_2 Type_1 deriving Show
   data Modular' = Modular' Integer Integer deriving Show
   data Normaliser_0 = Normaliser_0 String [(String, Kind_0)] [(String, Type_1)] Location_0 Expression_1 deriving Show
   data Pattern_5 =
@@ -247,28 +253,36 @@ module Typing where
           Class_4
             ("T", Star_kind_0)
             (Just "Ring")
-            [Method_4 "Inverse" [] [] (function_type (Name_type_1 "T") (maybe_type (Name_type_1 "T")))]),
-        ("Nonzero", Class_4 ("N", Nat_kind_0) Nothing [Method_4 "Div'" [] [] (function_type int_type int_type)]),
+            [Method_4 "Inverse" (Kinds_constraints_2 [] []) (function_type (Name_type_1 "T") (maybe_type (Name_type_1 "T")))]),
+        (
+          "Nonzero",
+          Class_4 ("N", Nat_kind_0) Nothing [Method_4 "Div'" (Kinds_constraints_2 [] []) (function_type int_type int_type)]),
         (
           "Ord",
           Class_4
             ("T", Star_kind_0)
             Nothing
-            [Method_4 "Compare" [] [] (function_type (Name_type_1 "T") (function_type (Name_type_1 "T") comparison_type))]),
+            [
+              Method_4
+                "Compare"
+                (Kinds_constraints_2 [] [])
+                (function_type (Name_type_1 "T") (function_type (Name_type_1 "T") comparison_type))]),
         (
           "Ring",
           Class_4
             ("T", Star_kind_0)
             Nothing
             [
-              Method_4 "Add" [] [] (function_type (Name_type_1 "T") (function_type (Name_type_1 "T") (Name_type_1 "T"))),
-              Method_4 "Convert" [] [] (function_type int_type (Name_type_1 "T")),
+              Method_4
+                "Add"
+                (Kinds_constraints_2 [] [])
+                (function_type (Name_type_1 "T") (function_type (Name_type_1 "T") (Name_type_1 "T"))),
+              Method_4 "Convert" (Kinds_constraints_2 [] []) (function_type int_type (Name_type_1 "T")),
               Method_4
                 "Multiply"
-                []
-                []
+                (Kinds_constraints_2 [] [])
                 (function_type (Name_type_1 "T") (function_type (Name_type_1 "T") (Name_type_1 "T"))),
-              Method_4 "Negate" [] [] (function_type (Name_type_1 "T") (Name_type_1 "T"))]),
+              Method_4 "Negate" (Kinds_constraints_2 [] []) (function_type (Name_type_1 "T") (Name_type_1 "T"))]),
         (
           "Writeable",
           Class_4
@@ -277,11 +291,10 @@ module Typing where
             [
               Method_4
                 "Write_Brackets"
-                []
-                []
+                (Kinds_constraints_2 [] [])
                 (function_type (Name_type_1 "T") (pair_type (list_type char_type) logical_type))])]
   classes_1 :: Map' Class_5
-  classes_1 = (\(Class_4 (_, a) b c) -> Class_5 a b ((\(Method_4 d _ _ _) -> d) <$> c)) <$> classes_0
+  classes_1 = (\(Class_4 (_, a) b c) -> Class_5 a b ((\(Method_4 d _ _) -> d) <$> c)) <$> classes_0
   classes_2 :: Map' Kind_0
   classes_2 = (\(Class_4 (_, a) _ _) -> a) <$> classes_0
   comparison_type :: Type_1
@@ -966,7 +979,7 @@ module Typing where
         (
           (\g ->
             let
-              g2 = (\(Method_3 w1 _ _ _) -> w1) <$> g
+              g2 = (\(Method_3 w1 _ _) -> w1) <$> g
             in
               (
                 Class_3 b (c, d) g' g,
@@ -992,7 +1005,8 @@ module Typing where
           (\e' ->
             (
               Prelude.foldl
-                (\x -> \(Method_4 t s u0 u) -> ins_new t (Basic_type_1 ((c, k) : s) (Just x1) (x1 : u0) u Nothing) x)
+                (\x -> \(Method_4 t (Kinds_constraints_2 s u0) u) ->
+                  ins_new t (Basic_type_1 ((c, k) : s) (Just x1) (x1 : u0) u Nothing) x)
                 f0
                 e',
               ins_new b (Class_4 (c, k) m e') f)) <$>
@@ -1085,14 +1099,14 @@ module Typing where
       [] ->
         case b of
           [] -> Right []
-          (Method_4 e _ _ _) : _ -> Left ("Missing definition " ++ e ++ " in instance " ++ m ++ " " ++ a ++ location' (l n))
+          (Method_4 e _ _) : _ -> Left ("Missing definition " ++ e ++ " in instance " ++ m ++ " " ++ a ++ location' (l n))
       (p' @ (Name h i), j) : k ->
         let
           o p = Left ("Definition " ++ i ++ location (l h) ++ " is not a component of class " ++ m ++ p)
         in
           case b of
             [] -> o "."
-            (Method_4 e s y f) : g ->
+            (Method_4 e (Kinds_constraints_2 s y) f) : g ->
               if i == e
                 then (:) (p', j, s, y, f) <$> type_cls_0 a g c k l m n
                 else o " or the definitions are in a wrong order."
@@ -1172,7 +1186,7 @@ module Typing where
       [] -> e
       b : c -> type_constraints_1 c (type_constraint_1 b e d) d
   type_data_1 :: Data_2 -> (Map' (Kind_0, Status), Map' Expr_2) -> (Map' (Kind_0, Status), Map' Expr_2)
-  type_data_1 (Data_2 b c d) (e, g) =
+  type_data_1 (Data_2 b (Kinds_constraints' c c2) d) (e, g) =
     let
       l m o =
         (
@@ -1209,7 +1223,7 @@ module Typing where
       Map' Kind_0 ->
       (Algebraics, Types, Map' (Constructor, Status)) ->
       Err ((Algebraics, Types, Map' (Constructor, Status)), Maybe Normaliser_0))
-  type_data_2 a (Data_2 g h b) c (d, e, m3) =
+  type_data_2 a (Data_2 g (Kinds_constraints' h h2) b) c (d, e, m3) =
     let
       l = type_kinds h c
       x' = Prelude.foldl (\n -> \n' -> Application_type_1 n n') (Name_type_1 g)
@@ -1301,7 +1315,7 @@ module Typing where
       Err (Def_4, Map' (Type_2, Status), Map' (Map' ([[String]], Status))))
   type_def_1 l a b c k k2 t' =
     case a of
-      Basic_def_3 f d e e' g i ->
+      Basic_def_3 f d (Kinds_constraints' e e') g i ->
         let
           j' = type_kinds e Data.Map.empty
         in
@@ -1309,7 +1323,8 @@ module Typing where
             type_constraints_0 Data.Map.empty e' (k2, j', (\_ -> Zr) <$> j') l >>=
             \o1 ->
               (
-                (\h -> (Basic_def_4 f d e o1 h i, ins_new d (Basic_type_1 e Nothing o1 h Nothing) c, t')) <$>
+                (\h ->
+                  (Basic_def_4 f d (Kinds_constraints_2 e o1) h i, ins_new d (Basic_type_1 e Nothing o1 h Nothing) c, t')) <$>
                 type_typ (Location_1 l) g (type_kinds e b) Star_kind_0))
       Instance_3 d (Name e m) (Name f n) k' o' g ->
         und_err
@@ -1358,7 +1373,7 @@ module Typing where
       Err (Map' Expr_2, [Chck]))
   type_def_2 j a (d, l, k) c m n u0 =
     case a of
-      Basic_def_4 r e b x h i ->
+      Basic_def_4 r e (Kinds_constraints_2 b x) h i ->
         (
           first (\t -> Data.Map.insert e (Expr_2 Nothing (fst <$> b) t) c) <$>
           type_expr
@@ -1732,13 +1747,14 @@ module Typing where
       [] -> d
       (e, f) : g -> type_kinds g (Data.Map.insert e f d)
   type_method :: (Location_0 -> Location_1) -> Method_2 -> Map' Kind_0 -> Err Method_3
-  type_method a (Method_2 b c i d) e = Method_3 b c i <$> type_typ a d (type_kinds c e) Star_kind_0
+  type_method a (Method_2 b (Kinds_constraints' c f) d) e =
+    Method_3 b (Kinds_constraints' c f) <$> type_typ a d (type_kinds c e) Star_kind_0
   type_method_1 :: String -> Map' Class_5 -> Method_3 -> Err Method_4
-  type_method_1 e g (Method_3 a b c d) =
+  type_method_1 e g (Method_3 a (Kinds_constraints' b c) d) =
     let
       m = Prelude.foldl (\h -> \(i, j) -> Data.Map.insert i j h) Data.Map.empty b
     in
-      (\f -> Method_4 a b f d) <$> type_constraints_0 Data.Map.empty c (g, m, (\_ -> Zr) <$> m) e
+      (\f -> Method_4 a (Kinds_constraints_2 b f) d) <$> type_constraints_0 Data.Map.empty c (g, m, (\_ -> Zr) <$> m) e
   type_methods_0 :: (Location_0 -> Location_1) -> [Method_2] -> Map' Kind_0 -> Err [Method_3]
   type_methods_0 a b c =
     case b of

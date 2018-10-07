@@ -19,9 +19,9 @@ module Tree where
   data Class_0 = Class_0 Name (Name, Kind_0) (Maybe Name) [Method] deriving Show
   data Constraint_0 = Constraint_0 Name Name deriving Show
   data Data_0 =
-    Algebraic_data_0 Location_0 String Kinds_constraints [Form_0] |
-    Branching_data_0 Location_0 String Kinds_constraints Data_br_0 Name Data_br_0 |
-    Struct_data_0 Location_0 Stat String Kinds_constraints [(Name, Type_7)] (Maybe (Location_0, Expression_0))
+    Algebraic_data_0 Location_0 Status String [(Name, Kind_0)] [Form_0] |
+    Branching_data_0 Location_0 Status String [(Name, Kind_0)] Data_br_0 Name Data_br_0 |
+    Struct_data_0 Location_0 Status String [(Name, Kind_0)] [(Name, Type_7)]
       deriving Show
   data Data_br_0 = Data_br_0 Name [(Name, Type_7)] deriving Show
   data Def_0 =
@@ -56,8 +56,9 @@ module Tree where
   data Pattern_0 = Blank_pattern | Name_pattern String deriving Show
   newtype Parser s f t = Parser {parser :: s -> f (t, s)}
   type Parser' = Parser State (Either Location_0)
+  -- data Stat = Hidden | Restricted | Standard deriving Show
   data State = State Tokens Location_0 deriving Show
-  data Stat = Hidden | Restricted | Standard deriving Show
+  data Status = New | Old deriving (Eq, Show)
   data Syntax = Syntax Location_0 String [(Name, Syntax_type)] Syntax_type Syntax_expr deriving Show
   data Syntax_expr =
     Application_syntax Syntax_expr Syntax_expr |
@@ -126,7 +127,8 @@ module Tree where
   parse_algebraic :: Parser' Data_0
   parse_algebraic =
     (
-      Algebraic_data_0 <&
+      Algebraic_data_0 <&>
+      parse_struct_status <*
       parse_token Algebraic_token <*>
       parse_name <*>
       parse_kinds <*
@@ -172,7 +174,7 @@ module Tree where
     (
       Basic_def_0 <$>
       parse_name'' Def_token <*>
-      parse_kinds <*>
+      parse_kinds' <*>
       parse_arguments' parse_pat <*
       parse_colon <*>
       parse_type <*
@@ -217,7 +219,8 @@ module Tree where
   parse_brnchs :: Parser' Data_0
   parse_brnchs =
     (
-      Branching_data_0 <&
+      Branching_data_0 <&>
+      parse_struct_status <*
       parse_token Branching_token <*>
       parse_name <*>
       parse_kinds <*
@@ -357,12 +360,10 @@ module Tree where
   parse_list_expression = List_expression_0 <$ parse_operator "!" <*> parse_square (parse_list 1 parse_expression')
   parse_kind :: Parser' Kind_0
   parse_kind = parse_arrow_kind <+> parse_name_kind
-  parse_kinds :: Parser' Kinds_constraints
-  parse_kinds =
-    (
-      Kinds_constraints <$>
-      parse_arguments (\a -> parse_brackets Left_square_token a Right_square_token) parse_name' parse_kind <*>
-      parse_constraints)
+  parse_kinds :: Parser' [(Name, Kind_0)]
+  parse_kinds = parse_arguments (\a -> parse_brackets Left_square_token a Right_square_token) parse_name' parse_kind
+  parse_kinds' :: Parser' Kinds_constraints
+  parse_kinds' = Kinds_constraints <$> parse_kinds <*> parse_constraints
   parse_list :: Integer -> Parser' t -> Parser' [t]
   parse_list i p =
     case i of
@@ -382,7 +383,7 @@ module Tree where
       parse_list 2 (parse_arrow' (Case_0 <$> parse_alg_pattern)) <*
       parse_token Right_curly_token)
   parse_method :: Parser' Method
-  parse_method = Method <$> parse_name' <*> parse_kinds <* parse_colon <*> parse_type
+  parse_method = Method <$> parse_name' <*> parse_kinds' <* parse_colon <*> parse_type
   parse_mid_expr :: Parser' Expression_0
   parse_mid_expr = parse_ap_expr <+> Modular_expression_0 <$> parse_modular
   parse_modular :: Parser' Modular
@@ -485,10 +486,9 @@ module Tree where
       parse_token Struct_token <*>
       parse_name <*>
       parse_kinds <*>
-      parse_arguments' parse_name' <*>
-      parse_optional' ((\a -> \b -> Just (a, b)) <& parse_operator "=" <*> parse_expression'))
-  parse_struct_status :: Parser' Stat
-  parse_struct_status = Hidden <$ parse_token Hidden_token <+> Restricted <$ parse_token Restricted_token <+> return Standard
+      parse_arguments' parse_name')
+  parse_struct_status :: Parser' Status
+  parse_struct_status = Old <$ parse_token Hidden_token <+> return New
   parse_syntax :: Parser' Syntax
   parse_syntax =
     (

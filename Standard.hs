@@ -12,11 +12,10 @@ module Standard where
     Basic_def_1 Name Kinds_constraints Type_8 Expression_9 |
     Instance_1 Location_0 Name Name [Pattern_1] [Constraint_0] [(Name, Expression_9)]
       deriving Show
-  data Data_6 = Data_6 Location_0 String Kinds_constraints Data_branch_6 deriving Show
+  data Data_6 = Data_6 Location_0 Status String [(Name, Kind_0)] Data_branch_6 deriving Show
   data Data_br_6 = Data_br_6 Name [(Name, Type_8)] deriving Show
-  data Data_branch_6 =
-    Algebraic_data_6 [Form_6] | Branching_data_6 Data_br_6 Name Data_br_6 | Struct_data_6 [(Name, Type_8)] Struct_status
-      deriving Show
+  data Data_branch_6 = Algebraic_data_6 [Form_6] | Branching_data_6 Data_br_6 Name Data_br_6 | Struct_data_6 [(Name, Type_8)]
+    deriving Show
   data Expression_6 =
     Application_expression_6 Expression_6 Expression_6 |
     Branch_expression_6 Name Expression_6 Name Expression_6 |
@@ -53,8 +52,6 @@ module Standard where
   data Op = Op Integer Assoc String deriving Show
   data Op' = Op' Location_0 Op deriving Show
   data Opdecl_1 = Opdecl_1 Location_0 String Name deriving Show
-  data Status = New | Old deriving (Eq, Show)
-  data Struct_status = Hidden_str | Restricted_str (Location_0, Expression_9) | Standard_str deriving Show
   data Syntax_2 = Syntax_2 Location_0 String [(String, Syntax_type)] Syntax_type Syntax_expr_2 deriving Show
   data Syntax_3 =
     Application_syntax_3 Syntax_3 Syntax_3 |
@@ -242,7 +239,7 @@ module Standard where
         in
           (
             (\g -> \h -> \k -> ((o, rem_old p, q, rem_old i), Tree_2 g h j k)) <$>
-            traverse (std_dat (Location_1 d) (fst <$> p, q, f)) a <*>
+            traverse (std_dat (Location_1 d)) a <*>
             traverse (std_cls (Location_1 d)) b <*>
             standard_defs (Location_1 d) (fst <$> p, q, fst <$> i) c))
   standard_arguments ::
@@ -277,17 +274,13 @@ module Standard where
   std_br a (Data_br_0 b c) = Data_br_6 b <$> traverse (\(g, h) -> (,) g <$> std_type a h) c
   std_cls :: (Location_0 -> Location_1) -> Class_0 -> Err Class_7
   std_cls e (Class_0 a b c d) = Class_7 a b c <$> traverse (std_mthd e) d
-  std_dat :: (Location_0 -> Location_1) -> (Map' Syntax_type, Map' Syntax_3, Map' Op) -> Data_0 -> Err Data_6
-  std_dat x (t, m, z) y =
+  std_dat :: (Location_0 -> Location_1) -> Data_0 -> Err Data_6
+  std_dat x y =
     case y of
-      Algebraic_data_0 a b c d ->
-        (\e -> Data_6 a b c (Algebraic_data_6 e)) <$> traverse (\(Form_0 g h) -> Form_6 g <$> traverse (std_type x) h) d
-      Branching_data_0 a b c d e f -> (\g -> \h -> Data_6 a b c (Branching_data_6 g e h)) <$> std_br x d <*> std_br x f
-      Struct_data_0 a f b c d j ->
-        (
-          (\i -> \e -> Data_6 a b c (Struct_data_6 e i)) <$>
-          std_stat x b (t, m, z) a f j <*>
-          traverse (\(g, h) -> (,) g <$> std_type x h) d)
+      Algebraic_data_0 a f b c d ->
+        (\e -> Data_6 a f b c (Algebraic_data_6 e)) <$> traverse (\(Form_0 g h) -> Form_6 g <$> traverse (std_type x) h) d
+      Branching_data_0 a i b c d e f -> (\g -> \h -> Data_6 a i b c (Branching_data_6 g e h)) <$> std_br x d <*> std_br x f
+      Struct_data_0 a f b c d -> (\e -> Data_6 a f b c (Struct_data_6 e)) <$> traverse (\(g, h) -> (,) g <$> std_type x h) d
   std_exp :: (Location_0 -> Location_1) -> Map' Op -> Expression_6 -> Err Expression_9
   std_exp a b c =
     let
@@ -364,6 +357,7 @@ module Standard where
       std_expr a ("definition " ++ z ++ "{" ++ y ++ "}" ++ location' (a b)) f d)
   std_mthd :: (Location_0 -> Location_1) -> Method -> Err Method_9
   std_mthd a (Method b c e) = Method_9 b c <$> std_type a e
+{-
   std_stat ::
     (
       (Location_0 -> Location_1) ->
@@ -380,6 +374,7 @@ module Standard where
       (Restricted, Just (g, e)) -> (\h -> Restricted_str (g, h)) <$> std_expr a ("checker for " ++ x ++ location' (a g)) f e
       (Standard, Nothing) -> Right Standard_str
       (_, Just _) -> Left ("Non-restricted struct" ++ location (a b) ++ " should not have a checker.")
+-}
   std_type :: (Location_0 -> Location_1) -> Type_7 -> Err Type_8
   std_type c (Type_7 a b) = Type_8 a <$> std_type' c b
   std_type' :: (Location_0 -> Location_1) -> Type_0 -> Err Type_5

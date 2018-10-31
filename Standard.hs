@@ -18,7 +18,7 @@ module Standard where
     deriving Show
   data Expression_6 =
     Application_expression_6 Expression_6 Expression_6 |
-    Branch_expression_6 Name Expression_6 Name Expression_6 |
+    Branch_expression_6 Name Expression_6 Pattern_1 Expression_6 |
     Case_expression_6 Expression_6 Expression_6 (String, String) Expression_6 |
     Char_expression_6 Char |
     Function_expression_6 Pat Expression_6 |
@@ -35,7 +35,7 @@ module Standard where
       deriving Show
   data Expression_9 =
     Application_expression_9 Expression_9 Expression_9 |
-    Branch_expression_9 Name Expression_9 Name Expression_9 |
+    Branch_expression_9 Name Expression_9 Pattern_1 Expression_9 |
     Char_expression_9 Char |
     Function_expression_9 Pat Expression_9 |
     Int_expression_9 Integer |
@@ -231,12 +231,12 @@ module Standard where
       Tree_0 ->
       Err ((Locations, Map' Syntax_type, Map' Syntax_3, Map' Op), Tree_2))
   standard_1 d (w, n, m, f) (Tree_0 y a b e c) =
-    (
-      process_syntax d y (w, n, m) >>=
-      \(o, p, q) ->
-        let
-          (i, j) = gather_ops (Location_1 d) (old f) e
-        in
+    let
+      (i, j) = gather_ops (Location_1 d) (old f) e
+    in
+      (
+        process_syntax d y (w, n, m) >>=
+        \(o, p, q) ->
           (
             (\g -> \h -> \k -> ((o, rem_old p, q, rem_old i), Tree_2 g h j k)) <$>
             traverse (std_dat (Location_1 d)) a <*>
@@ -317,6 +317,7 @@ module Standard where
                   [] -> f
                   k : l -> synrepl h (List_expression_6 l) (synrepl g k i)
               _ -> undefined)
+        Function_expression_6 a c -> Function_expression_6 a (std_expr' b c)
         Let_expression_6 f g h i -> Let_expression_6 f g (e h) (e i)
         List_expression_6 f -> List_expression_6 (e <$> f)
         Match_expression_6 f g h -> Match_expression_6 f (e g) ((\(Case_6 c i) -> Case_6 c (e i)) <$> h)

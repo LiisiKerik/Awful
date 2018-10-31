@@ -173,19 +173,24 @@ module Eval where
                   Write_Brackets_Int_expression_2 ->
                     case j of
                       Int_expression_2 k ->
-                        Just (pair_expression (list_expression (show k)) (Algebraic_expression_2 "False" []))
+                        Just (pair_expression (list_expression (show k)) (Int_expression_2 0))
                       _ -> undefined
                   Write_Brackets_Modular_expression_2 k ->
                     case j of
                       Modular_expression_2 l ->
-                        Just (pair_expression (list_expression (show k ++ " # " ++ show l)) (Algebraic_expression_2 "True" []))
+                        Just (pair_expression (list_expression (show k ++ " # " ++ show l)) (Int_expression_2 1))
                       _ -> undefined
                   _ -> undefined))
       Branch_expression_2 b d e f ->
         eval'
           a
           (case b of
-            Application_type_1 (Name_type_1 "Next") g -> repl_expr (Data.Map.singleton e g) f
+            Application_type_1 (Name_type_1 "Next") g ->
+              repl_expr
+                (case e of
+                  Blank_pattern -> Data.Map.empty
+                  Name_pattern x -> Data.Map.singleton x g)
+                f
             Name_type_1 "Zero" -> d
             _ -> undefined)
       Match_expression_2 b d -> eval' a b >>= \e -> eval' a (eval_match e d)

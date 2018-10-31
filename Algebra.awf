@@ -2,14 +2,15 @@
 Load (Standard.awf)
 Branching Array[T : Star]{Zero -> Empty_Array, Next N -> Construct_Array(Head : T, Tail : Array N T)}
 Struct Complex[T : Star](Real : T, Imaginary : T)
+~/
 Struct Fraction(Num : Int, Den : Int) =
   Let
     Pair Sign_Num Num' = Separate Num, Pair Sign_Den Den' = Separate Den, GCD_Num_Den = GCD Num_0 Den_0, 
   In
     Fraction () (Div' GCD_Num_Den}
-`Restricted Struct Polynomial[T : Star]<Ring T>(Coefficients : List T) = 
-`Normalised Struct [T : Star]<Ring T>(Coefficients : List T) = Polynomial
-`Normalised Struct Polynomial[T : Star]<Ring T>(Coefficients : List T) -> 
+/~
+Hidden Struct Fraction(Num : Int, Den : Int)
+Hidden Struct Polynomial[T : Star](Coefficients : List T)
 Struct Quaternion[T : Star](Qr : T, Qx : T, Qy : T, Qz : T)
 Branching Square[T : Star]{
   Zero -> Empty_Square,
@@ -19,9 +20,6 @@ Branching Triangle[T : Star]{
   Zero -> Empty_Triangle,
   Next N -> Construct_Triangle(Fst_Triangle : T, Top_row_Triangle : Array N T, Triangle' : Triangle N T)}
 Class Commutative{_ : Star}<Ring>
-Class Finite_Array{N : Nat}<Ord_Array>(All_Array[T : Star]<Finite T> : List (Array N T))
-Class Foldable{F : Star -> Star}(Fold_right[T : Star, U : Star] : (T -> U -> U) -> U -> F T -> U)
-Class Functor_Array{N : Nat}(Fmap_Array[T : Star, U : Star] : (T -> U) -> Array N T -> Array N U)
 Class Mat{F : Nat -> Star -> Star}(
   Adj[N : Nat, T : Star]<Commutative T> : F N T -> F N T,
   Adj_Det[N : Nat, T : Star]<Commutative T> : F N T -> F N T * T,
@@ -29,16 +27,14 @@ Class Mat{F : Nat -> Star -> Star}(
   Det[N : Nat, T : Star]<Commutative T> : F N T -> T,
   Matrix_by_vector[N : Nat, T : Star]<Ring T> : F N T -> Array N T -> Array N T,
   Vector_by_matrix[N : Nat, T : Star]<Ring T> : Array N T -> F N T -> Array N T)
-Class Ord_Array{N : Nat}(Compare_Array[T : Star]<Ord T> : Array N T -> Array N T -> Comparison)
-Class Writeable_Array{N : Nat}(Write_Brackets_Array[T : Star]<Writeable T> : Array N T -> List Char * Logical)
-Class Writeable_Square{N : Nat}(Write_Brackets_Square[T : Star]<Writeable T> : Square N T -> List Char * Logical)
-Class Writeable_Triangle{N : Nat}(Write_Brackets_Triangle[T : Star]<Writeable T> : Triangle N T -> List Char * Logical)
 Operator !+ Add' 1 Left
 Def Add'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Add
-Instance Applicative{Complex}(Apply (Complex f g) (Complex x y) = Complex (f x) (g y), Lift x = Complex x x)
+Instance Applicative{Complex}(Compose (Complex f g) (Complex x y) = Complex (f x) (g y), Lift x = Complex x x)
 Instance Applicative{Quaternion}(
-  Apply (Quaternion f g h i) (Quaternion x y z a) = Quaternion (f x) (g y) (h z) (i a),
+  Compose (Quaternion f g h i) (Quaternion x y z a) = Quaternion (f x) (g y) (h z) (i a),
   Lift x = Quaternion x x x x)
+Def Array_to_List[N : Nat, T : Star] : Array N T -> List T =
+  Branch N {Zero -> Empty_Array -> Empty_List, Next _ -> Construct_Array x y -> x : Array_to_List y}
 Instance Commutative{Complex T}<Commutative T>
 Instance Commutative{Int}
 Instance Commutative{Logical}
@@ -47,30 +43,26 @@ Def Div_left'[F : Star -> Star, T : Star]<Functor F, Field T>(x : T, y : F T) : 
   (z -> Multiply_left z y) . Inverse x
 Def Div_right'[F : Star -> Star, T : Star]<Functor F, Field T>(x : F T, y : T) : Maybe (F T) = Multiply_right x . Inverse y
 Instance Field{Complex T}<Commutative T, Field T>(
-  Inverse (Complex x y) = Div_right' (Complex x (Negate y)) (Sum_squares (List (x, y))))
+  Inverse (Complex x y) = Div_right' (Complex x (Negate y)) (Sum_squares (!List ![x, y])))
 Instance Field{Quaternion T}<Commutative T, Field T>(
   Inverse (Quaternion x y z a) =
-    Div_right' (Quaternion x (Negate y) (Negate z) (Negate a)) (Sum_squares (List (x, y, z, a))))
-Instance Finite{Array N T}<Finite T, Finite_Array N>(All = All_Array)
-Instance Finite_Array{Zero}(All_Array = Lift Empty_Array)
-Instance Finite_Array{Next N}<Finite_Array N>(All_Array = Zip Construct_Array All All)
-Instance Foldable{Either T}(Fold_right f x y = Match y {Left _ -> x, Right z -> f z x})
-Instance Foldable{List}(Fold_right f x y = Match y {Empty_List -> x, Construct_List z a -> f z (Fold_right f x a)})
-Instance Foldable{Maybe}(Fold_right f x y = Match y {Nothing -> x, Wrap z -> f z x})
-Instance Functor{Array N}<Functor_Array N>(Compose = Fmap_Array)
-Instance Functor{Complex}(Compose f (Complex x y) = Complex (f x) (f y))
-Instance Functor{Quaternion}(Compose f (Quaternion x y z a) = Quaternion (f x) (f y) (f z) (f a))
-Instance Functor_Array{Zero}(Fmap_Array _ _ = Empty_Array)
-Instance Functor_Array{Next N}<Functor_Array N>(Fmap_Array f a = Construct_Array (f (Head a)) (f . Tail a))
-Def GCD(x : Int, y : Int) : Int =
+    Div_right' (Quaternion x (Negate y) (Negate z) (Negate a)) (Sum_squares (!List ![x, y, z, a])))
+Instance Finite{Array N T}<Finite T>(All = Branch N {Zero -> Lift Empty_Array, Next _ -> Zip Construct_Array All All})
+Instance Functor{Array N}(
+  Apply f = Branch N {Zero -> Empty_Array -> Empty_Array, Next _ -> Construct_Array x y -> Construct_Array (f x) (Compose f y)})
+Instance Functor{Complex}(Apply f (Complex x y) = Complex (f x) (f y))
+Instance Functor{Quaternion}(Apply f (Quaternion x y z a) = Quaternion (f x) (f y) (f z) (f a))
+Def GCD(x : Int, y : Int) : Int = Crash
 Def Multiply_left[T : Star, F : Star -> Star]<Functor F, Ring T>(x : T, y : F T) : F T = Multiply x . y
 Def Multiply_right[F : Star -> Star, T : Star]<Functor F, Ring T>(x : F T, y : T) : F T = (z -> z * y) . x
-Instance Ord{Array N T}<Ord T, Ord_Array N>(Compare = Compare_Array)
+Instance Ord{Array N T}<Ord T>(
+  Compare =
+    Branch N {
+      Zero -> Empty_Array -> Empty_Array -> EQ,
+      Next _ -> Construct_Array x y -> Construct_Array z a -> Compare (Pair x y) (Pair z a)})
 Instance Ord{Complex T}<Ord T>(Compare (Complex x y) (Complex z a) = Compare (Pair x y) (Pair z a))
 Instance Ord{Quaternion T}<Ord T>(
   Compare (Quaternion x y z a) (Quaternion b c d e) = Compare (Pair x (Pair y (Pair z a))) (Pair b (Pair c (Pair d e))))
-Instance Ord_Array{Zero}(Compare_Array _ _ = EQ)
-Instance Ord_Array{Next N}<Ord_Array N>(Compare_Array x y = Compare (Pair (Head x) (Tail x)) (Pair (Head y) (Tail y)))
 Instance Ring{Complex T}<Ring T>(
   Add = Add',
   Convert x = Complex (Convert x) Zr,
@@ -90,49 +82,30 @@ Def Separate(x : Int) : Int * Int = Match Compare x 0 {LT -> Pair -1 (Negate x),
 Def Sqr[T : Star]<Ring T>(x : T) : T = x * x
 Def Sum[F : Star -> Star, T : Star]<Foldable F, Ring T> : F T -> T = Fold_right Add Zr
 Def Sum_squares[F : Star -> Star, T : Star]<Foldable F, Functor F, Ring T>(x : F T) : T = Sum (Sqr . x)
-Instance Writeable{Array N T}<Writeable T, Writeable_Array N>(Write_Brackets = Write_Brackets_Array)
+`Instance Writeable{Array N T}<Writeable T, Writeable_Array N>(Write_Brackets = Write_Brackets_Array)
+Instance Writeable{Array N T}<Writeable T>(
+  Write_Brackets x = Branch N {
+    Zero -> !List !["E", "m", "p", "t", "y", "_", "A", "r", "r", "a", "y"] & 0,
+    Next _ ->
+      Construct_Array y z ->
+        Cat
+          (!List !["!", "A", "r", "r", "a", "y", " ", "!", "["])
+          (Cat (Interleave (!List ![",", " "]) (Write . Array_to_List x)) (Lift "]")) &
+        1})
 Instance Writeable{Complex T}<Writeable T>(
-  Write_Brackets (Complex x y) =
-    Pair (Write' (List ("C", "o", "m", "p", "l", "e", "x")) (List (Brackets x, Brackets y))) True)
-Instance Writeable{Fraction}(
-  Write_Brackets (Fraction x y) =
-    Pair (Write' (List ("F", "r", "a", "c", "t", "i", "o", "n")) (List (Brackets x, Brackets y))) True)
+  Write_Brackets (Complex x y) = !List !["C", "o", "m", "p", "l", "e", "x"] ... x ... y & 1)
+Instance Writeable{Fraction}(Write_Brackets (Fraction x y) = !List !["F", "r", "a", "c", "t", "i", "o", "n"] ... x ... y & 1)
 Instance Writeable{Quaternion T}<Writeable T>(
-  Write_Brackets (Quaternion x y z a) =
-    Pair
-      (Write'
-        (List ("Q", "u", "a", "t", "e", "r", "n", "i", "o", "n"))
-        (List (Brackets x, Brackets y, Brackets z, Brackets a)))
-      True)
-Instance Writeable{Square N T}<Writeable T, Writeable_Square N>(Write_Brackets = Write_Brackets_Square)
-Instance Writeable{Toeplitz N T}<Writeable T, Writeable_Array N>(
-  Write_Brackets (Toeplitz x) = Pair (Cat (List ("T", "o", "e", "p", "l", "i", "t", "z", " ")) (Brackets x)) True)
-Instance Writeable{Triangle N T}<Writeable T, Writeable_Triangle N>(Write_Brackets = Write_Brackets_Triangle)
-Instance Writeable_Array{Zero}(
-  Write_Brackets_Array _ = Pair (List ("E", "m", "p", "t", "y", "_", "A", "r", "r", "a", "y")) False)
-Instance Writeable_Array{Next N}<Writeable_Array N>(
-  Write_Brackets_Array x =
-    Pair
-      (Write'
-        (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "A", "r", "r", "a", "y"))
-        (List (Brackets (Head x), Brackets (Tail x))))
-      True)
-Instance Writeable_Square{Zero}(
-  Write_Brackets_Square _ = Pair (List ("E", "m", "p", "t", "y", "_", "S", "q", "u", "a", "r", "e")) False)
-Instance Writeable_Square{Next N}<Writeable_Array N, Writeable_Square N>(
-  Write_Brackets_Square x =
-    Pair
-      (Write'
-        (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "S", "q", "u", "a", "r", "e"))
-        (List (Brackets (Fst_Square x), Brackets (Top_row_Square x), Brackets (Left_column_Square x), Brackets (Square' x))))
-      True)
-Instance Writeable_Triangle{Zero}(
-  Write_Brackets_Triangle _ = Pair (List ("E", "m", "p", "t", "y", "_", "T", "r", "i", "a", "n", "g", "l", "e")) False)
-Instance Writeable_Triangle{Next N}<Writeable_Array N, Writeable_Triangle N>(
-  Write_Brackets_Triangle x =
-    Pair
-      (Write'
-        (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "r", "i", "a", "n", "g", "l", "e"))
-        (List (Brackets (Fst_Triangle x), Brackets (Top_row_Triangle x), Brackets (Triangle' x))))
-      True)
-`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+  Write_Brackets (Quaternion x y z a) = !List !["Q", "u", "a", "t", "e", "r", "n", "i", "o", "n"] ... x ... y ... z ... a ... 1)
+Instance Writeable{Square N T}<Writeable T>(
+  Write_Brackets x =
+    Branch N {Zero -> !List !["E", "m", "p", "t", "y", "_", "S", "q", "u", "a", "r", "e"] & 0, Next _ -> Crash})
+Instance Writeable{Toeplitz N T}<Writeable T>(Write_Brackets (Toeplitz x) =
+  Cat
+    (!List !["!", "T", "o", "e", "p", "l", "i", "t", "z", " ", "!", "["])
+    (Cat (Interleave (!List ![",", " "]) (Write . Array_to_List x)) (Lift "]")) &
+  1)
+Instance Writeable{Triangle N T}<Writeable T>(
+  Write_Brackets x =
+    Branch N {Zero -> !List !["E", "m", "p", "t", "y", "_", "T", "r", "i", "a", "n", "g", "l", "e"] & 0, Next _ -> Crash})
+````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

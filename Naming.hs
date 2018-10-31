@@ -36,9 +36,9 @@ module Naming where
       deriving Show
   data Expression_1 =
     Application_expression_1 Expression_1 Expression_1 |
-    Branch_expression_1 Name Expression_1 String Expression_1 |
+    Branch_expression_1 Name Expression_1 Pattern_0 Expression_1 |
     Char_expression_1 Char |
-    Function_expression_1 Pat Expression_1 |
+    Function_expression_1 Pat' Expression_1 |
     Int_expression_1 Integer |
     Match_expression_1 Location_0 Expression_1 [Case_2] |
     Modular_expression_1 Modular |
@@ -48,6 +48,7 @@ module Naming where
   data Kinds_constraints' = Kinds_constraints' [(String, Kind_0)] [Constraint_0] deriving Show
   data Method_1 = Method_1 String Kinds_constraints Type_8 deriving Show
   data Method_2 = Method_2 String Kinds_constraints' Type_8 deriving Show
+  data Pat' = Application_pat' Name [Pat'] | Blank_pat' | Name_pat' String deriving Show
   data Tree_4 = Tree_4 [Data_1] [Class_1] [Name] [Def_2] deriving Show
   data Tree_5 = Tree_5 [Data_2] [Class_2] [Name] [Def_3] deriving Show
   naming ::
@@ -199,17 +200,17 @@ module Naming where
         (
           (\i -> \(j, k) -> Branch_expression_1 c i j k) <$>
           naming_expression g d ((f0, f1), b) <*>
-          (naming_name g e b >>= \(i, j) -> (,) j <$> naming_expression g h ((f0, f1), i)))
+          (naming_pattern g e b >>= \(i, j) -> (,) j <$> naming_expression g h ((f0, f1), i)))
       Char_expression_9 c -> Right (Char_expression_1 c)
       Function_expression_9 c d -> naming_fun g ((f0, f1), b) c d
       Int_expression_9 c -> Right (Int_expression_1 c)
       Let_expression_9 (Name l c) d e h ->
         let
-          i j = naming_application g ((f0, f1), b) (naming_fun g ((f0, f1), b) (Pat l j) h)
+          i j = naming_application g ((f0, f1), b) (naming_fun g ((f0, f1), b) j h)
         in
           case Data.Set.member c f0 of
-            False -> i (Name_pat c) (Prelude.foldr Function_expression_9 e d)
-            True -> i (Application_pat c d) e
+            False -> i (Name_pat (Name l c)) (Prelude.foldr Function_expression_9 e d)
+            True -> i (Application_pat (Name l c) d) e
       Match_expression_9 h c d ->
         Match_expression_1 h <$> naming_expression g c ((f0, f1), b) <*> naming_cases g d ((f0, f1), b)
       Modular_expression_9 c -> Right (Modular_expression_1 c)
@@ -277,16 +278,16 @@ module Naming where
           case Data.Map.lookup e b of
             Just g -> Left (location_err ("definitions of " ++ e) g h)
             Nothing -> second ((:) f) <$> naming_ops a (Data.Map.insert e (Library h) b) i
-  naming_pat :: String -> Pat -> (Set String, Locations) -> Err (Locations, Pat)
-  naming_pat a (Pat b c) (f, d) =
+  naming_pat :: String -> Pat -> (Set String, Locations) -> Err (Locations, Pat')
+  naming_pat a c (f, d) =
     case c of
-      Application_pat g e -> second (\h -> Pat b (Application_pat g h)) <$> naming_pats a e (f, d)
-      Blank_pat -> Right (d, Pat b Blank_pat)
-      Name_pat e ->
+      Application_pat b e -> second (\h -> Application_pat' b h) <$> naming_pats a e (f, d)
+      Blank_pat -> Right (d, Blank_pat')
+      Name_pat (Name b e) ->
         case Data.Set.member e f of
-          False -> (\(g, _) -> (g, Pat b c)) <$> naming_name a (Name b e) d
-          True -> Right (d, Pat b (Application_pat e []))
-  naming_pats :: String -> [Pat] -> (Set String, Locations) -> Err (Locations, [Pat])
+          False -> (\(g, _) -> (g, Name_pat' e)) <$> naming_name a (Name b e) d
+          True -> Right (d, Application_pat' (Name b e) [])
+  naming_pats :: String -> [Pat] -> (Set String, Locations) -> Err (Locations, [Pat'])
   naming_pats a b (f, c) =
     case b of
       [] -> Right (c, [])

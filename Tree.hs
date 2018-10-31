@@ -30,7 +30,7 @@ module Tree where
       deriving Show
   data Expression_0 =
     Application_expression_0 Expression_0 Expression_0 |
-    Branch_expression_0 Name Expression_0 Name Expression_0 |
+    Branch_expression_0 Name Expression_0 Pattern_1 Expression_0 |
     Char_expression_0 Char |
     Function_expression_0 Pat Expression_0 |
     Int_expression_0 Integer |
@@ -50,8 +50,7 @@ module Tree where
   data Modular = Modular Location_0 Integer Integer deriving Show
   data Name = Name Location_0 String deriving Show
   data Opdecl_0 = Opdecl_0 Location_0 String Name Integer Assoc deriving Show
-  data Pat = Pat Location_0 Pat_branch deriving Show
-  data Pat_branch = Application_pat String [Pat] | Blank_pat | Name_pat String deriving Show
+  data Pat = Application_pat Name [Pat] | Blank_pat | Name_pat Name deriving Show
   data Pattern_1 = Pattern_1 Location_0 Pattern_0 deriving Show
   data Pattern_0 = Blank_pattern | Name_pattern String deriving Show
   newtype Parser s f t = Parser {parser :: s -> f (t, s)}
@@ -77,8 +76,6 @@ module Tree where
   data Type_0 = Application_type_0 Type_0 [Type_0] | Name_type_0 Name | Nat_type_0 Integer | Op_type_0 Type_0 [(Name, Type_0)]
     deriving Show
   data Type_7 = Type_7 Location_0 Type_0 deriving Show
-  class Get_location t where
-    get_location :: t -> Location_0
   infixl 4 <&
   (<&) :: (Location_0 -> t) -> Parser' () -> Parser' t
   f <& p = f <$> parse_location <* p
@@ -93,10 +90,6 @@ module Tree where
     pure x = Parser (\y -> return (x, y))
   instance Functor f => Functor (Parser s f) where
     fmap a (Parser b) = Parser (\c -> first a <$> b c)
-  instance Get_location Pat where
-    get_location (Pat a _) = a
-  instance Get_location Pattern_1 where
-    get_location (Pattern_1 a _) = a
   instance Monad f => Monad (Parser s f) where
     Parser p >>= f = Parser (p >=> \(y, z) -> parser (f y) z)
   empty_parser :: Parser' t
@@ -149,12 +142,7 @@ module Tree where
       parse_brack_alg_pattern <*>
       parse_many parse_brack_alg_pattern)
   parse_application_pat :: Parser' Pat
-  parse_application_pat =
-    (
-      (\a -> \x -> \y -> \z -> Pat a (Application_pat x (y : z))) <&>
-      parse_name <*>
-      parse_brack_pat <*>
-      parse_many parse_brack_pat)
+  parse_application_pat = Application_pat <$> parse_name' <*> parse_some parse_brack_pat
   parse_argument :: Parser' t -> Parser' u -> Parser' (t, u)
   parse_argument p q = (,) <$> p <* parse_colon <*> q
   parse_arguments :: (Parser' [(t, u)] -> Parser' [(t, u)]) -> Parser' t -> Parser' u -> Parser' [(t, u)]
@@ -185,7 +173,7 @@ module Tree where
   parse_blank_alg_pattern :: Parser' Alg_pat
   parse_blank_alg_pattern = Blank_alg_pat <$ parse_token Blank_token
   parse_blank_pat :: Parser' Pat
-  parse_blank_pat = (\x -> Pat x Blank_pat) <& parse_token Blank_token
+  parse_blank_pat = Blank_pat <$ parse_token Blank_token
   parse_br_expr :: Parser' Expression_0
   parse_br_expr = parse_round (parse_comp_expr <+> parse_mid_expr) <+> parse_elementary_expression
   parse_br_expr' :: Parser' Expression_0
@@ -213,7 +201,7 @@ module Tree where
       parse_br_expression <*
       parse_comma <*
       parse_name_4 "Next" <*>
-      parse_name' <*>
+      parse_pattern_1 <*>
       parse_br_expression <*
       parse_token Right_curly_token)
   parse_brnchs :: Parser' Data_0
@@ -417,7 +405,7 @@ module Tree where
   parse_name_kind :: Parser' Kind_0
   parse_name_kind = Nat_kind_0 <$ parse_name_4 "Nat" <+> Star_kind_0 <$ parse_name_4 "Star"
   parse_name_pat :: Parser' Pat
-  parse_name_pat = (\x -> \y -> Pat x (Name_pat y)) <&> parse_name
+  parse_name_pat = Name_pat <$> parse_name'
   parse_name_pattern :: Parser' Pattern_0
   parse_name_pattern = Name_pattern <$> parse_name
   parse_op :: Parser' Name

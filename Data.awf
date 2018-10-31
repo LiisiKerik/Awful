@@ -1,24 +1,116 @@
 ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 Load (Standard.awf)
+Hidden Struct Dictionary[T : Star, U : Star](Entries : Tree (Entry' T U))
+Struct Entry'[T : Star, U : Star](Key : T, Result : U, Balancing : Comparison)
+Hidden Struct Set[T : Star](Elements : Dictionary T Unit)
 Algebraic Tree[T : Star]{Empty_Tree, Construct_Tree T (Tree T) (Tree T)}
-Hidden Struct Dictionary[T : Star, U : Star]<Ord T>(Entries : Tree ((T & Comparison) & U))
-Instance Functor{Dictionary T}<Ord T>(Apply f (Dictionary x) = Dictionary (f . x))
+Struct Unit
+Class Container{F : Star -> Star}(
+  Empty[T : Star] : F T,
+  Filter[T : Star] : (T -> Logical) -> F T -> F T,
+  Group[T : Star, U : Star]<Ord U> : (T -> U) -> F T -> Dictionary U (F T))
+Operator ? Filter 5 Right
+Instance Container{Dictionary T}<Ord T>(
+  Empty = Dictionary Empty_Tree,
+  Filter f x = Crash,
+  Group f x = Crash)
+Instance Container{List}(
+  Empty = Empty_List,
+  Filter f x =
+    Match x {
+      Empty_List -> Empty_List,
+      Construct_List y z -> Let a = Filter f z In Match f y {False -> a, True -> Construct_List y a}},
+  Group f x = Crash)
+Instance Container{Maybe}(
+  Empty = Nothing,
+  Filter f x = Match x {Nothing -> Nothing, Wrap y -> Match f y {False -> Nothing, True -> x}},
+  Group f x = Match x {Nothing -> Empty, Wrap y -> Entry (f y) x})
+Def Contains[T : Star]<Ord T>(x : T, Set y : Set T) : Logical = Match Find x y {Nothing -> False, Wrap Unit -> True}
+Def Dictionary_Insert[T : Star, U : Star]<Ord T>(x : T, y : U, Dictionary z : Dictionary T U) : Maybe (Dictionary T U) =
+  Let Pair (Pair a _) b = Insert x y z In Match b {False -> Wrap (Dictionary a), True -> Nothing}
+Def Entry[T : Star, U : Star]<Ord T>(x : T, y : U) : Dictionary T U = Dictionary (Leaf (Entry' x y EQ))
+Def Empty_Set[T : Star]<Ord T> : Set T = Set Empty
+Def Filter_Set[T : Star]<Ord T>(Set x : Set T) : Set T = Crash
+Def Find[T : Star, U : Star]<Ord T>(x : T, Dictionary y : Dictionary T U) : Maybe U = Find' x y
+Def Find'[T : Star, U : Star]<Ord T>(x : T, y : Tree (Entry' T U)) : Maybe U =
+  Match y {
+    Empty_Tree -> Nothing,
+    Construct_Tree (Entry' z a _) b c -> Match x =?= z {LT -> Find' x b, EQ -> Wrap a, GT -> Find' x c}}
+Instance Functor{Dictionary T}<Ord T>(Apply f (Dictionary x) = Dictionary (Apply f . x))
+Instance Functor{Entry' T}(Apply f (Entry' x y z) = Entry' x (f y) z)
 Instance Functor{Tree}(
-  Apply f x = Match x {Empty_Tree -> Empty_Tree, Construct_Tree y z a -> Construct_Tree (f y) (Fmap f z) (Fmap f a)})
+  Apply f x = Match x {Empty_Tree -> Empty_Tree, Construct_Tree y z a -> Construct_Tree (f y) (Apply f z) (Apply f a)})
+Def Group_Set[T : Star]<Ord T>(Set x : Set T) : Set T = Crash
+Def Insert[T : Star, U : Star]<Ord T>(x : T, y : U, z : Tree (Entry' T U)) : (Tree (Entry' T U) * Logical) * Logical =
+  Match z {
+    Empty_Tree -> (Leaf (Entry' x y EQ) & True) & False,
+    Construct_Tree (Entry' a b c) d e ->
+      Match x =?= a {
+        LT ->
+          Apply_left
+            (Pair f g ->
+              Match c {
+                LT -> Construct_Tree (Entry' a b (Match g {False -> LT, True -> EQ})) f e & False,
+                EQ -> Construct_Tree (Entry' a b (Match g {False -> EQ, True -> GT})) f e & g,
+                GT ->
+                  Match g {
+                    False -> Construct_Tree (Entry' a b GT) f e & False,
+                    True ->
+                      Match f {
+                        Empty_Tree -> Crash,
+                        Construct_Tree (Entry' h i j) k l ->
+                          Match j {
+                            LT ->
+                              Match l {
+                                Empty_Tree -> Crash,
+                                Construct_Tree (Entry' m n o) p q ->
+                                  Construct_Tree
+                                    (Entry' m n EQ)
+                                    (Construct_Tree (Entry' h i (Match o {LT -> GT, _ -> EQ})) k p)
+                                    (Construct_Tree (Entry' a b (Match o {GT -> LT, _ -> EQ})) q e) &
+                                  False},
+                            EQ -> Construct_Tree (Entry' h i LT) k (Construct_Tree (Entry' a b GT) l e) & True,
+                            GT -> Construct_Tree (Entry' h i EQ) k (Construct_Tree (Entry' a b EQ) l e) & False}}}})
+            (Insert x y d),
+        EQ -> (Leaf (Entry' a y EQ) & False) & True,
+        GT ->
+          Apply_left
+            (Pair f g ->
+              Match c {
+                LT ->
+                  Match g {
+                    False -> Construct_Tree (Entry' a b LT) d f & False,
+                    True ->
+                      Match f {
+                        Empty_Tree -> Crash,
+                        Construct_Tree (Entry' h i j) k l ->
+                          Match j {
+                            LT -> Construct_Tree (Entry' h i EQ) (Construct_Tree (Entry' a b EQ) d k) l & False,
+                            EQ -> Construct_Tree (Entry' h i GT) (Construct_Tree (Entry' a b LT) d k) l & True,
+                            GT ->
+                              Match k {
+                                Empty_Tree -> Crash,
+                                Construct_Tree (Entry' m n o) p q ->
+                                  Construct_Tree
+                                    (Entry' m n EQ)
+                                    (Construct_Tree (Entry' a b (Match o {LT -> GT, _ -> EQ})) d p)
+                                    (Construct_Tree (Entry' h i (Match o {GT -> LT, _ -> EQ})) q l) &
+                                  False}}}},
+                EQ -> Construct_Tree (Entry' a b (Match g {False -> EQ, True -> LT})) d f & g,
+                GT -> Construct_Tree (Entry' a b (Match g {False -> GT, True -> EQ})) d f & False})
+            (Insert x y e)}}
+Def Leaf[T : Star](x : T) : Tree T = Construct_Tree x Empty_Tree Empty_Tree
 Instance Ord{Tree T}<Ord T>(
   Compare x y =
     Match x {
       Empty_Tree -> Match y {Empty_Tree -> EQ, Construct_Tree _ _ _ -> LT},
       Construct_Tree z a b ->
         Match y {Empty_Tree -> GT, Construct_Tree c d e -> Compare (Pair z (Pair a b)) (Pair c (Pair d e))}})
+Def Set_Insert[T : Star]<Ord T>(x : T, Set y : Set T) : Maybe (Set T) = Set . Dictionary_Insert x Unit y
 Instance Writeable{Tree T}<Writeable T>(
   Write_Brackets x =
     Match x {
-      Empty_Tree -> Pair (List ("E", "m", "p", "t", "y", "_", "T", "r", "e", "e")) False,
+      Empty_Tree -> Pair (!List !["E", "m", "p", "t", "y", "_", "T", "r", "e", "e"]) 0,
       Construct_Tree y z a ->
-        Pair
-          (Write'
-            (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "r", "e", "e"))
-            (List (Brackets y, Brackets z, Brackets a)))
-          True})
+        Pair (!List !["C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "r", "e", "e"] ... y ... z ... a) 1})
 ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

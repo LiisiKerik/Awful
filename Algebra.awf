@@ -49,7 +49,7 @@ Instance Field{Quaternion T}<Commutative T, Field T>(
     Div_right' (Quaternion x (Negate y) (Negate z) (Negate a)) (Sum_squares (!List ![x, y, z, a])))
 Instance Finite{Array N T}<Finite T>(All = Branch N {Zero -> Lift Empty_Array, Next _ -> Zip Construct_Array All All})
 Instance Functor{Array N}(
-  Apply f = Branch N {Zero -> Empty_Array -> Empty_Array, Next _ -> Construct_Array x y -> Construct_Array (f x) (Compose f y)})
+  Apply f = Branch N {Zero -> Empty_Array -> Empty_Array, Next _ -> Construct_Array x y -> Construct_Array (f x) (Apply f y)})
 Instance Functor{Complex}(Apply f (Complex x y) = Complex (f x) (f y))
 Instance Functor{Quaternion}(Apply f (Quaternion x y z a) = Quaternion (f x) (f y) (f z) (f a))
 Def GCD(x : Int, y : Int) : Int = Crash
@@ -82,21 +82,19 @@ Def Separate(x : Int) : Int * Int = Match Compare x 0 {LT -> Pair -1 (Negate x),
 Def Sqr[T : Star]<Ring T>(x : T) : T = x * x
 Def Sum[F : Star -> Star, T : Star]<Foldable F, Ring T> : F T -> T = Fold_right Add Zr
 Def Sum_squares[F : Star -> Star, T : Star]<Foldable F, Functor F, Ring T>(x : F T) : T = Sum (Sqr . x)
-`Instance Writeable{Array N T}<Writeable T, Writeable_Array N>(Write_Brackets = Write_Brackets_Array)
 Instance Writeable{Array N T}<Writeable T>(
   Write_Brackets x = Branch N {
     Zero -> !List !["E", "m", "p", "t", "y", "_", "A", "r", "r", "a", "y"] & 0,
     Next _ ->
-      Construct_Array y z ->
-        Cat
-          (!List !["!", "A", "r", "r", "a", "y", " ", "!", "["])
-          (Cat (Interleave (!List ![",", " "]) (Write . Array_to_List x)) (Lift "]")) &
-        1})
+      Cat
+        (!List !["!", "A", "r", "r", "a", "y", " ", "!", "["])
+        (Cat (Interleave (!List ![",", " "]) (Write . Array_to_List x)) (Lift "]")) &
+      1})
 Instance Writeable{Complex T}<Writeable T>(
   Write_Brackets (Complex x y) = !List !["C", "o", "m", "p", "l", "e", "x"] ... x ... y & 1)
 Instance Writeable{Fraction}(Write_Brackets (Fraction x y) = !List !["F", "r", "a", "c", "t", "i", "o", "n"] ... x ... y & 1)
 Instance Writeable{Quaternion T}<Writeable T>(
-  Write_Brackets (Quaternion x y z a) = !List !["Q", "u", "a", "t", "e", "r", "n", "i", "o", "n"] ... x ... y ... z ... a ... 1)
+  Write_Brackets (Quaternion x y z a) = !List !["Q", "u", "a", "t", "e", "r", "n", "i", "o", "n"] ... x ... y ... z ... a & 1)
 Instance Writeable{Square N T}<Writeable T>(
   Write_Brackets x =
     Branch N {Zero -> !List !["E", "m", "p", "t", "y", "_", "S", "q", "u", "a", "r", "e"] & 0, Next _ -> Crash})

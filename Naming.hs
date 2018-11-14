@@ -209,8 +209,8 @@ module Naming where
           i j = naming_application g ((f0, f1), b) (naming_fun g ((f0, f1), b) j h)
         in
           case Data.Set.member c f0 of
-            False -> i (Name_pat (Name l c)) (Prelude.foldr Function_expression_9 e d)
-            True -> i (Application_pat (Name l c) d) e
+            False -> i (Name_pat_2 (Name l c)) (Prelude.foldr Function_expression_9 e d)
+            True -> i (Application_pat_2 (Name l c) d) e
       Match_expression_9 h c d ->
         Match_expression_1 h <$> naming_expression g c ((f0, f1), b) <*> naming_cases g d ((f0, f1), b)
       Modular_expression_9 c -> Right (Modular_expression_1 c)
@@ -221,7 +221,7 @@ module Naming where
   naming_form d (Form_6 a b) (c, e) = (\(f, g) -> ((f, Data.Set.insert g e), Form_1 g b)) <$> naming_name d a c
   naming_forms :: String -> [Form_6] -> (Locations, Set String) -> Err ((Locations, Set String), [Form_1])
   naming_forms = naming_list naming_form
-  naming_fun :: String -> ((Set String, Set String), Locations) -> Pat -> Expression_9 -> Err Expression_1
+  naming_fun :: String -> ((Set String, Set String), Locations) -> Pat_2 -> Expression_9 -> Err Expression_1
   naming_fun x ((y0, y1), b) z w =
     naming_pat x z (y0, b) >>= \(a, c) -> Function_expression_1 c <$> naming_expression x w ((y0, y1), a)
   naming_kinds :: String -> (Locations, [(Name, Kind_0)]) -> Err (Locations, [(String, Kind_0)])
@@ -278,16 +278,16 @@ module Naming where
           case Data.Map.lookup e b of
             Just g -> Left (location_err ("definitions of " ++ e) g h)
             Nothing -> second ((:) f) <$> naming_ops a (Data.Map.insert e (Library h) b) i
-  naming_pat :: String -> Pat -> (Set String, Locations) -> Err (Locations, Pat')
+  naming_pat :: String -> Pat_2 -> (Set String, Locations) -> Err (Locations, Pat')
   naming_pat a c (f, d) =
     case c of
-      Application_pat b e -> second (\h -> Application_pat' b h) <$> naming_pats a e (f, d)
-      Blank_pat -> Right (d, Blank_pat')
-      Name_pat (Name b e) ->
+      Application_pat_2 b e -> second (\h -> Application_pat' b h) <$> naming_pats a e (f, d)
+      Blank_pat_2 -> Right (d, Blank_pat')
+      Name_pat_2 (Name b e) ->
         case Data.Set.member e f of
           False -> (\(g, _) -> (g, Name_pat' e)) <$> naming_name a (Name b e) d
           True -> Right (d, Application_pat' (Name b e) [])
-  naming_pats :: String -> [Pat] -> (Set String, Locations) -> Err (Locations, [Pat'])
+  naming_pats :: String -> [Pat_2] -> (Set String, Locations) -> Err (Locations, [Pat'])
   naming_pats a b (f, c) =
     case b of
       [] -> Right (c, [])

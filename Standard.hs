@@ -21,10 +21,10 @@ module Standard where
     Branch_expression_6 Name Expression_6 Pattern_1 Expression_6 |
     Case_expression_6 Expression_6 Expression_6 (String, String) Expression_6 |
     Char_expression_6 Char |
-    Function_expression_6 Pat Expression_6 |
+    Function_expression_6 Pat_2 Expression_6 |
     Function_syn_expression_6 String Expression_6 |
     Int_expression_6 Integer |
-    Let_expression_6 Name [Pat] Expression_6 Expression_6 |
+    Let_expression_6 Name [Pat_2] Expression_6 Expression_6 |
     List_expression_6 [Expression_6] |
     Match_expression_6 Location_0 Expression_6 [Case_6] |
     Modular_expression_6 Modular |
@@ -37,9 +37,9 @@ module Standard where
     Application_expression_9 Expression_9 Expression_9 |
     Branch_expression_9 Name Expression_9 Pattern_1 Expression_9 |
     Char_expression_9 Char |
-    Function_expression_9 Pat Expression_9 |
+    Function_expression_9 Pat_2 Expression_9 |
     Int_expression_9 Integer |
-    Let_expression_9 Name [Pat] Expression_9 Expression_9 |
+    Let_expression_9 Name [Pat_2] Expression_9 Expression_9 |
     Match_expression_9 Location_0 Expression_9 [Case_1] |
     Modular_expression_9 Modular |
     Name_expression_9 Name (Maybe Type_8) [Type_8]
@@ -52,6 +52,7 @@ module Standard where
   data Op = Op Integer Assoc String deriving Show
   data Op' = Op' Location_0 Op deriving Show
   data Opdecl_1 = Opdecl_1 Location_0 String Name deriving Show
+  data Pat_2 = Application_pat_2 Name [Pat_2] | Blank_pat_2 | Name_pat_2 Name deriving Show
   data Syntax_2 = Syntax_2 Location_0 String [(String, Syntax_type)] Syntax_type Syntax_expr_2 deriving Show
   data Syntax_3 =
     Application_syntax_3 Syntax_3 Syntax_3 |
@@ -158,7 +159,7 @@ module Standard where
       (d, e) : f -> naming_name a d b >>= \(g, h) -> second ((:) (h, e)) <$> naming_synvars a g f
   old :: Map' t -> Map' (t, Status)
   old = (<$>) (flip (,) Old)
-  pop :: (t -> t -> t, Name -> t) -> [(Op', t)] -> t -> Op' -> [(Op', t)]
+  pop :: (Name -> t -> t -> t) -> [(Op', t)] -> t -> Op' -> [(Op', t)]
   pop f x expr (Op' l (Op pr assoc name)) =
     let
       u = (Op' l (Op pr assoc name), expr) : x
@@ -171,16 +172,16 @@ module Standard where
             True -> pop' pop f x' l' name' expr' expr (Op' l (Op pr assoc name))
   pop' ::
     (
-      ((t -> t -> t, Name -> t) -> [(Op', t)] -> t -> u) ->
-      (t -> t -> t, Name -> t) ->
+      ((Name -> t -> t -> t) -> [(Op', t)] -> t -> u) ->
+      (Name -> t -> t -> t) ->
       [(Op', t)] ->
       Location_0 ->
       String ->
       t ->
       t ->
       u)
-  pop' h (f, g) x' l name expr' expr = h (f, g) x' (f (f (g (Name l name)) expr') expr)
-  pop_all :: (t -> t -> t, Name -> t) -> [(Op', t)] -> t -> t
+  pop' h f x' l name expr' expr = h f x' (f (Name l name) expr' expr)
+  pop_all :: (Name -> t -> t -> t) -> [(Op', t)] -> t -> t
   pop_all f x expr =
     case x of
       [] -> expr
@@ -210,20 +211,23 @@ module Standard where
         Arrow_syntax _ _ -> "(" ++ b ++ ")"
         _ -> b
   shunting_yard ::
-    (Location_0 -> Location_1) -> (t -> Err u, u -> u -> u, Name -> u) -> Map' Op -> [(Op', u)] -> t -> [(Name, t)] -> Err u
-  shunting_yard a (f, g, h) ops x expr y =
+    (
+      (Location_0 -> Location_1) ->
+      String ->
+      (t -> Err u, Name -> u -> u -> u) ->
+      Map' Op ->
+      [(Op', u)] ->
+      t ->
+      [(Name, t)] ->
+      Err u)
+  shunting_yard a k (f, g) ops x expr y =
     (
       f expr >>=
       \expr'' ->
         case y of
-          [] -> Right (pop_all (g, h) x expr'')
+          [] -> Right (pop_all g x expr'')
           (Name l op, expr') : y' ->
-            und_err
-              op
-              ops
-              "operator"
-              (a l)
-              (\op' -> shunting_yard a (f, g, h) ops (pop (g, h) x expr'' (Op' l op')) expr' y'))
+            und_err op ops k (a l) (\op' -> shunting_yard a k (f, g) ops (pop g x expr'' (Op' l op')) expr' y'))
   standard_1 ::
     (
       String ->
@@ -238,9 +242,7 @@ module Standard where
         process_syntax d y (w, n, m) >>=
         \(o, p, q) ->
           (
-            (\g -> \h -> \k -> ((o, rem_old p, q, rem_old i), Tree_2 g h j k)) <$>
-            traverse (std_dat (Location_1 d)) a <*>
-            traverse (std_cls (Location_1 d)) b <*>
+            (\k -> ((o, rem_old p, q, rem_old i), Tree_2 (std_dat (Location_1 d) <$> a) (std_cls (Location_1 d) <$> b) j k)) <$>
             standard_defs (Location_1 d) (fst <$> p, q, fst <$> i) c))
   standard_arguments ::
     (
@@ -251,17 +253,17 @@ module Standard where
       Type_7 ->
       Expression_0 ->
       Err (Type_8, Expression_9))
-  standard_arguments a y m b c d =
+  standard_arguments a y (t, u, m) b c d =
     case b of
-      [] -> (,) <$> std_type a c <*> std_expr a y m d
+      [] -> (,) (std_type a c) <$> std_expr a y (t, u, m) d
       (e, Type_7 l f) : g ->
         (
-          (\h -> \(Type_8 i j, k) ->
+          (\n -> \(Type_8 i j, k) ->
             (
-              Type_8 i (Application_type_5 (Application_type_5 (Name_type_5 (Name l "Function")) h) j),
-              Function_expression_9 e k)) <$>
-          std_type' a f <*>
-          standard_arguments a y m g c d)
+              Type_8 i (Application_type_5 (Application_type_5 (Name_type_5 (Name l "Function")) (std_type' a f)) j),
+              Function_expression_9 n k)) <$>
+          std_pat a m e <*>
+          standard_arguments a y (t, u, m) g c d)
   standard_def :: (Location_0 -> Location_1) -> (Map' Syntax_type, Map' Syntax_3, Map' Op) -> Def_0 -> Err Def_1
   standard_def i j a =
     case a of
@@ -270,17 +272,16 @@ module Standard where
       Instance_def_0 b c (Name d y) f g e -> Instance_1 b c (Name d y) f g <$> traverse (std_inst i y j) e
   standard_defs :: (Location_0 -> Location_1) -> (Map' Syntax_type, Map' Syntax_3, Map' Op) -> [Def_0] -> Err [Def_1]
   standard_defs a b = traverse (standard_def a b)
-  std_br :: (Location_0 -> Location_1) -> Data_br_0 -> Err Data_br_6
-  std_br a (Data_br_0 b c) = Data_br_6 b <$> traverse (\(g, h) -> (,) g <$> std_type a h) c
-  std_cls :: (Location_0 -> Location_1) -> Class_0 -> Err Class_7
-  std_cls e (Class_0 a b c d) = Class_7 a b c <$> traverse (std_mthd e) d
-  std_dat :: (Location_0 -> Location_1) -> Data_0 -> Err Data_6
+  std_br :: (Location_0 -> Location_1) -> Data_br_0 -> Data_br_6
+  std_br a (Data_br_0 b c) = Data_br_6 b (second (std_type a) <$> c)
+  std_cls :: (Location_0 -> Location_1) -> Class_0 -> Class_7
+  std_cls e (Class_0 a b c d) = Class_7 a b c (std_mthd e <$> d)
+  std_dat :: (Location_0 -> Location_1) -> Data_0 -> Data_6
   std_dat x y =
     case y of
-      Algebraic_data_0 a f b c d ->
-        (\e -> Data_6 a f b c (Algebraic_data_6 e)) <$> traverse (\(Form_0 g h) -> Form_6 g <$> traverse (std_type x) h) d
-      Branching_data_0 a i b c d e f -> (\g -> \h -> Data_6 a i b c (Branching_data_6 g e h)) <$> std_br x d <*> std_br x f
-      Struct_data_0 a f b c d -> (\e -> Data_6 a f b c (Struct_data_6 e)) <$> traverse (\(g, h) -> (,) g <$> std_type x h) d
+      Algebraic_data_0 a f b c d -> Data_6 a f b c (Algebraic_data_6 ((\(Form_0 g h) -> Form_6 g (std_type x <$> h)) <$> d))
+      Branching_data_0 a i b c d e f -> Data_6 a i b c (Branching_data_6 (std_br x d) e (std_br x f))
+      Struct_data_0 a f b c d -> Data_6 a f b c (Struct_data_6 (second (std_type x) <$> d))
   std_exp :: (Location_0 -> Location_1) -> Map' Op -> Expression_6 -> Err Expression_9
   std_exp a b c =
     let
@@ -295,12 +296,20 @@ module Standard where
         Let_expression_6 e f g h -> Let_expression_9 e f <$> d g <*> d h
         Match_expression_6 e f g -> Match_expression_9 e <$> d f <*> traverse (\(Case_6 h i) -> Case_1 h <$> d i) g
         Modular_expression_6 e -> Right (Modular_expression_9 e)
-        Name_expression_6 (Name h i) f g -> Name_expression_9 (Name h i) <$> traverse (std_type a) f <*> traverse (std_type a) g
-        Op_expression_6 e f -> shunting_yard a (d, Application_expression_9, \g -> Name_expression_9 g Nothing []) b [] e f
+        Name_expression_6 (Name h i) f g -> Right (Name_expression_9 (Name h i) (std_type a <$> f) (std_type a <$> g))
+        Op_expression_6 e f ->
+          shunting_yard
+            a
+            "operator"
+            (d, \g -> \h -> Application_expression_9 (Application_expression_9 (Name_expression_9 g Nothing []) h))
+            b
+            []
+            e
+            f
         _ -> undefined
   std_expr ::
     (Location_0 -> Location_1) -> String -> (Map' Syntax_type, Map' Syntax_3, Map' Op) -> Expression_0 -> Err Expression_9
-  std_expr a f (b, c, d) e = type_syn' a f b e >>= \g -> std_exp a d (std_expr' c g)
+  std_expr a f (b, c, d) e = type_syn' a f (d, b) e >>= \g -> std_exp a d (std_expr' c g)
   std_expr' :: Map' Syntax_3 -> Expression_6 -> Expression_6
   std_expr' b d =
     let
@@ -352,12 +361,20 @@ module Standard where
       (Map' Syntax_type, Map' Syntax_3, Map' Op) ->
       (Name, ([Pat], Expression_0)) ->
       Err (Name, Expression_9))
-  std_inst a y f (Name b z, (c, d)) =
+  std_inst a y (t, u, f) (Name b z, (c, d)) =
     (
-      (\e -> (Name b z, Prelude.foldr Function_expression_9 e c)) <$>
-      std_expr a ("definition " ++ z ++ "{" ++ y ++ "}" ++ location' (a b)) f d)
-  std_mthd :: (Location_0 -> Location_1) -> Method -> Err Method_9
-  std_mthd a (Method b c e) = Method_9 b c <$> std_type a e
+      (\w -> \e -> (Name b z, Prelude.foldr Function_expression_9 e w)) <$>
+      traverse (std_pat a f) c <*>
+      std_expr a ("definition " ++ z ++ "{" ++ y ++ "}" ++ location' (a b)) (t, u, f) d)
+  std_mthd :: (Location_0 -> Location_1) -> Method -> Method_9
+  std_mthd a (Method b c e) = Method_9 b c (std_type a e)
+  std_pat :: (Location_0 -> Location_1) -> Map' Op -> Pat -> Err Pat_2
+  std_pat a b c =
+    case c of
+      Application_pat d e -> Application_pat_2 d <$> traverse (std_pat a b) e
+      Blank_pat -> Right (Blank_pat_2)
+      Name_pat d -> Right (Name_pat_2 d)
+      Op_pat d e -> shunting_yard a "operator" (std_pat a b, \f -> \g -> \h -> Application_pat_2 f [g, h]) b [] d e
 {-
   std_stat ::
     (
@@ -376,22 +393,24 @@ module Standard where
       (Standard, Nothing) -> Right Standard_str
       (_, Just _) -> Left ("Non-restricted struct" ++ location (a b) ++ " should not have a checker.")
 -}
-  std_type :: (Location_0 -> Location_1) -> Type_7 -> Err Type_8
-  std_type c (Type_7 a b) = Type_8 a <$> std_type' c b
-  std_type' :: (Location_0 -> Location_1) -> Type_0 -> Err Type_5
+  std_type :: (Location_0 -> Location_1) -> Type_7 -> Type_8
+  std_type c (Type_7 a b) = Type_8 a (std_type' c b)
+  std_type' :: (Location_0 -> Location_1) -> Type_0 -> Type_5
   std_type' e b =
     case b of
-      Application_type_0 c d -> Prelude.foldl Application_type_5 <$> std_type' e c <*> traverse (std_type' e) d
-      Name_type_0 c -> Right (Name_type_5 c)
-      Nat_type_0 a -> Right (int_to_nat a)
+      Application_type_0 c d -> Prelude.foldl Application_type_5 (std_type' e c) (std_type' e <$> d)
+      Name_type_0 c -> Name_type_5 c
+      Nat_type_0 a -> int_to_nat a
       Op_type_0 a c ->
-        shunting_yard
-          e
-          (std_type' e, Application_type_5, \f -> Name_type_5 f)
-          (fromList [("*", Op 0 Rght "Pair"), ("+", Op 1 Rght "Either"), ("->", Op 2 Rght "Function")])
-          []
-          a
-          c
+        unwrap
+          (shunting_yard
+            e
+            "type operator"
+            (Right <$> std_type' e, \d -> \f -> Application_type_5 (Application_type_5 (Name_type_5 d) f))
+            (fromList [("*", Op 0 Rght "Pair"), ("+", Op 1 Rght "Either"), ("->", Op 2 Rght "Function")])
+            []
+            a
+            c)
   synrepl :: String -> Expression_6 -> Expression_6 -> Expression_6
   synrepl a b c =
     let
@@ -425,44 +444,52 @@ module Standard where
         _ -> c
   type_err_syn :: String -> Syntax_type -> Syntax_type -> Err t
   type_err_syn a c d = Left ("Syntactic type mismatch between " ++ show_syn_0 c ++ " and " ++ show_syn_0 d ++ " in " ++ a)
-  type_syn :: (Location_0 -> Location_1) -> String -> Map' Syntax_type -> Expression_0 -> Err (Expression_6, Syntax_type)
-  type_syn a m b c =
+  type_syn ::
+    (Location_0 -> Location_1) -> String -> (Map' Op, Map' Syntax_type) -> Expression_0 -> Err (Expression_6, Syntax_type)
+  type_syn a m (k, b) c =
     case c of
       Application_expression_0 d e ->
         (
-          (,) <$> type_syn a m b d <*> type_syn a m b e >>=
+          (,) <$> type_syn a m (k, b) d <*> type_syn a m (k, b) e >>=
           \((f, g), (h, i)) ->
             case (g, i) of
               (Expr_syntax, Expr_syntax) -> Right (Application_expression_6 f h, Expr_syntax)
-              (Arrow_syntax j k, l) -> (Syn_app_expression_6 f h, k) <$ type_syn_check m j l
+              (Arrow_syntax j u, l) -> (Syn_app_expression_6 f h, u) <$ type_syn_check m j l
               _ -> Left ("Syntactic type mismatch in " ++ m))
       Branch_expression_0 d e f g ->
-        (\h -> \j -> (Branch_expression_6 d h f j, Expr_syntax)) <$> type_syn' a m b e <*> type_syn' a m b g
+        (\h -> \j -> (Branch_expression_6 d h f j, Expr_syntax)) <$> type_syn' a m (k, b) e <*> type_syn' a m (k, b) g
       Char_expression_0 d -> Right (Char_expression_6 d, Expr_syntax)
-      Function_expression_0 d e -> (\f -> (Function_expression_6 d f, Expr_syntax)) <$> type_syn' a m b e
+      Function_expression_0 d e ->
+        (\g -> \f -> (Function_expression_6 g f, Expr_syntax)) <$> std_pat a k d <*> type_syn' a m (k, b) e
       Int_expression_0 d -> Right (Int_expression_6 d, Expr_syntax)
       Let_expression_0 d e f g ->
-        (\h -> \j -> (Let_expression_6 d e h j, Expr_syntax)) <$> type_syn' a m b f <*> type_syn' a m b g
+        (
+          (\i -> \h -> \j -> (Let_expression_6 d i h j, Expr_syntax)) <$>
+          traverse (std_pat a k) e <*>
+          type_syn' a m (k, b) f <*>
+          type_syn' a m (k, b) g)
       List_expression_0 d ->
         (
-          traverse (type_syn a m b) d >>=
+          traverse (type_syn a m (k, b)) d >>=
           \e ->
             case e of
               [] -> undefined
               (f, g) : h -> (List_expression_6 (f : (fst <$> h)), List_syntax g) <$ type_syn_list m g (snd <$> h))
       Match_expression_0 d e f ->
-        (\g -> \i -> (Match_expression_6 d g i, Expr_syntax)) <$> type_syn' a m b e <*> traverse (type_syn_case a m b) f
+        (
+          (\g -> \i -> (Match_expression_6 d g i, Expr_syntax)) <$>
+          type_syn' a m (k, b) e <*> traverse (type_syn_case a m (k, b)) f)
       Modular_expression_0 d -> Right (Modular_expression_6 d, Expr_syntax)
       Name_expression_0 (Name d g) e f -> Right (Name_expression_6 (Name d g) e f, Expr_syntax)
       Op_expression_0 d e ->
         (
           (\f -> \g -> (Op_expression_6 f g, Expr_syntax)) <$>
-          type_syn' a m b d <*>
-          traverse (\(f, g) -> (,) f <$> type_syn' a m b g) e)
+          type_syn' a m (k, b) d <*>
+          traverse (\(f, g) -> (,) f <$> type_syn' a m (k, b) g) e)
       Syntax_expression_0 (Name d e) -> und_err e b "syntax" (a d) (\f -> Right (Syntax_expression_6 (Name d e), f))
-  type_syn' :: (Location_0 -> Location_1) -> String -> Map' Syntax_type -> Expression_0 -> Err Expression_6
-  type_syn' a b c d = type_syn a b c d >>= \(e, f) -> e <$ type_syn_check b Expr_syntax f
-  type_syn_case :: (Location_0 -> Location_1) -> String -> Map' Syntax_type -> Case_0 -> Err Case_6
+  type_syn' :: (Location_0 -> Location_1) -> String -> (Map' Op, Map' Syntax_type) -> Expression_0 -> Err Expression_6
+  type_syn' a b (k, c) d = type_syn a b (k, c) d >>= \(e, f) -> e <$ type_syn_check b Expr_syntax f
+  type_syn_case :: (Location_0 -> Location_1) -> String -> (Map' Op, Map' Syntax_type) -> Case_0 -> Err Case_6
   type_syn_case a b c (Case_0 d e) = (\f -> Case_6 d f) <$> type_syn' a b c e
   type_syn_check :: String -> Syntax_type -> Syntax_type -> Err ()
   type_syn_check g a b =
@@ -552,4 +579,9 @@ module Standard where
     case Data.Map.lookup a b of
       Just e -> f e
       Nothing -> Left ("Undefined " ++ c ++ " " ++ a ++ location' d)
+  unwrap :: Either t u -> u
+  unwrap x =
+    case x of
+      Left _ -> undefined
+      Right y -> y
 --------------------------------------------------------------------------------------------------------------------------------

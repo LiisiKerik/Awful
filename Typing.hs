@@ -1,9 +1,4 @@
 {-
-operaatorid struktuuride ja algebraliste andmetüüpide patternmatchides
-mis juhtub kui esimeses moodulis on kusagil tüübimuutuja T ja järgmises moodulis sama nimega globaalne tüüp?
-Let f = Crash, x = f f In 0 -- tüüpimine läheb lõpmatusse tsüklisse sest puudub occur check
-"./Awful eval "List (0)"" without importing Standard.awf - error message about Writeable class looks bad; fix
-let expr de-sugaring (and therefore struct name collection) completely to Standard.hs module
 all de-sugaring: remove from Tree.hs, put into Standard.hs
 allow using operators in class method definitions? Instance Ring{Complex T}<Ring T>(..., Complex x y * Complex z w = ...)
 Match expression parsing has a bug. Match Foo{Int} vs Match x {False -> ...
@@ -24,8 +19,6 @@ generalise Branching data type to branch from any of the type variables?
     Branching Array[! : Nat, T : Star]{Zero -> ..., Next N -> ...}
 remove special semantics of missing pattern match arguments?
 Allow hiding things to functions outside module - so that helper functions are not exported from the module?
-use operators in patternmatch?
-make arrow a special token, so that arrow is not a legal operator (handle special case in tokenise instead of parser). also =
 move modular checking to parser?
 make syntax case more general (full expression, not just variable, as argument)
 polymorphism in syntax specification language
@@ -47,6 +40,8 @@ Group' (for grouping into finite number of groups)
 allow blanks instead of type variables
 special function for writing ![...]
 algebraic pattern matching - check in Typing module that all constructors are actually legit
+allow 0#1 in structure pattern match
+operaatorid struktuuride ja algebraliste andmetüüpide patternmatchides
 -}
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
@@ -103,7 +98,7 @@ module Typing where
       [Constraint_1]
       [[String]]
         deriving Show
-  data Eqtns = Eqtns (Set String) [(Type_1, Type_1)] [(String, (Name, Type_1))] [Cond_eqtns] deriving Show
+  data Eqtns = Eqtns (Set String) [(Type_1, Type_1)] [(String, (Name_3, Type_1))] [Cond_eqtns] deriving Show
   data Expr_2 = Expr_2 (Maybe [String]) [String] Expression_2 deriving Show
   data Expression_2 =
     Add_Int_0_expression_2 |
@@ -172,6 +167,7 @@ module Typing where
     Modular_pattern_5 Integer |
     Struct_pattern_5 String [Pattern_5]
       deriving Show
+  data Name_3 = Writeable | Realname Name deriving Show
   data Nat = Nxt Nat | Zr deriving (Eq, Ord, Show)
   data Pat_1 = Application_pat_1 [Pat_1] | Blank_pat_1 | Name_pat_1 String deriving Show
   data Type_1 = Application_type_1 Type_1 Type_1 | Name_type_1 String deriving (Eq, Show)
@@ -203,6 +199,14 @@ module Typing where
           [("T", Star_kind_0), ("U", Star_kind_0)]
           (pair_type (Name_type_1 "T") (Name_type_1 "U"))
           [("Pair", [Name_type_1 "T", Name_type_1 "U"])])]
+  brack :: Integer -> Type_1 -> String
+  brack a d =
+    let
+      (b, c) = typestr' d
+    in
+      case c > a of
+        False -> b
+        True -> "(" ++ b ++ ")"
   chain_constraints :: Maybe String -> Map' Class_5 -> Map' (Map' [String]) -> String -> Map' (Map' [String])
   chain_constraints a b c e =
     case a of
@@ -297,7 +301,7 @@ module Typing where
             Nothing
             [
               Method_4
-                "Write_Brackets"
+                "Write_brackets"
                 (Kinds_constraints_2 [] []) (function_type (Name_type_1 "T") (pair_type (list_type char_type) int_type))])]
   classes_1 :: Map' Class_5
   classes_1 = (\(Class_4 (_, a) b c) -> Class_5 a b ((\(Method_4 d _ _) -> d) <$> c)) <$> classes_0
@@ -390,7 +394,7 @@ module Typing where
           ("Multiply Int", Expr_2 (Just []) [] Multiply_Int_0_expression_2),
           ("Negate Int", Expr_2 (Just []) [] Negate_Int_expression_2),
           ("Second", Expr_2 Nothing ["T", "U"] (Field_expression_2 1)),
-          ("Write_Brackets Int", Expr_2 (Just []) [] Write_Brackets_Int_expression_2)])
+          ("Write_brackets Int", Expr_2 (Just []) [] Write_Brackets_Int_expression_2)])
   either_type :: Type_1 -> Type_1 -> Type_1
   either_type x = Application_type_1 (Application_type_1 (Name_type_1 "Either") x)
   find_and_delete :: Ord t => Map t u -> t -> Maybe (u, Map t u)
@@ -562,7 +566,7 @@ module Typing where
             "Ord",
             "Ring",
             "Second",
-            "Write_Brackets",
+            "Write_brackets",
             "Writeable",
             "Zero"]))
   maybe_type :: Type_1 -> Type_1
@@ -580,6 +584,11 @@ module Typing where
       Arrow_kind_1 c d -> occ_kind a c || occ_kind a d
       Var_kind_1 c -> c == a
       _ -> False
+  occtype :: String -> Type_1 -> Bool
+  occtype a b =
+    case b of
+      Application_type_1 c d -> occtype a c || occtype a d
+      Name_type_1 c -> a == c
   old' :: Map' (Map' t) -> Map' (Map' (t, Status))
   old' = (<$>) old
   pair_type :: Type_1 -> Type_1 -> Type_1
@@ -675,7 +684,7 @@ module Typing where
       Nat_kind_1 -> ("Nat", False)
       Star_kind_1 -> ("Star", False)
       Var_kind_1 b -> (show b, False)
-  slv :: Map' (Map' [[String]]) -> [(String, (Name, Type_1))] -> (Name -> String -> String -> String) -> Err ()
+  slv :: Map' (Map' [[String]]) -> [(String, (Name_3, Type_1))] -> (Name_3 -> String -> String -> String) -> Err ()
   slv a b h =
     case b of
       [] -> Right ()
@@ -693,11 +702,11 @@ module Typing where
   slv_constrs ::
     (
       Map' (Map' [[String]]) ->
-      [(String, (Name, Type_1))] ->
-      (Name -> String -> String -> String) ->
+      [(String, (Name_3, Type_1))] ->
+      (Name_3 -> String -> String -> String) ->
       [Type_1] ->
       [[String]] ->
-      Name ->
+      Name_3 ->
       Err ())
   slv_constrs a b c d e y =
     case d of
@@ -712,18 +721,26 @@ module Typing where
   solve_all :: (Location_0 -> Location_1) -> Map' (Map' [[String]]) -> String -> Eqtns -> Expression_2 -> Err Expression_2
   solve_all a b c (Eqtns d e f g) h =
     (
-      solvesys (\i -> \j -> Left ("Type mismatch between " ++ min i j ++ " and " ++ max i j ++ c)) e (f, h, d, g) >>=
+      solvesys c e (f, h, d, g) >>=
       \(i, j, k, l) ->
         case Data.Set.null k of
--- TODO: make this error message more detailed (say which branch this occurred in, with location)?
           False -> Left ("Unresolved type variables" ++ c)
           True ->
             (
               slv
                 b
                 i
-                (\(Name m n) -> \o -> \p ->
-                  "Function " ++ n ++ location (a m) ++ " requires instance or constraint " ++ o ++ " " ++ p ++ ".") >>
+                (\u -> \o -> \p ->
+                  (
+                    "Function " ++
+                    (case u of
+                      Writeable -> "Write invoked by Awful for printing the result"
+                      Realname (Name m n) -> n ++ location (a m)) ++
+                    " requires instance or constraint " ++
+                    o ++
+                    " " ++
+                    p ++
+                    ".")) >>
               solve_conds a b c l j))
   solve_cond :: (Location_0 -> Location_1) -> Map' (Map' [[String]]) -> String -> Cond_eqtns -> Expression_2 -> Err Expression_2
   solve_cond a b c (Cond_eqtns _ e _ g) h = solve_all a b c e h >>= solve_all a b c g
@@ -756,10 +773,10 @@ module Typing where
             False -> kind_mism_err a c (Var_kind_1 b)
             True -> kind_mism_err a (Var_kind_1 b) c)
   solvesys ::
-    (String -> String -> Err ([(String, (Name, Type_1))], Expression_2, Set String, [Cond_eqtns])) ->
+    String ->
     [(Type_1, Type_1)] ->
-    ([(String, (Name, Type_1))], Expression_2, Set String, [Cond_eqtns]) ->
-    Err ([(String, (Name, Type_1))], Expression_2, Set String, [Cond_eqtns])
+    ([(String, (Name_3, Type_1))], Expression_2, Set String, [Cond_eqtns]) ->
+    Err ([(String, (Name_3, Type_1))], Expression_2, Set String, [Cond_eqtns])
   solvesys m b (a', t, u, u1) =
     case b of
       [] -> Right (a', t, u, u1)
@@ -768,7 +785,7 @@ module Typing where
           Application_type_1 e f ->
             case d of
               Application_type_1 h i -> solvesys m ((e, h) : (f, i) : g) (a', t, u, u1)
-              Name_type_1 h -> solvesys' m h c g (a', t, u, u1)
+              Name_type_1 h -> solvesys' m h c g (a', t, u, u1) False
           Name_type_1 e ->
             case d of
               Name_type_1 f ->
@@ -778,37 +795,32 @@ module Typing where
                     case Data.Set.member e u of
                       False ->
                         case Data.Set.member f u of
-                          False -> m e f
+                          False -> type_mism_err m c d
                           True -> solvesys_rep m f c g (a', t, u, u1)
                       True -> solvesys_rep m e d g (a', t, u, u1)
-              _ -> solvesys' m e d g (a', t, u, u1)
+              _ -> solvesys' m e d g (a', t, u, u1) True
   solvesys' ::
-    (String -> String -> Err ([(String, (Name, Type_1))], Expression_2, Set String, [Cond_eqtns])) ->
+    String ->
     String ->
     Type_1 ->
     [(Type_1, Type_1)] ->
-    ([(String, (Name, Type_1))], Expression_2, Set String, [Cond_eqtns]) ->
-    Err ([(String, (Name, Type_1))], Expression_2, Set String, [Cond_eqtns])
-  solvesys' h b c d (x, m, a, w) =
-    let
-      (y, _) = typestring c []
-    in
-      case Data.Set.member b a of
-        False ->
-          h
-            b
-            (case Data.Set.member y a of
-              False -> y
--- todo: see veateade on kahtlane!
-              True -> "an application type")
-        True -> solvesys_rep h b c d (x, m, a, w)
+    ([(String, (Name_3, Type_1))], Expression_2, Set String, [Cond_eqtns]) ->
+    Bool ->
+    Err ([(String, (Name_3, Type_1))], Expression_2, Set String, [Cond_eqtns])
+  solvesys' h b c d (x, m, a, w) e =
+    case (Data.Set.member b a, occtype b c) of
+      (True, False) -> solvesys_rep h b c d (x, m, a, w)
+      _ ->
+        case e of
+          False -> type_mism_err h c (Name_type_1 b)
+          True -> type_mism_err h (Name_type_1 b) c
   solvesys_rep ::
-    (String -> String -> Err ([(String, (Name, Type_1))], Expression_2, Set String, [Cond_eqtns])) ->
+    String ->
     String ->
     Type_1 ->
     [(Type_1, Type_1)] ->
-    ([(String, (Name, Type_1))], Expression_2, Set String, [Cond_eqtns]) ->
-    Err ([(String, (Name, Type_1))], Expression_2, Set String, [Cond_eqtns])
+    ([(String, (Name_3, Type_1))], Expression_2, Set String, [Cond_eqtns]) ->
+    Err ([(String, (Name_3, Type_1))], Expression_2, Set String, [Cond_eqtns])
   solvesys_rep a c d e (x, f, k, w) =
     let
       m = sysrep' c d
@@ -1517,9 +1529,7 @@ module Typing where
       (list_type char_type)
       (Location_1 "input")
       (c, d, e)
-      (Application_expression_1
-        (Name_expression_1 (Name (Location_0 0 0) "First") Nothing [])
-        (Application_expression_1 (Name_expression_1 (Name (Location_0 0 0) "Write_Brackets") Nothing []) f))
+      (Application_expression_1 Write_expression_1 f)
       g
       0
       b
@@ -1659,7 +1669,7 @@ module Typing where
                           Eqtns
                             n
                             ((e, repl' p j) : h)
-                            (((\(Constraint_1 a0 b0) -> (a0, (Name a7 c, p ! b0))) <$> a') ++ c')
+                            (((\(Constraint_1 a0 b0) -> (a0, (Realname (Name a7 c), p ! b0))) <$> a') ++ c')
                             h9,
                           s,
                           [],
@@ -1701,6 +1711,18 @@ module Typing where
                             Data.Map.empty
                             o
                             f)
+        Write_expression_1 ->
+          Right
+            (
+              Glob_expression_2 "Write" (Just (Name_type_1 (show o))) [],
+              Eqtns
+                (Data.Set.insert (show o) f)
+                ((e, function_type (Name_type_1 (show o)) (list_type char_type)) : h)
+                (("Writeable", (Writeable, Name_type_1 (show o))) : c')
+                h9,
+              o + 1,
+              [],
+              ([], Nothing))
   type_exprs ::
     (
       (Name -> String) ->
@@ -1780,6 +1802,8 @@ module Typing where
     case a of
       [] -> Right []
       b : c -> type_method_1 e f b >>= \d -> (:) d <$> type_methods_1 e f c
+  type_mism_err :: String -> Type_1 -> Type_1 -> Err t
+  type_mism_err a b c = Left ("Type mismatch between " ++ typestr b ++ " and " ++ typestr c ++ a)
 {-
   type_normaliser ::
     (
@@ -2002,13 +2026,31 @@ module Typing where
               (function_type (pair_type (Name_type_1 "T") (Name_type_1 "U")) (Name_type_1 "U"))
               Nothing),
           (
-            "Write_Brackets",
+            "Write_brackets",
             Basic_type_1
               [("T", Star_kind_0)]
               (Just (Constraint_1 "Writeable" "T"))
               [Constraint_1 "Writeable" "T"]
               (function_type (Name_type_1 "T") (pair_type (list_type char_type) int_type))
+              Nothing),
+          (
+            "Write",
+            Basic_type_1
+              [("T", Star_kind_0)]
+              (Just (Constraint_1 "Writeable" "T"))
+              [Constraint_1 "Writeable" "T"]
+              (function_type (Name_type_1 "T") (list_type char_type))
               Nothing)])
+  typestr :: Type_1 -> String
+  typestr a = fst (typestr' a)
+  typestr' :: Type_1 -> (String, Integer)
+  typestr' a =
+    case a of
+      Application_type_1 (Application_type_1 (Name_type_1 "Either") b) c -> (brack 2 b ++ " + " ++ brack 3 c, 3)
+      Application_type_1 (Application_type_1 (Name_type_1 "Function") b) c -> (brack 3 b ++ " -> " ++ typestr c, 4)
+      Application_type_1 (Application_type_1 (Name_type_1 "Pair") b) c -> (brack 1 b ++ " * " ++ brack 2 c, 2)
+      Application_type_1 b c -> (brack 1 b ++ " " ++ brack 0 c, 1)
+      Name_type_1 b -> (b, 0)
   typestring :: Type_1 -> [Type_1] -> (String, [Type_1])
   typestring a d =
     case a of

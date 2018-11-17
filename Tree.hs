@@ -11,7 +11,8 @@ module Tree where
     Char_alg_pat Char |
     Int_alg_pat Integer |
     Modular_alg_pat Modular |
-    Name_alg_pat Name
+    Name_alg_pat Name |
+    Op_alg_pat Alg_pat [(Name, Alg_pat)]
       deriving Show
   data Assoc = Lft | Rght deriving (Eq, Show)
   data Brnch_0 = Brnch_0 Name [Name] Name [(Name, Type_7)] deriving Show
@@ -49,6 +50,7 @@ module Tree where
   data Method = Method Name Kinds_constraints Type_7 deriving Show
   data Modular = Modular Location_0 Integer Integer deriving Show
   data Name = Name Location_0 String deriving Show
+  data Op = Op Integer Assoc String deriving Show
   data Opdecl_0 = Opdecl_0 Location_0 String Name Integer Assoc deriving Show
   data Pat = Application_pat Name [Pat] | Blank_pat | Name_pat Name | Op_pat Pat [(Name, Pat)] deriving Show
   data Pattern_1 = Pattern_1 Location_0 Pattern_0 deriving Show
@@ -118,7 +120,7 @@ module Tree where
                 [] -> Right f
                 _ -> d g)
   parse_alg_pattern :: Parser' Alg_pat
-  parse_alg_pattern = parse_comp_alg_pattern <+> parse_elementary_alg_pattern
+  parse_alg_pattern = parse_op_alg_pattern <+> parse_comp_alg_pattern <+> parse_elementary_alg_pattern
   parse_algebraic :: Parser' Data_0
   parse_algebraic =
     (
@@ -143,8 +145,8 @@ module Tree where
     (
       (\t -> \x -> \y -> \z -> Application_alg_pat t x (y : z)) <&>
       parse_name <*>
-      parse_brack_alg_pattern <*>
-      parse_many parse_brack_alg_pattern)
+      parse_br_alg_pattern <*>
+      parse_many parse_br_alg_pattern)
   parse_argument :: Parser' t -> Parser' u -> Parser' (t, u)
   parse_argument p q = (,) <$> p <* parse_colon <*> q
   parse_arguments :: (Parser' [(t, u)] -> Parser' [(t, u)]) -> Parser' t -> Parser' u -> Parser' [(t, u)]
@@ -176,6 +178,10 @@ module Tree where
   parse_blank_alg_pattern = Blank_alg_pat <$ parse_token Blank_token
   parse_blank_pat :: Parser' Pat
   parse_blank_pat = Blank_pat <$ parse_token Blank_token
+  parse_br_alg_pattern :: Parser' Alg_pat
+  parse_br_alg_pattern = parse_round (parse_op_alg_pattern <+> parse_comp_alg_pattern) <+> parse_elementary_alg_pattern
+  parse_br_alg_pattern' :: Parser' Alg_pat
+  parse_br_alg_pattern' = parse_comp_alg_pattern <+> parse_round parse_op_alg_pattern <+> parse_elementary_alg_pattern
   parse_br_expr :: Parser' Expression_0
   parse_br_expr = parse_round (parse_comp_expr <+> parse_mid_expr) <+> parse_elementary_expression
   parse_br_expr' :: Parser' Expression_0
@@ -190,8 +196,6 @@ module Tree where
   parse_br_type = parse_round (parse_op_type <+> parse_ap_type) <+> parse_elementary_type
   parse_br_type' :: Parser' Type_0
   parse_br_type' = parse_ap_type <+> parse_round parse_op_type <+> parse_elementary_type
-  parse_brack_alg_pattern :: Parser' Alg_pat
-  parse_brack_alg_pattern = parse_round parse_comp_alg_pattern <+> parse_elementary_alg_pattern
   parse_brackets :: Token_0 -> Parser' t -> Token_0 -> Parser' t
   parse_brackets a b c = parse_token a *> b <* parse_token c
   parse_branch_expression :: Parser' Expression_0
@@ -411,47 +415,35 @@ module Tree where
   parse_name_pat = Name_pat <$> parse_name'
   parse_name_pattern :: Parser' Pattern_0
   parse_name_pattern = Name_pattern <$> parse_name
-  parse_op :: Parser' Name
-  parse_op = Name <&> parse_op''
-  parse_op' :: Parser' Name
-  parse_op' =
-    (
-      Name <&>
-      parse_elementary
-        (\a ->
-          case a of
-            Operator_token b ->
-              case b of
-                "=" -> Nothing
-                _ -> Just b
-            _ -> Nothing))
-  parse_op'' :: Parser' String
-  parse_op'' =
+  parse_op :: Parser' String
+  parse_op =
     parse_elementary
       (\a ->
         case a of
           Operator_token b -> Just b
           _ -> Nothing)
-  parse_op_0 :: Parser' Name
-  parse_op_0 = Name <&> parse_op_1
-  parse_op_1 :: Parser' String
-  parse_op_1 = filter_parser (\x -> notElem x ["->"]) parse_op''
+  parse_op_0 :: Parser' String
+  parse_op_0 = filter_parser (\x -> notElem x ["#", "->", "="]) parse_op
+  parse_op_0' :: Parser' Name
+  parse_op_0' = Name <&> parse_op_0
+  parse_op_alg_pattern :: Parser' Alg_pat
+  parse_op_alg_pattern = Op_alg_pat <$> parse_br_alg_pattern' <*> parse_some ((,) <$> parse_op_0' <*> parse_br_alg_pattern')
   parse_op_expr :: Parser' Expression_0
-  parse_op_expr = Op_expression_0 <$> parse_br_expr' <*> parse_some ((,) <$> parse_op_0 <*> parse_br_expr')
+  parse_op_expr = Op_expression_0 <$> parse_br_expr' <*> parse_some ((,) <$> parse_op_0' <*> parse_br_expr')
   parse_op_pat :: Parser' Pat
-  parse_op_pat = Op_pat <$> parse_br_pat' <*> parse_some ((,) <$> parse_op_0 <*> parse_br_pat')
+  parse_op_pat = Op_pat <$> parse_br_pat' <*> parse_some ((,) <$> parse_op_0' <*> parse_br_pat')
   parse_op_type :: Parser' Type_0
   parse_op_type =
     (
       Op_type_0 <$>
       parse_br_type' <*>
-      parse_some ((,) <$> (Name <&> filter_parser (\x -> elem x ["*", "+", "->"]) parse_op'') <*> parse_br_type'))
+      parse_some ((,) <$> (Name <&> filter_parser (\x -> elem x (fst <$> typeops)) parse_op) <*> parse_br_type'))
   parse_opdecl :: Parser' Opdecl_0
   parse_opdecl =
     (
       Opdecl_0 <&
       parse_token Opdecl_token <*>
-      parse_op'' <*>
+      parse_op_0 <*>
       parse_name' <*>
       parse_int <*>
       (Lft <$ parse_name_4 "Left" <+> Rght <$ parse_name_4 "Right"))
@@ -468,7 +460,12 @@ module Tree where
     (
       (\a -> first ((,) a)) <$>
       parse_br_pat' <*>
-      ((,) [] <$ parse_colon <*> parse_type <+> (\a -> first (\(b, c) -> (a, b) : c)) <$> parse_op <*> parse_pat_and_type))
+      (
+        (,) [] <$ parse_colon <*> parse_type <+>
+        (
+          (\a -> first (\(b, c) -> (a, b) : c)) <$>
+          (Name <&> parse_op_0) <*>
+          parse_pat_and_type)))
   parse_pattern_0 :: Parser' Pattern_0
   parse_pattern_0 = parse_blank <+> parse_name_pattern
   parse_pattern_1 :: Parser' Pattern_1
@@ -554,7 +551,7 @@ module Tree where
   parse_syntax_name' :: Parser' Name
   parse_syntax_name' = (\x -> \y -> Name x ('!' : y)) <& parse_token Synvar_token <*> parse_name
   parse_syntax_op :: Parser' Syntax_expr
-  parse_syntax_op = Op_syntax <$> parse_syntax_br' <*> parse_some ((,) <$> parse_op_1 <*> parse_syntax_br')
+  parse_syntax_op = Op_syntax <$> parse_syntax_br' <*> parse_some ((,) <$> parse_op_0 <*> parse_syntax_br')
   parse_syntax_type :: Parser' Syntax_type
   parse_syntax_type = parse_syntax_arrow <+> parse_syntax_type_0
   parse_syntax_type_0 :: Parser' Syntax_type
@@ -586,6 +583,8 @@ module Tree where
     case a of
       [] -> b
       Token_1 c _ : _ -> c
+  typeops :: [(String, Op)]
+  typeops = [("*", Op 0 Rght "Pair"), ("+", Op 1 Rght "Either"), ("->", Op 2 Rght "Function")]
   update_location :: State -> Location_0 -> State
   update_location (State a b) c = State a (max b c)
 --------------------------------------------------------------------------------------------------------------------------------

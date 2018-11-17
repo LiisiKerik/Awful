@@ -311,23 +311,24 @@ module Eval where
       String ->
       Tree_0 ->
       (
-        ((Set String, Set String), Locations, Locations, Map' (Map' Location')),
+        (Set String, Locations, Locations, Map' (Map' Location')),
         (File, Map' Syntax_type, Map' Op),
         Map' Expr_2,
         (Locations, Map' Syntax_3)) ->
       Err
         (
-          ((Set String, Set String), Locations, Locations, Map' (Map' Location')),
+          (Set String, Locations, Locations, Map' (Map' Location')),
           (File, Map' Syntax_type, Map' Op),
           Map' Expr_2,
           (Locations, Map' Syntax_3)))
-  standard_naming_typing f a (b, (c, t, u), g, (g0, g')) =
+  standard_naming_typing f a ((b, b2, b3, b4), (c, t, u), g, (g0, g')) =
     (
-      standard_1 f (g0, t, g', u) a >>=
-      \((v0, v1, v2, v3), n') ->
+      standard_1 f (g0, t, g', u, b) a >>=
+      \((v0, v1, v2, v3, t2), n') ->
         (
-          naming f n' b >>=
-          \(d, e) -> typing f e (c, g) >>= \(h, i, j) -> (d, (h, v1, v3), i, (v0, v2)) <$ do_checks (Location_1 f, i) j))
+          naming f n' (b2, b3, b4) >>=
+          \((d0, d1, d2), e) ->
+            typing f e (c, g) >>= \(h, i, j) -> ((t2, d0, d1, d2), (h, v1, v3), i, (v0, v2)) <$ do_checks (Location_1 f, i) j))
   subst_expr :: String -> Expression_2 -> Expression_2 -> Expression_2
   subst_expr a b c =
     let
@@ -369,7 +370,7 @@ module Eval where
       [] -> b
       (c, d) : e -> subst_pats e (subst_pat' c d b)
   tokenise_parse_naming_typing_eval ::
-    ((Set String, Set String), Locations) ->
+    (Set String, Locations) ->
     Map' Kind_0 ->
     (Map' Alg, Map' Constructor, Map' Type_2) ->
     Map' Expr_2 ->
@@ -377,9 +378,9 @@ module Eval where
     Map' (Map' [[String]]) ->
     (Map' Syntax_type, Map' Syntax_3, Map' Op) ->
     Err String
-  tokenise_parse_naming_typing_eval c f (g, h, i) l e u q =
+  tokenise_parse_naming_typing_eval (c0, c) f (g, h, i) l e u (q0, q1, q2) =
     (
-      std_expr (Location_1 "input") "input" q e >>=
+      std_expr (Location_1 "input") "input" (c0, q0, q1, q2) e >>=
       \e' ->
         (
           naming_expression "input" e' c >>=

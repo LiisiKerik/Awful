@@ -17,8 +17,8 @@ module Eval where
         case c of
           0 -> Nothing
           _ -> (\d -> div (a * d + b) c) <$> div_finite c (mod (- b) c) (mod a c)
-  do_check :: (Location_0 -> Location_1, Map' Expr_2) -> Chck -> Err ()
-  do_check (f, y) (Chck (Name l a) (b, c) d) =
+  do_check :: (Location_0 -> Location_1, Map' Expr_2) -> Chck' -> Err ()
+  do_check (f, y) (Chck' (Name l a) (b, c) d) =
     (
       traverse
         (simple'
@@ -42,7 +42,7 @@ module Eval where
                     Left ("Failed static argument check for constructor " ++ a ++ location' (f l))
                   Algebraic_expression_2 "True" [] -> Right ()
                   _ -> undefined)
-  do_checks :: (Location_0 -> Location_1, Map' Expr_2) -> [Chck] -> Err ()
+  do_checks :: (Location_0 -> Location_1, Map' Expr_2) -> [Chck'] -> Err ()
   do_checks f a = traverse_ (do_check f) a
   eval :: Map' Expr_2 -> Expression_2 -> String
   eval a b =
@@ -116,10 +116,6 @@ module Eval where
                           (case l of
                             0 -> nothing_algebraic
                             _ -> wrap_algebraic (Int_expression_2 (div k l)))
-                      _ -> undefined
-                  Div'_expression_2 k ->
-                    case j of
-                      Int_expression_2 l -> Just (Int_expression_2 (div l k))
                       _ -> undefined
                   Field_expression_2 k ->
                     case j of
@@ -257,7 +253,7 @@ module Eval where
   repl_expr a b =
     let
       e = repl_expr a
-      f = repl' a
+      f = repl3 a
     in
       case b of
         Algebraic_expression_2 c d -> Algebraic_expression_2 c (e <$> d)
@@ -267,6 +263,14 @@ module Eval where
         Glob_expression_2 c d g -> Glob_expression_2 c (f <$> d) (f <$> g)
         Match_expression_2 c d -> Match_expression_2 (e c) ((\(Case_3 g h) -> Case_3 g (e h)) <$> d)
         _ -> b
+  repl3 :: Map' Type_1 -> Type_1 -> Type_1
+  repl3 a b =
+    case b of
+      Application_type_1 c d -> Application_type_1 (repl3 a c) (repl3 a d)
+      Name_type_1 c ->
+        case Data.Map.lookup c a of
+          Nothing -> b
+          Just d -> d
   simple :: (String, Map' Expr_2) -> Expression_2 -> Err Expression_2
   simple (x, z) a =
     case a of

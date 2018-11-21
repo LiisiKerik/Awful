@@ -269,7 +269,7 @@ module Standard where
             (
               Type_8 i (Application_type_5 (Application_type_5 (Name_type_5 (Name l "Function")) (std_type' a f)) j),
               Function_expression_9 n k)) <$>
-          std_pat a m e <*>
+          std_pat a (m, w) e <*>
           standard_arguments a y (w, t, u, m) g c d)
   standard_def :: (Location_0 -> Location_1) -> (Set String, Map' Syntax_type, Map' Syntax_3, Map' Op) -> Def_0 -> Err Def_1
   standard_def i j a =
@@ -401,33 +401,59 @@ module Standard where
       (Location_0 -> Location_1) ->
       String ->
       (Set String, Map' Syntax_type, Map' Syntax_3, Map' Op) ->
-      (Name, ([Pat], Expression_0)) ->
+      (Either (Name, [Pat]) (Pat, [(Name, Pat)]), Expression_0) ->
       Err (Name, Expression_9))
-  std_inst a y (m, t, u, f) (Name b z, (c, d)) =
+  std_inst a b (c, d, e, f) (g, h) =
     (
-      (\w -> \e -> (Name b z, Prelude.foldr Function_expression_9 e w)) <$>
-      traverse (std_pat a f) c <*>
-      std_expr a ("definition " ++ z ++ "{" ++ y ++ "}" ++ location' (a b)) (m, t, u, f) d)
+      (case g of
+        Left (i, j) -> (,) i <$> traverse (std_pat a (f, c)) j
+        Right (i, j) ->
+          (
+            (\k ->
+              case k of
+                Application_pat_2 l [m, n] -> (l, [m, n])
+                _ -> undefined) <$>
+            shunting_yard a "operator" (std_pat a (f, c), \k -> \l -> \m -> Application_pat_2 k [l, m]) f [] i j)) >>=
+      \(Name i j, k) ->
+        (
+          (\l -> (Name i j, Prelude.foldr Function_expression_9 l k)) <$>
+          std_expr a ("definition " ++ j ++ "{" ++ b ++ "}" ++ location' (a i)) (c, d, e, f) h))
+  std_let ::
+    (
+      (Location_0 -> Location_1) ->
+      String ->
+      (Set String, Map' Op, Map' Syntax_type) ->
+      [(Name, [Pat], Expression_0)] ->
+      Expression_0 ->
+      Err Expression_6)
+  std_let a m (u, k, b) n g =
+    case n of
+      [] -> type_syn' a m (u, k, b) g
+      (Name l d, e, f) : n' ->
+        (
+          (\i -> \h -> \j ->
+            let
+              w t = Application_expression_6 (Function_expression_6 t j)
+            in
+              case Data.Set.member d u of
+                False -> w (Name_pat_2 (Name l d)) (Prelude.foldr Function_expression_6 h i)
+                True -> w (Application_pat_2 (Name l d) i) h) <$>
+          traverse (std_pat a (k, u)) e <*>
+          type_syn' a m (u, k, b) f <*>
+          std_let a m (u, k, b) n' g)
   std_mthd :: (Location_0 -> Location_1) -> Method -> Method_9
   std_mthd a (Method b c e) = Method_9 b c (std_type a e)
-{-
-  naming_pat :: String -> Pat_2 -> (Set String, Locations) -> Err (Locations, Pat')
-  naming_pat a c (f, d) =
+  std_pat :: (Location_0 -> Location_1) -> (Map' Op, Set String) -> Pat -> Err Pat_2
+  std_pat a (b, i) c =
     case c of
-      Application_pat_2 b e -> second (\h -> Application_pat' b h) <$> naming_pats a e (f, d)
-      Blank_pat_2 -> Right (d, Blank_pat')
-      Name_pat_2 (Name b e) ->
-        case Data.Set.member e f of
-          False -> (\(g, _) -> (g, Name_pat' e)) <$> naming_name a (Name b e) d
-          True -> Right (d, Application_pat' (Name b e) [])
--}
-  std_pat :: (Location_0 -> Location_1) -> Map' Op -> Pat -> Err Pat_2
-  std_pat a b c =
-    case c of
-      Application_pat d e -> Application_pat_2 d <$> traverse (std_pat a b) e
+      Application_pat d e -> Application_pat_2 d <$> traverse (std_pat a (b, i)) e
       Blank_pat -> Right (Blank_pat_2)
-      Name_pat d -> Right (Name_pat_2 d)
-      Op_pat d e -> shunting_yard a "operator" (std_pat a b, \f -> \g -> \h -> Application_pat_2 f [g, h]) b [] d e
+      Name_pat (Name d e) ->
+        Right
+          (case Data.Set.member e i of
+            False -> Name_pat_2 (Name d e)
+            True -> Application_pat_2 (Name d e) [])
+      Op_pat d e -> shunting_yard a "operator" (std_pat a (b, i), \f -> \g -> \h -> Application_pat_2 f [g, h]) b [] d e
 {-
   std_stat ::
     (
@@ -517,22 +543,9 @@ module Standard where
         (\h -> \j -> (Branch_expression_6 d h f j, Expr_syntax)) <$> type_syn' a m (u, k, b) e <*> type_syn' a m (u, k, b) g
       Char_expression_0 d -> Right (Char_expression_6 d, Expr_syntax)
       Function_expression_0 d e ->
-        (\g -> \f -> (Function_expression_6 g f, Expr_syntax)) <$> std_pat a k d <*> type_syn' a m (u, k, b) e
+        (\g -> \f -> (Function_expression_6 g f, Expr_syntax)) <$> std_pat a (k, u) d <*> type_syn' a m (u, k, b) e
       Int_expression_0 d -> Right (Int_expression_6 d, Expr_syntax)
-      Let_expression_0 (Name l d) e f g ->
-        (
-          (\i -> \h -> \j ->
-            let
-              w t = Application_expression_6 (Function_expression_6 t j)
-            in
-              (
-                case Data.Set.member d u of
-                  False -> w (Name_pat_2 (Name l d)) (Prelude.foldr Function_expression_6 h i)
-                  True -> w (Application_pat_2 (Name l d) i) h,
-                Expr_syntax)) <$>
-          traverse (std_pat a k) e <*>
-          type_syn' a m (u, k, b) f <*>
-          type_syn' a m (u, k, b) g)
+      Let_expression_0 d e -> (\x -> (x, Expr_syntax)) <$> std_let a m (u, k, b) d e
       List_expression_0 d ->
         (
           traverse (type_syn a m (u, k, b)) d >>=

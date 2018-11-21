@@ -27,7 +27,7 @@ module Tree where
   data Data_br_0 = Data_br_0 Name [(Name, Type_7)] deriving Show
   data Def_0 =
     Basic_def_0 Name Kinds_constraints [(Pat, Type_7)] Type_7 Expression_0 |
-    Instance_def_0 Location_0 Name Name [Pattern_1] [Constraint_0] [(Name, ([Pat], Expression_0))]
+    Instance_def_0 Location_0 Name Name [Pattern_1] [Constraint_0] [(Either (Name, [Pat]) (Pat, [(Name, Pat)]), Expression_0)]
       deriving Show
   data Expression_0 =
     Application_expression_0 Expression_0 Expression_0 |
@@ -35,7 +35,7 @@ module Tree where
     Char_expression_0 Char |
     Function_expression_0 Pat Expression_0 |
     Int_expression_0 Integer |
-    Let_expression_0 Name [Pat] Expression_0 Expression_0 |
+    Let_expression_0 [(Name, [Pat], Expression_0)] Expression_0 |
     List_expression_0 [Expression_0] |
     Match_expression_0 Location_0 Expression_0 [Case_0] |
     Modular_expression_0 Modular |
@@ -48,7 +48,7 @@ module Tree where
   data Kind_0 = Arrow_kind_0 Kind_0 Kind_0 | Nat_kind_0 | Star_kind_0 deriving (Eq, Show)
   data Kinds_constraints = Kinds_constraints [(Name, Kind_0)] [Constraint_0] deriving Show
   data Method = Method Name Kinds_constraints Type_7 deriving Show
-  data Modular = Modular Location_0 Integer Integer deriving Show
+  data Modular = Modular Integer Integer deriving Show
   data Name = Name Location_0 String deriving Show
   data Op = Op Integer Assoc String deriving Show
   data Opdecl_0 = Opdecl_0 Location_0 String Name Integer Assoc deriving Show
@@ -142,11 +142,7 @@ module Tree where
   parse_appl f p = Prelude.foldl f <$> p <*> parse_some p
   parse_application_alg_pattern :: Parser' Alg_pat
   parse_application_alg_pattern =
-    (
-      (\t -> \x -> \y -> \z -> Application_alg_pat t x (y : z)) <&>
-      parse_name <*>
-      parse_br_alg_pattern <*>
-      parse_many parse_br_alg_pattern)
+    Application_alg_pat <&> parse_name <*> ((:) <$> parse_br_alg_pattern <*> parse_many parse_br_alg_pattern)
   parse_argument :: Parser' t -> Parser' u -> Parser' (t, u)
   parse_argument p q = (,) <$> p <* parse_colon <*> q
   parse_arguments :: (Parser' [(t, u)] -> Parser' [(t, u)]) -> Parser' t -> Parser' u -> Parser' [(t, u)]
@@ -307,7 +303,7 @@ module Tree where
   parse_expression' :: Parser' Expression_0
   parse_expression' = parse_comp_expr <+> parse_mid_expr <+> parse_elementary_expression
   parse_file :: Parser' Name
-  parse_file = (\(Name x y) -> Name x (y ++ ".awf")) <$> parse_name' <* parse_operator "." <* parse_name_4 "awf"
+  parse_file = Name <&> ((\x -> x ++ ".awf") <$> parse_name) <* parse_operator "." <* parse_name_4 "awf"
   parse_files :: Parser' [Name]
   parse_files = parse_round (parse_list 1 parse_file)
   parse_form :: Parser' Form_0
@@ -329,7 +325,13 @@ module Tree where
       parse_constraints <*>
       parse_optional
         parse_round
-        ((\x -> \y -> \z -> (x, (y, z))) <$> parse_name' <*> parse_many parse_br_pat <* parse_eq <*> parse_expression'))
+        (
+          (,) <$>
+          (
+            Right <$> ((,) <$> parse_br_pat' <*> parse_some ((,) <$> parse_op_0' <*> parse_br_pat')) <+>
+            Left <$> ((,) <$> parse_name' <*> parse_many parse_br_pat)) <*
+          parse_eq <*>
+          parse_expression'))
   parse_int :: Parser' Integer
   parse_int = parse_int' <+> negate <$ parse_token Negate_token <*> filter_parser ((/=) 0) parse_int'
   parse_int' :: Parser' Integer
@@ -346,7 +348,7 @@ module Tree where
   parse_let_expression :: Parser' Expression_0
   parse_let_expression =
     (
-      flip (foldr (\(a, b, c) -> Let_expression_0 a b c)) <$
+      Let_expression_0 <$
       parse_token Let_token <*>
       parse_list 1 ((,,) <$> parse_name' <*> parse_many parse_br_pat <* parse_eq <*> parse_expression') <*
       parse_token In_token <*>
@@ -382,7 +384,7 @@ module Tree where
   parse_mid_expr :: Parser' Expression_0
   parse_mid_expr = parse_ap_expr <+> Modular_expression_0 <$> parse_modular
   parse_modular :: Parser' Modular
-  parse_modular = (\x -> flip (Modular x)) <&> parse_int' <* parse_operator "#" <*> parse_int'
+  parse_modular = filter_parser (\(Modular x y) -> y < x) (flip Modular <$> parse_int' <* parse_operator "#" <*> parse_int')
   parse_modular_alg_pattern :: Parser' Alg_pat
   parse_modular_alg_pattern = Modular_alg_pat <$> parse_modular
   parse_name :: Parser' String
@@ -549,7 +551,7 @@ module Tree where
         parse_optional' (parse_brackets Left_square_token (parse_list 1 parse_type') Right_square_token)) <+>
       Syntax_syntax <$> parse_syntax_name')
   parse_syntax_name' :: Parser' Name
-  parse_syntax_name' = (\x -> \y -> Name x ('!' : y)) <& parse_token Synvar_token <*> parse_name
+  parse_syntax_name' = Name <& parse_token Synvar_token <*> ((:) '!' <$> parse_name)
   parse_syntax_op :: Parser' Syntax_expr
   parse_syntax_op = Op_syntax <$> parse_syntax_br' <*> parse_some ((,) <$> parse_op_0 <*> parse_syntax_br')
   parse_syntax_type :: Parser' Syntax_type

@@ -51,7 +51,7 @@ Def Apply_left[T : Star, U : Star, F : Star -> Star -> Star, V : Star]<Braided F
 Def Apply_right[T : Star, U : Star, F : Star -> Star -> Star, V : Star]<Braided F> : (T -> U) -> F V T -> F V U =
   Apply' Identity
 Def Brackets[T : Star]<Writeable T>(x : Int, y : T) : List Char =
-  Let Pair z a = Write_Brackets y In Match x =?= a {LT -> Cat (Lift "(") (Cat z (Lift ")")), _ -> z}
+  Let Pair z a = Write_brackets y In Match x =?= a {LT -> Cat (Lift "(") (Cat z (Lift ")")), _ -> z}
 Instance Braided{Either}(
   Apply' f g x = Match x {Left y -> Left (f y), Right y -> Right (g y)},
   Associate_left x = Match x {Left y -> Left (Left y), Right y -> Match y {Left z -> Left (Right z), Right z -> Right z}},
@@ -139,34 +139,34 @@ Instance Ring{Pair T U}<Ring T, Ring U>(
   Convert x = Pair (Convert x) (Convert x),
   Multiply (Pair x y) (Pair z a) = Pair (x * z) (y * a),
   Negate (Pair x y) = Pair (Negate x) (Negate y))
-Def Write[T : Star]<Writeable T>(x : T) : List Char = First (Write_Brackets x)
+Def Write[T : Star]<Writeable T>(x : T) : List Char = First (Write_brackets x)
 Def Write'[T : Star]<Writeable T>(x : List Char, y : T) : List Char = Cat x (Cat (Lift " ") (Brackets 0 y))
 Instance Writeable{Char}(
-  Write_Brackets c = Pair (Match c {Newline -> !List !["N", "e", "w", "l", "i", "n", "e"], _ -> !List ![""", c, """]}) 0)
+  Write_brackets c = Pair (Match c {Newline -> !List !["N", "e", "w", "l", "i", "n", "e"], _ -> !List ![""", c, """]}) 0)
 Instance Writeable{Comparison}(
-  Write_Brackets x = Pair (Match x {LT -> !List !["L", "T"], EQ -> !List !["E", "Q"], GT -> !List !["G", "T"]}) 0)
+  Write_brackets x = Pair (Match x {LT -> !List !["L", "T"], EQ -> !List !["E", "Q"], GT -> !List !["G", "T"]}) 0)
 Instance Writeable{Either T U}<Writeable T, Writeable U>(
-  Write_Brackets x =
+  Write_brackets x =
     Pair
       (Match x {
         Left y -> Cat (!List !["L", "e", "f", "t", " "]) (Brackets 0 y),
         Right y -> Cat (!List !["R", "i", "g", "h", "t", " "]) (Brackets 0 y)})
       1)
 Instance Writeable{List T}<Writeable T>(
-  Write_Brackets x =
+  Write_brackets x =
     Match x {
       Empty_List -> Pair (!List !["E", "m", "p", "t", "y", "_", "L", "i", "s", "t"]) 0,
       Construct_List y z ->
         Cat (!List !["!", "L", "i", "s", "t", " ", "!", "["]) (Cat (Interleave (!List ![",", " "]) (Write . x)) (Lift "]")) &
         1})
 Instance Writeable{Logical}(
-  Write_Brackets x = Pair (Match x {False -> !List !["F", "a", "l", "s", "e"], True -> !List !["T", "r", "u", "e"]}) 0)
+  Write_brackets x = Pair (Match x {False -> !List !["F", "a", "l", "s", "e"], True -> !List !["T", "r", "u", "e"]}) 0)
 Instance Writeable{Maybe T}<Writeable T>(
-  Write_Brackets x =
+  Write_brackets x =
     Match x {
       Nothing -> !List !["N", "o", "t", "h", "i", "n", "g"] & 0,
       Wrap y -> Cat (!List !["W", "r", "a", "p", " "]) (Brackets 0 y) & 1})
-Instance Writeable{Pair T U}<Writeable T, Writeable U>(Write_Brackets (Pair x y) =
+Instance Writeable{Pair T U}<Writeable T, Writeable U>(Write_brackets (Pair x y) =
   Cat (Brackets 1 x) (Cat (!List ![" ", "&", " "]) (Brackets 2 y)) & 2)
 Def Zip[F : Star -> Star, T : Star, U : Star, V : Star]<Applicative F>(f : T -> U -> V, x : F T) : F U -> F V = Compose (f . x)
 Def Zr[T : Star]<Ring T> : T = Convert 0

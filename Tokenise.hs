@@ -3,9 +3,9 @@
 module Tokenise where
   import Data.Bifunctor
   import Data.Char
+  import Errors
   data Char' =
     Delimiter_char Delimiter |
-    Exclamation_char |
     Int_char Char |
     Minus_char |
     Name_char Char |
@@ -19,6 +19,7 @@ module Tokenise where
       deriving Show
   data Delimiter =
     Comma_delimiter |
+    Dollar_delimiter |
     Left_curly_delimiter |
     Left_round_delimiter |
     Left_square_delimiter |
@@ -26,23 +27,18 @@ module Tokenise where
     Right_round_delimiter |
     Right_square_delimiter
       deriving Show
-  type Err t = Either String t
-  data Location_0 = Location_0 Integer Integer deriving (Eq, Ord, Show)
-  data Location_1 = Location_1 String Location_0 deriving Show
   data Token_0 =
     Algebraic_token |
     Blank_token |
     Branch_token |
-    Branching_token |
     Case_token |
     Char_token Char |
     Check_token |
     Class_token |
     Comma_token |
+    Data_token |
     Def_token |
     Eval_token |
-    Expr_token |
-    Hidden_token |
     In_token |
     Instance_token |
     Int_token Integer |
@@ -55,40 +51,41 @@ module Tokenise where
     Name_token String |
     Negate_token |
     Of_token |
-    Opdecl_token |
     Operator_token String |
-    -- Restricted_token |
     Right_curly_token |
     Right_round_token |
     Right_square_token |
     Struct_token |
+    Syntax_name_token |
     Syntax_token |
-    Synvar_token
+    Term_token |
+    Type_token
       deriving (Eq, Show)
   data Token_1 = Token_1 Location_0 Token_0 deriving Show
   data Tokens = Tokens [Token_1] Location_0 deriving Show
-  accumulate :: (String -> Token_0) -> (Char' -> Maybe Char) -> Location_1 -> [Char'] -> Err Tokens
-  accumulate a b c d = (\(e, f) -> add_token c (a e) f) <$> accumulate' b c d
-  accumulate' :: (Char' -> Maybe Char) -> Location_1 -> [Char'] -> Err (String, Tokens)
-  accumulate' a b c =
-    let
-      d = (,) "" <$> tokenise' b c
-    in
-      case c of
-        [] -> d
-        e : f ->
-          case a e of
-            Just g -> first ((:) g) <$> accumulate' a (next_char b) f
-            Nothing -> d
-  add_token :: Location_1 -> Token_0 -> Tokens -> Tokens
-  add_token (Location_1 _ a) b (Tokens c d) = Tokens (Token_1 a b : c) d
-  char :: Char -> Char'
-  char a =
+  add_token :: Location_0 -> Token_0 -> Tokens -> Tokens
+  add_token location token (Tokens tokens end_location) = Tokens (Token_1 location token : tokens) end_location
+  char'_to_char :: Char' -> Char
+  char'_to_char char' =
+    case char' of
+      Delimiter_char delimiter -> delimiter_to_char delimiter
+      Int_char char -> char
+      Minus_char -> '-'
+      Name_char char -> char
+      Newline_char -> '\n'
+      Operator_char char -> char
+      Quote_char -> '"'
+      Slash_char -> '/'
+      Space_char -> ' '
+      Tick_char -> '`'
+      Tilde_char -> '~'
+  char_to_char' :: Char -> Char'
+  char_to_char' a =
     case a of
       '\n' -> Newline_char
       ' ' -> Space_char
-      '!' -> Exclamation_char
       '"' -> Quote_char
+      '$' -> Delimiter_char Dollar_delimiter
       '(' -> Delimiter_char Left_round_delimiter
       ')' -> Delimiter_char Right_round_delimiter
       ',' -> Delimiter_char Comma_delimiter
@@ -104,14 +101,48 @@ module Tokenise where
         (if_sequence
           a
           [
-            (flip elem ['#', '$', '%', '&', '*', '+', '.', ':', ';', '|', '<', '=', '>', '?', '@', '\\', '^'], Operator_char),
+            (flip elem ['!', '#', '%', '&', '*', '+', '.', ':', ';', '|', '<', '=', '>', '?', '@', '\\', '^'], Operator_char),
             (isDigit, Int_char)]
           Name_char)
             a
-  end_tokens :: Location_1 -> Err Tokens
-  end_tokens (Location_1 _ a) = Right (Tokens [] a)
-  file_location :: Location_1 -> String
-  file_location (Location_1 a _) = a
+  delimiter_to_char :: Delimiter -> Char
+  delimiter_to_char delimiter =
+    case delimiter of
+      Comma_delimiter -> ','
+      Dollar_delimiter -> '$'
+      Left_curly_delimiter -> '{'
+      Left_round_delimiter -> '('
+      Left_square_delimiter -> '['
+      Right_curly_delimiter -> '}'
+      Right_round_delimiter -> ')'
+      Right_square_delimiter -> ']'
+  delimiter_to_token :: Delimiter -> Token_0
+  delimiter_to_token delimiter =
+    case delimiter of
+      Comma_delimiter -> Comma_token
+      Dollar_delimiter -> Syntax_name_token
+      Left_curly_delimiter -> Left_curly_token
+      Left_round_delimiter -> Left_round_token
+      Left_square_delimiter -> Left_square_token
+      Right_curly_delimiter -> Right_curly_token
+      Right_round_delimiter -> Right_round_token
+      Right_square_delimiter -> Right_square_token
+  end_tokens :: Location_0 -> Err Tokens
+  end_tokens location = Right (Tokens [] location)
+  gather_token :: (Char' -> Maybe Char) -> (String -> Token_0) -> Location_0 -> [Char'] -> Err Tokens
+  gather_token token_char string_to_token location file =
+    (\(token, tokens) -> add_token location (string_to_token token) tokens) <$> gather_token' token_char location file
+  gather_token' :: (Char' -> Maybe Char) -> Location_0 -> [Char'] -> Err (String, Tokens)
+  gather_token' token_char location file_0 =
+    let
+      d = (,) "" <$> tokenise' location file_0
+    in
+      case file_0 of
+        [] -> d
+        e : f ->
+          case token_char e of
+            Just g -> first ((:) g) <$> gather_token' token_char (next_char location) f
+            Nothing -> d
   if_sequence :: t -> [(t -> Bool, u)] -> u -> u
   if_sequence a b c =
     case b of
@@ -122,185 +153,135 @@ module Tokenise where
     case a of
       Int_char b -> Just b
       _ -> Nothing
-  location :: Location_1 -> String
-  location (Location_1 a b) = " at " ++ a ++ ":" ++ location0 b
-  location' :: Location_1 -> String
-  location' a = location a ++ "."
-  location0 :: Location_0 -> String
-  location0 (Location_0 a b) = show a ++ ":" ++ show b
   name_char :: Char' -> Maybe Char
-  name_char a =
-    case a of
-      Int_char b -> Just b
-      Name_char b -> Just b
+  name_char char =
+    case char of
+      Int_char char' -> Just char'
+      Name_char char' -> Just char'
       _ -> Nothing
-  next_char :: Location_1 -> Location_1
-  next_char (Location_1 a (Location_0 b c)) = Location_1 a (Location_0 b (c + 1))
-  next_line :: Location_1 -> Location_1
-  next_line (Location_1 a (Location_0 b _)) = Location_1 a (Location_0 (b + 1) 1)
+  next_char :: Location_0 -> Location_0
+  next_char (Location_0 line char) = Location_0 line (char + 1)
+  next_line :: Location_0 -> Location_0
+  next_line (Location_0 line _) = Location_0 (line + 1) 1
   operator_char :: Char' -> Maybe Char
-  operator_char a =
-    case a of
-      Exclamation_char -> Just '!'
+  operator_char char =
+    case char of
       Minus_char -> Just '-'
-      Operator_char b -> Just b
+      Operator_char char' -> Just char'
       Slash_char -> Just '/'
       Tilde_char -> Just '~'
       _ -> Nothing
-  tokenise :: (Location_0 -> Location_1) -> String -> Err Tokens
-  tokenise a b = tokenise' (a (Location_0 1 1)) (char <$> b)
-  tokenise' :: Location_1 -> [Char'] -> Err Tokens
-  tokenise' a b =
-    case b of
-      [] -> end_tokens a
-      c : d ->
-        let
-          e = next_char a
-          f = tokenise_operator a b
-        in
-          case c of
-            Delimiter_char g ->
-              (
-                add_token
-                  a
-                  (case g of
-                    Comma_delimiter -> Comma_token
-                    Left_curly_delimiter -> Left_curly_token
-                    Left_round_delimiter -> Left_round_token
-                    Left_square_delimiter -> Left_square_token
-                    Right_curly_delimiter -> Right_curly_token
-                    Right_round_delimiter -> Right_round_token
-                    Right_square_delimiter -> Right_square_token) <$>
-                tokenise' e d)
-            Exclamation_char ->
-              case d of
-                Name_char _ : _ -> add_token a Synvar_token <$> accumulate word_token name_char e d
-                _ -> f
-            Int_char _ -> accumulate (Int_token <$> read) int_char a b
-            Minus_char ->
-              case d of
-                Int_char _ : _ -> add_token a Negate_token <$> accumulate (Int_token <$> read) int_char e d
-                _ -> f
-            Name_char _ -> accumulate word_token name_char a b
-            Newline_char -> tokenise' (next_line a) d
-            Operator_char _ -> f
-            Quote_char -> (\(g, h) -> add_token a (Char_token g) h) <$> tokenise_char e d
-            Slash_char -> f
-            Space_char -> tokenise' e d
-            Tick_char -> tokenise_single e d
-            Tilde_char ->
-              case d of
-                Slash_char : x -> tokenise_multiline 1 (next_char e) x
-                _ -> tokenise_operator a b
-  tokenise_char :: Location_1 -> [Char'] -> Err (Char, Tokens)
-  tokenise_char a b =
-    case b of
-      [] -> Left ("Missing character and end quote" ++ location' a)
-      c : d ->
-        let
-          e = char'_to_char c
-        in
-          case e of
-            '\n' -> Left ("Newline inside quotes" ++ location' a)
-            _ -> (,) e <$> tokenise_quote (next_char a) d
-  tokenise_multiline :: Integer -> Location_1 -> [Char'] -> Err Tokens
-  tokenise_multiline a b c =
-    case c of
-      [] -> Left ("Missing end comment in " ++ file_location b ++ ".")
-      d : e ->
-        let
-          f = tokenise_multiline a
-          g = next_char b
-        in
-          case d of
-            Newline_char -> f (next_line b) e
-            Slash_char -> tokenise_slash a g e
-            Tilde_char -> tokenise_multiline_tilde a g e
-            _ -> f g e
-  tokenise_multiline_tilde :: Integer -> Location_1 -> [Char'] -> Err Tokens
-  tokenise_multiline_tilde a b c =
-    case c of
-      Slash_char : d -> tokenise_multiline (a + 1) (next_char b) d
-      _ -> tokenise_multiline a b c
-  tokenise_operator :: Location_1 -> [Char'] -> Err Tokens
-  tokenise_operator = accumulate Operator_token operator_char
-  tokenise_quote :: Location_1 -> [Char'] -> Err Tokens
-  tokenise_quote a b =
+  tokenise :: String -> Err Tokens
+  tokenise file = tokenise' (Location_0 1 1) (char_to_char' <$> file)
+  tokenise' :: Location_0 -> [Char'] -> Err Tokens
+  tokenise' location_0 file_0 =
     let
-      e = Left ("Missing end quote" ++ location' a)
+      location_1 = next_char location_0
     in
-      case b of
-        [] -> e
-        c : d ->
-          case c of
-            Quote_char -> tokenise' (next_char a) d
-            _ -> e
-  tokenise_single :: Location_1 -> [Char'] -> Err Tokens
+      case file_0 of
+        [] -> end_tokens location_0
+        char : file_1 ->
+          case char of
+            Delimiter_char delimiter ->
+              add_token location_0 (delimiter_to_token delimiter) <$> tokenise' location_1 file_1
+            Int_char digit ->
+              case (digit, file_1) of
+                ('0', Int_char _ : _) -> Left (Int_starting_with_zero location_0)
+                _ -> gather_token int_char (Int_token <$> read) location_0 file_0
+            Minus_char ->
+              case file_1 of
+                Int_char digit : _ ->
+                  case digit of
+                    '0' -> Left (Negation_of_int_starting_with_zero location_0)
+                    _ ->
+                      (
+                        add_token location_0 Negate_token <$>
+                        gather_token int_char (Int_token <$> read) location_1 file_1)
+                _ -> tokenise_operator location_0 file_0
+            Name_char _ -> gather_token name_char word_token location_0 file_0
+            Newline_char -> tokenise' (next_line location_0) file_1
+            Operator_char _ -> tokenise_operator location_0 file_0
+            Quote_char ->
+              (\(char', tokens) -> add_token location_0 (Char_token char') tokens) <$> tokenise_char location_1 file_1
+            Slash_char -> tokenise_operator location_0 file_0
+            Space_char -> tokenise' location_1 file_1
+            Tick_char -> tokenise_single location_1 file_1
+            Tilde_char ->
+              case file_1 of
+                Slash_char : file_2 -> tokenise_multiline 1 (next_char location_1) file_2
+                _ -> tokenise_operator location_0 file_0
+  tokenise_char :: Location_0 -> [Char'] -> Err (Char, Tokens)
+  tokenise_char location file_0 =
+    case file_0 of
+      [] -> Left Missing_char_and_end_quote
+      char : file_1 ->
+        case char'_to_char char of
+          '\n' -> Left (Newline_inside_quotes location)
+          char' -> (,) char' <$> tokenise_quote (next_char location) file_1
+  tokenise_multiline :: Integer -> Location_0 -> [Char'] -> Err Tokens
+  tokenise_multiline depth location_0 file_0 =
+    let
+      location_1 = next_char location_0
+    in
+      case file_0 of
+        [] -> Left Missing_end_comment
+        char : file_1 ->
+          case char of
+            Newline_char -> tokenise_multiline depth (next_line location_0) file_1
+            Slash_char -> tokenise_slash depth location_1 file_1
+            Tilde_char -> tokenise_tilde depth location_1 file_1
+            _ -> tokenise_multiline depth location_1 file_1
+  tokenise_operator :: Location_0 -> [Char'] -> Err Tokens
+  tokenise_operator location = gather_token operator_char Operator_token location
+  tokenise_quote :: Location_0 -> [Char'] -> Err Tokens
+  tokenise_quote a b =
+    case b of
+      Quote_char : d -> tokenise' (next_char a) d
+      _ -> Left Missing_end_quote
+  tokenise_single :: Location_0 -> [Char'] -> Err Tokens
   tokenise_single a b =
     case b of
       [] -> end_tokens a
       c : d ->
-        (case c of
-          Newline_char -> tokenise' (next_line a)
-          _ -> tokenise_single (next_char a))
-            d
-  tokenise_slash :: Integer -> Location_1 -> [Char'] -> Err Tokens
-  tokenise_slash a b c =
+        case c of
+          Newline_char -> tokenise' (next_line a) d
+          _ -> tokenise_single (next_char a) d
+  tokenise_slash :: Integer -> Location_0 -> [Char'] -> Err Tokens
+  tokenise_slash depth e c =
     case c of
       Tilde_char : d ->
-        (case a of
-          1 -> tokenise'
-          _ -> tokenise_multiline (a - 1))
-            (next_char b)
+        (case depth of
+          1 -> tokenise' (next_char e)
+          _ -> tokenise_multiline (depth - 1) (next_char e))
             d
-      _ -> tokenise_multiline a b c
-  char'_to_char :: Char' -> Char
-  char'_to_char a =
-    case a of
-      Delimiter_char b ->
-        case b of
-          Comma_delimiter -> ','
-          Left_curly_delimiter -> '{'
-          Left_round_delimiter -> '('
-          Left_square_delimiter -> '['
-          Right_curly_delimiter -> '}'
-          Right_round_delimiter -> ')'
-          Right_square_delimiter -> ']'
-      Exclamation_char -> '!'
-      Int_char b -> b
-      Minus_char -> '-'
-      Name_char b -> b
-      Newline_char -> '\n'
-      Operator_char b -> b
-      Quote_char -> '"'
-      Slash_char -> '/'
-      Space_char -> ' '
-      Tick_char -> '`'
-      Tilde_char -> '~'
+      _ -> tokenise_multiline depth e c
+  tokenise_tilde :: Integer -> Location_0 -> [Char'] -> Err Tokens
+  tokenise_tilde depth b file_0 =
+    case file_0 of
+      Slash_char : file_1 -> tokenise_multiline (depth + 1) (next_char b) file_1
+      _ -> tokenise_multiline depth b file_0
   word_token :: String -> Token_0
-  word_token a =
-    case a of
+  word_token word =
+    case word of
       "_" -> Blank_token
       "Algebraic" -> Algebraic_token
       "Branch" -> Branch_token
-      "Branching" -> Branching_token
       "Check" -> Check_token
       "Class" -> Class_token
+      "Data" -> Data_token
       "Def" -> Def_token
       "Eval" -> Eval_token
-      "Expr" -> Expr_token
-      "Hidden" -> Hidden_token
       "In" -> In_token
       "Instance" -> Instance_token
       "Let" -> Let_token
       "Load" -> Load_token
       "Match" -> Match_token
       "Newline" -> Char_token '\n'
-      "Operator" -> Opdecl_token
-      -- "Restricted" -> Restricted_token
       "Struct" -> Struct_token
       "Syntax" -> Syntax_token
+      "Term" -> Term_token
+      "Type" -> Type_token
       "case" -> Case_token
       "of" -> Of_token
-      _ -> Name_token a
+      _ -> Name_token word
 --------------------------------------------------------------------------------------------------------------------------------

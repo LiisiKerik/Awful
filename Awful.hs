@@ -11,19 +11,27 @@ module Main where
   import Tokenise
   import Tree
   import Typing
-  type Files = Map' (File, Map' Syntax_type, Map' Op)
+  type Files = Map' (File, Map' ([String], Syntax_type'), (Map' Op, Map' Op))
   check ::
     (
       [String] ->
-      (Files, (Set String, Locations, Locations, Map' (Map' Location')), Map' Expr_2, (Locations, Map' Syntax_3)) ->
+      (
+        Files,
+        (Set String, (Locations, Locations, Locations), (Locations, Locations), Map' (Map' Location')),
+        Map' Expr_2,
+        (Locations, Map' Syntax_3)) ->
       Location_1 ->
       String ->
       IO
         (Err
           (
-            (Files, (Set String, Locations, Locations, Map' (Map' Location')), Map' Expr_2, (Locations, Map' Syntax_3)),
-            (File, Map' Syntax_type, Map' Op))))
-  check b m' @ (f, _, _, _) j name_qc =
+            (
+              Files,
+              (Set String, (Locations, Locations, Locations), (Locations, Locations), Map' (Map' Location')),
+              Map' Expr_2,
+              (Locations, Map' Syntax_3)),
+            (File, Map' ([String], Syntax_type'), (Map' Op, Map' Op)))))
+  check b m' @ (f, _, _, _) (Location_1 j7 j) name_qc =
     case Data.Map.lookup name_qc f of
       Just a -> return (Right (m', a))
       Nothing ->
@@ -35,7 +43,7 @@ module Main where
               case find_file of
                 Just file -> do
                   a <- readFile file
-                  case parse_tree (Location_1 name_qc) a of
+                  case parse_tree name_qc a of
                     Left c -> return (Left c)
                     Right (Tree_1 c d) -> do
                       g <- check_imports name_qc (name_qc : b) (m', init_type_context) c Data.Map.empty
@@ -46,7 +54,7 @@ module Main where
                             (
                               (\(k, n, o, o1) -> ((Data.Map.insert name_qc n h, k, o, o1), n)) <$>
                               standard_naming_typing name_qc d (i, m, l, l5)))
-                Nothing -> err ("Failed to find file " ++ name_qc ++ " requested" ++ location' j)
+                Nothing -> err ("Failed to find file " ++ name_qc ++ " requested" ++ location' j7 j)
   check' :: String -> [String] -> Maybe [String]
   check' a b =
     case b of
@@ -57,15 +65,23 @@ module Main where
       String ->
       [String] ->
       (
-        (Files, (Set String, Locations, Locations, Map' (Map' Location')), Map' Expr_2, (Locations, Map' Syntax_3)),
-        (File, Map' Syntax_type, Map' Op)) ->
+        (
+          Files,
+          (Set String, (Locations, Locations, Locations), (Locations, Locations), Map' (Map' Location')),
+          Map' Expr_2,
+          (Locations, Map' Syntax_3)),
+        (File, Map' ([String], Syntax_type'), (Map' Op, Map' Op))) ->
       [Name] ->
       Map' Location_0 ->
       IO
         (Err
           (
-            (Files, (Set String, Locations, Locations, Map' (Map' Location')), Map' Expr_2, (Locations, Map' Syntax_3)),
-            (File, Map' Syntax_type, Map' Op))))
+            (
+              Files,
+              (Set String, (Locations, Locations, Locations), (Locations, Locations), Map' (Map' Location')),
+              Map' Expr_2,
+              (Locations, Map' Syntax_3)),
+            (File, Map' ([String], Syntax_type'), (Map' Op, Map' Op)))))
   check_imports j a b @ (f, k) c h =
     case c of
       [] -> return (Right b)
@@ -111,16 +127,21 @@ module Main where
     return
       (
         c >>=
-        \((_, (e, t, _, _), f, (_, u1)), (File j g h i _ _ m _, u0, u)) ->
+        \((_, (e, (_, _, t), _, _), f, (_, u1)), (File j g h i _ _ m _, u0, (_, u))) ->
           tokenise_parse_naming_typing_eval (e, t) j (g, h, i) f b m (u0, u1, u))
-  init' :: (Files, (Set String, Locations, Locations, Map' (Map' Location')), Map' Expr_2, (Locations, Map' Syntax_3))
+  init' ::
+    (
+      Files,
+      (Set String, (Locations, Locations, Locations), (Locations, Locations), Map' (Map' Location')),
+      Map' Expr_2,
+      (Locations, Map' Syntax_3))
   init' =
     (
       Data.Map.empty,
       (
-        Data.Set.fromList ["Construct_List", "EQ", "Empty_List", "GT", "Left", "LT", "Nothing", "Pair", "Right", "Wrap"],
-        locations,
-        Data.Map.empty,
+        Data.Set.fromList (algebraics' >>= \(_, Alg' _ _ a) -> fst <$> a),
+        (locations_0, locations_1, locations_2),
+        (Data.Map.empty, Data.Map.empty),
         Data.Map.fromList
           [
             ("Field", Data.Map.fromList [("Modular", Language)]),

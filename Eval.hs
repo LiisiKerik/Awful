@@ -17,7 +17,7 @@ module Eval where
         case c of
           0 -> Nothing
           _ -> (\d -> div (a * d + b) c) <$> div_finite c (mod (- b) c) (mod a c)
-  do_check :: (Location_0 -> Location_1, Map' Expr_2) -> Chck' -> Err ()
+  do_check :: (String, Map' Expr_2) -> Chck' -> Err ()
   do_check (f, y) (Chck' (Name l a) (b, c) d) =
     (
       traverse
@@ -26,23 +26,23 @@ module Eval where
             (
               "Constructor " ++
               a ++
-              location (f l) ++
+              location f l ++
               " is restricted and should be applied only to primitives and fully applied constructors."),
             y))
         d >>=
       \e ->
         case length e == length b of
-          False -> Left ("Constructor " ++ a ++ location (f l) ++ " is restricted and should be fully applied.")
+          False -> Left ("Constructor " ++ a ++ location f l ++ " is restricted and should be fully applied.")
           True ->
             case eval' y (Prelude.foldl (\m -> \(n, o) -> subst_expr n m o) c (zip b e)) of
-              Nothing -> Left ("Static argument check for constructor " ++ a ++ location (f l) ++ " resulted in Crash.")
+              Nothing -> Left ("Static argument check for constructor " ++ a ++ location f l ++ " resulted in Crash.")
               Just k ->
                 case k of
                   Algebraic_expression_2 "False" [] ->
-                    Left ("Failed static argument check for constructor " ++ a ++ location' (f l))
+                    Left ("Failed static argument check for constructor " ++ a ++ location' f l)
                   Algebraic_expression_2 "True" [] -> Right ()
                   _ -> undefined)
-  do_checks :: (Location_0 -> Location_1, Map' Expr_2) -> [Chck'] -> Err ()
+  do_checks :: (String, Map' Expr_2) -> [Chck'] -> Err ()
   do_checks f a = traverse_ (do_check f) a
   eval :: Map' Expr_2 -> Expression_2 -> String
   eval a b =
@@ -315,14 +315,14 @@ module Eval where
       String ->
       Tree_0 ->
       (
-        (Set String, Locations, Locations, Map' (Map' Location')),
-        (File, Map' Syntax_type, Map' Op),
+        (Set String, (Locations, Locations, Locations), (Locations, Locations), Map' (Map' Location')),
+        (File, Map' ([String], Syntax_type'), (Map' Op, Map' Op)),
         Map' Expr_2,
         (Locations, Map' Syntax_3)) ->
       Err
         (
-          (Set String, Locations, Locations, Map' (Map' Location')),
-          (File, Map' Syntax_type, Map' Op),
+          (Set String, (Locations, Locations, Locations), (Locations, Locations), Map' (Map' Location')),
+          (File, Map' ([String], Syntax_type'), (Map' Op, Map' Op)),
           Map' Expr_2,
           (Locations, Map' Syntax_3)))
   standard_naming_typing f a ((b, b2, b3, b4), (c, t, u), g, (g0, g')) =
@@ -332,7 +332,7 @@ module Eval where
         (
           naming f n' (b2, b3, b4) >>=
           \((d0, d1, d2), e) ->
-            typing f e (c, g) >>= \(h, i, j) -> ((t2, d0, d1, d2), (h, v1, v3), i, (v0, v2)) <$ do_checks (Location_1 f, i) j))
+            typing f e (c, g) >>= \(h, i, j) -> ((t2, d0, d1, d2), (h, v1, v3), i, (v0, v2)) <$ do_checks (f, i) j))
   subst_expr :: String -> Expression_2 -> Expression_2 -> Expression_2
   subst_expr a b c =
     let
@@ -374,21 +374,22 @@ module Eval where
       [] -> b
       (c, d) : e -> subst_pats e (subst_pat' c d b)
   tokenise_parse_naming_typing_eval ::
-    (Set String, Locations) ->
-    Map' Kind_0 ->
-    (Map' Alg, Map' Constructor, Map' Type_2) ->
-    Map' Expr_2 ->
-    Expression_0 ->
-    Map' (Map' [[String]]) ->
-    (Map' Syntax_type, Map' Syntax_3, Map' Op) ->
-    Err String
+    (
+      (Set String, Locations) ->
+      Map' Kind_0 ->
+      (Map' Alg, Map' Constructor, Map' Type_2) ->
+      Map' Expr_2 ->
+      Expression_0 ->
+      Map' (Map' [[String]]) ->
+      (Map' ([String], Syntax_type'), Map' Syntax_3, Map' Op) ->
+      Err String)
   tokenise_parse_naming_typing_eval (c0, c) f (g, h, i) l e u (q0, q1, q2) =
     (
-      std_expr (Location_1 "input") "input" (c0, q0, q1, q2) e >>=
+      std_expr Nothing (c0, q0, q1, q2) e >>=
       \e' ->
         (
           naming_expression "input" e' c >>=
-          \j -> type_expr' (f, g, h, i) j u >>= \(x, y) -> eval l x <$ do_checks (Location_1 "input", l) y))
+          \j -> type_expr' (f, g, h, i) j u >>= \(x, y) -> eval l x <$ do_checks ("input", l) y))
   tostr :: Expression_2 -> String
   tostr x =
     case x of

@@ -1,173 +1,249 @@
 ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
-Syntax !List :: [Expr] -> Expr = !foldr Construct_List Empty_List
-Syntax !foldr(!f :: Expr, !x :: Expr, !y :: [Expr]) :: Expr = case !y of {[] -> !x, !z : !a -> !f !z (!foldr !f !x !a)}
-Algebraic Logical{False, True}
-Class Applicative{F : Star -> Star}<Functor>(Compose[T : Star, U : Star] : F (T -> U) -> F T -> F U, Lift[T : Star] : T -> F T)
-Class Braided{F : Star -> Star -> Star}(
-  Apply'[T : Star, U : Star, V : Star, W : Star] : (T -> U) -> (V -> W) -> F T V -> F U W,
-  Associate_left[T : Star, U : Star, V : Star] : F T (F U V) -> F (F T U) V,
-  Associate_right[T : Star, U : Star, V : Star] : F (F T U) V -> F T (F U V),
-  Commute[T : Star, U : Star] : F T U -> F U T)
-Class Finite{T : Star}<Ord>(All : List T)
-Class Foldable{F : Star -> Star}(
-  Fold_left[T : Star, U : Star] : (T -> U -> T) -> T -> F U -> T,
-  Fold_right[T : Star, U : Star] : (T -> U -> U) -> U -> F T -> U)
-Class Functor{F : Star -> Star}(Apply[T : Star, U : Star] : (T -> U) -> F T -> F U)
-Class Monad{F : Star -> Star}<Applicative>(Bind[T : Star, U : Star] : F T -> (T -> F U) -> F U)
+Type * Pair 0 Right
+Type + Either 1 Right
+Type -> Arrow 2 Right
 Operator ! Compose 5 Left
-Operator & Pair 6 Right
-Operator % Mod 0 Left
-Operator * Multiply 0 Left
-Operator + Add 1 Left
-Operator - Minus 1 Left
+Operator !! Merge 5 Right
+Operator !- Compose_discard_right 5 Right
 Operator . Apply 5 Left
-Operator .. Apply' 5 Right
-Operator ... Write' 5 Left
-Operator / Div_right 0 Left
-Operator /\ Max 3 Left
-Operator /-\ Nand 3 Left
-Operator : Construct_List 7 Right
-Operator < Less 2 Left
-Operator <= Less_or_equal 2 Left
-Operator =/ Not_equal 2 Left
-Operator == Equal 2 Left
-Operator =?= Compare 2 Left
-Operator > Greater 2 Left
-Operator >= Greater_or_equal 2 Left
-Operator \ Div_left 0 Left
-Operator \/ Min 4 Left
-Operator \-/ Nor 4 Left
-Operator | Div 0 Left
-Operator ~ Bind 5 Right
-Def All_Modular[N : Nat]<Nonzero N>(x : Modular N) : List (Modular N) =
-  Let y = x + Id In Construct_List x (Match Is_Zero y {False -> All_Modular y, True -> Empty_List})
-Instance Applicative{Either _}(Compose x y = Match x {Left z -> Left z, Right f -> f . y}, Lift = Right)
-Instance Applicative{Function _}(Compose f g x = f x (g x), Lift x _ = x)
-Instance Applicative{List}(
-  Compose x y = Match x {Empty_List -> Empty_List, Construct_List f z -> Cat (f . y) (z ! y)},
-  Lift x = !List ![x])
-Instance Applicative{Maybe}(Compose x y = Match x {Nothing -> Nothing, Wrap f -> f . y}, Lift = Wrap)
-Def Apply_left[T : Star, U : Star, F : Star -> Star -> Star, V : Star]<Braided F>(f : T -> U) : F T V -> F U V = f .. Identity
-Def Apply_right[T : Star, U : Star, F : Star -> Star -> Star, V : Star]<Braided F> : (T -> U) -> F V T -> F V U =
-  Apply' Identity
-Def Brackets[T : Star]<Writeable T>(x : Int, y : T) : List Char =
-  Let Pair z a = Write_brackets y In Match x =?= a {LT -> Cat (Lift "(") (Cat z (Lift ")")), _ -> z}
-Instance Braided{Either}(
-  Apply' f g x = Match x {Left y -> Left (f y), Right y -> Right (g y)},
-  Associate_left x = Match x {Left y -> Left (Left y), Right y -> Match y {Left z -> Left (Right z), Right z -> Right z}},
-  Associate_right x = Match x {Left y -> Match y {Left z -> Left z, Right z -> Right (Left z)}, Right y -> Right (Right y)},
-  Commute x = Match x {Left y -> Right y, Right y -> Left y})
-Instance Braided{Pair}(
-  Apply' f g (Pair x y) = Pair (f x) (g y),
-  Associate_left (Pair x (Pair y z)) = Pair (Pair x y) z,
-  Associate_right (Pair (Pair x y) z) = Pair x (Pair y z),
-  Commute (Pair x y) = Pair y x)
-Def Cat[T : Star](x : List T, y : List T) : List T = Match x {Empty_List -> y, Construct_List z a -> Construct_List z (Cat a y)}
-Def Convert'[F : Star -> Star, T : Star]<Applicative F, Ring T>(x : Int) : F T = Lift (Convert x)
-Def Div_left[T : Star]<Field T>(x : T, y : T) : Maybe T = (z -> z * y) . Inverse x
-Def Div_right[T : Star]<Field T>(x : T, y : T) : Maybe T = Multiply x . Inverse y
-Def Equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> True, _ -> False}
-Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, _ -> Nothing})
-Instance Field{Logical}(Inverse x = Match x {False -> Nothing, True -> Wrap True})
-Instance Field{Pair T U}<Field T, Field U>(Inverse (Pair x y) = Zip Pair (Inverse x) (Inverse y))
-Instance Finite{Comparison}(All = !List ![LT,  EQ,  GT])
-Instance Finite{Either T U}<Finite T, Finite U>(All = Cat (Left . All) (Right . All))
-Instance Finite{Logical}(All = !List ![False, True])
-Instance Finite{Maybe T}<Finite T>(All = Construct_List Nothing (Wrap . All))
-Instance Finite{Modular N}(All = Branch N {Zero -> Empty_List, Next N' -> All_Modular Zr})
-Instance Finite{Pair T U}<Finite T, Finite U>(All = Zip Pair All All)
-Def Flatten[F : Star -> Star, T : Star]<Monad F>(x : F (F T)) : F T = Bind x Identity
-Instance Foldable{List}(
-  Fold_left f x y = Match y {Empty_List -> x, Construct_List z a -> Fold_left f (f x z) a},
-  Fold_right f x y = Match y {Empty_List -> x, Construct_List z a -> f z (Fold_right f x a)})
-Instance Foldable{Maybe}(
-  Fold_left f x y = Match y {Nothing -> x, Wrap z -> f x z},
+Operator .!. Write_application_1 0 Left
+Operator .- Apply_discard 5 Left
+Operator .. Apply_2 5 Right
+Operator ... Write_application_0 0 Left
+Operator .> Apply_right 5 Left
+Operator & Pair 9 Right
+Operator * Times 2 Left
+Operator + Add 3 Left
+Operator -! Compose_discard_left 5 Left
+Operator /\ And 6 Right
+Operator : Construct_List 4 Right
+Operator :+ Cat 4 Right
+Operator <. Apply_left 5 Left
+Operator ? Fold_Logical 5 Right
+Operator ?? Fold_Either 5 Right
+Operator \/ Or 7 Right
+Syntax $List :: [Expr] -> Expr = $foldr Construct_List Empty_List
+Syntax $foldr ($f :: Expr, $x :: Expr, $y :: [Expr]) :: Expr = case $y of {[] -> $x, $z : $a -> $f $z ($foldr $f $x $a)}
+Syntax $map {$t, $u} ($f :: $t -> $u, $x :: [$t]) :: [$u] = case $x of {[] -> [] {$u}, $y : $z -> $f $y : $map {$t, $u} $f $z}
+Data Either [T : Star, U : Star] = Algebraic {Left T, Right U}
+Data Logical = Algebraic {False, True}
+Data Pair [T : Star, U : Star] = Struct Pair (First : T, Second : U)
+Data Unit = Struct Unit
+Class Applicative {F : Star -> Star} <Functor F> (
+  Compose [T : Star, U : Star] : F (T -> U) -> F T -> F U,
+  Lift [T : Star] : T -> F T)
+Class Braid {F : Star -> Star -> Star} (
+  Apply_2 [T : Star, U : Star, V : Star, W : Star] : (T -> U) -> (V -> W) -> F T V -> F U W,
+  Associate_right [T : Star, U : Star, V : Star] : F (F T U) V -> F T (F U V),
+  Commute [T : Star, U : Star] : F T U -> F U T)
+Class Comp_lattice {T : Star} <Max_lattice T, Min_lattice T> (Not : T -> T)
+Class Container {F : Star -> Star} (
+  Contains [T : Star] <Ord T> : T -> F T -> Logical,
+  Empty [T : Star] : F T,
+  Filter [T : Star] : (T -> Logical) -> F T -> F T,
+  Size [T : Star] : F T -> Int)
+Class Finite {T : Star} <Ord T> (All : List T)
+Class Functor {F : Star -> Star} (Apply [T : Star, U : Star] : (T -> U) -> F T -> F U)
+Class Lattice {T : Star} (And : T -> T -> T, Or : T -> T -> T)
+Class Max_lattice {T : Star} <Lattice T> (Max : T)
+Class Min_lattice {T : Star} <Lattice T> (Min : T)
+Class Monad {F : Star -> Star} <Applicative F> (Flatten [T : Star] : F (F T) -> F T)
+Class Sequence {F : Star -> Star} <Functor F> (
+  Flip [G : Star -> Star, T : Star] <Applicative G> : F (G T) -> G (F T),
+  Fold_right [T : Star, U : Star] : (T -> U -> U) -> U -> F T -> U)
+Def And_all [F : Star -> Star, T : Star] <Max_lattice T, Sequence F> : F T -> T = Fold_right And Max
+Def Add_Applicative [F : Star -> Star, T : Star] <Applicative F, Ring T> : F T -> F T -> F T = Zip Add
+Def Add_all [F : Star -> Star, T : Star] <Ring T, Sequence F> : F T -> T = Fold_right Add Zr
+Def All_Modular [N : Nat] <Nonzero N> (x : Modular N) : List (Modular N) =
+  x : (Match Equal Max x {False -> All_Modular (Id + x), True -> Empty_List})
+Instance Applicative {Arrow _} ((f ! g) x = f x (g x), Lift x _ = x)
+Instance Applicative {Either _} (x ! y = Match x {Left z -> Left z, Right f -> f . y}, Lift = Right)
+Instance Applicative {List} (x ! y = Fold_List Empty_List (f -> Cat (f . y)) x, Lift x = $List [x])
+Instance Applicative {Maybe} (x ! y = Fold_Maybe Nothing (f -> f . y) x, Lift = Wrap)
+Def Apply_discard [T : Star, F : Star -> Star, U : Star] <Functor F> (x : T, y : F U) : F T = Lift x . y
+Def Apply_left [T : Star, U : Star, F : Star -> Star -> Star, V : Star] <Braid F> (f : T -> U) : F T V -> F U V = f .. Identity
+Def Apply_right [T : Star, U : Star, F : Star -> Star -> Star, V : Star] <Braid F> (f : T -> U) : F V T -> F V U = Identity .. f
+Def Associate_left [F : Star -> Star -> Star, T : Star, U : Star, V : Star] <Braid F> (x : F T (F U V)) : F (F T U) V =
+  Commute <. Commute (Associate_right (Commute <. Commute x))
+Def Bind [T : Star, F : Star -> Star, U : Star] <Monad F> (f : T -> F U, x : F T) : F U = Flatten (f . x)
+Def Brackets [T : Star] <Writeable T> (p : Int, a : Associativity, b : Associativity, x : T) : List Char =
+  Let
+    Op y q c = Write_brackets x,
+    z = Lift "(" :+ y :+ Lift ")"
+  In
+    Match Compare p q {LT -> z, EQ -> (z ? y) (Equal a b /\ Equal a c), GT -> y}
+Instance Braid {Either} (
+  f .. g = Left . f ?? Right . g,
+  Associate_right = (Left ?? (Right . Left)) ?? (Right . Right),
+  Commute = Right ?? Left)
+Instance Braid {Pair} (
+  f .. g = f . First !! g . Second,
+  Associate_right = (First . First) !! (Second . First) !! Second,
+  Commute = Second !! First)
+Def Cat [T : Star] (x : List T, y : List T) : List T = Fold_List y Construct_List x
+Def Check [T : Star] (x : Logical, y : T) : T = (Crash ? y) x
+Instance Comp_lattice {_ -> T} <Comp_lattice T> (Not = Apply Not)
+Instance Comp_lattice {Logical} (Not x = Match x {False -> True, True -> False})
+Instance Comp_lattice {Modular N} <Nonzero N> (Not x = Max + Negate x)
+Instance Comp_lattice {T * U} <Comp_lattice T, Comp_lattice U> (Not = Not .. Not)
+Instance Comp_lattice {Unit} (Not = Identity)
+Def Compose_discard_left [F : Star -> Star, T : Star, U : Star] <Applicative F> (x : F T, y : F U) : F U = Identity .- x ! y
+Def Compose_discard_right [F : Star -> Star, T : Star, U : Star] <Applicative F> : F T -> F U -> F T = Zip Lift
+Instance Container {List} (
+  Contains x = Fold_List False (y -> Or (Equal x y)),
+  Empty = Empty_List,
+  Filter f = Fold_List Empty_List (x -> Match f x {False -> Identity, True -> Construct_List x}),
+  Size = Fold_List 0 (Lift (Add 1)))
+Instance Container {Maybe} (
+  Contains x = Fold_Maybe False (Equal x),
+  Empty = Nothing,
+  Filter f = Fold_Maybe Nothing (x -> Match f x {False -> Nothing, True -> Wrap x}),
+  Size = Fold_Maybe 0 (Lift 1))
+Def Convert_Applicative[F : Star -> Star, T : Star]<Applicative F, Ring T>(x : Int) : F T = Lift (Convert x)
+Def Div_left [T : Star] <Field T> (x : T, y : T) : Maybe T = (z -> z * y) . Inverse x
+Def Div_right [T : Star] <Field T> (x : T, y : T) : Maybe T = Times x . Inverse y
+Def Equal [T : Star] <Ord T> (x : T, y : T) : Logical = Match Compare x y {EQ -> True, _ -> False}
+Instance Field {Int} (Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, _ -> Nothing})
+Instance Field {Logical} (Inverse = Nothing ? Wrap True)
+Instance Field {T * U} <Field T, Field U> (Inverse (x & y) = Merge (Inverse x) (Inverse y))
+Instance Field {Unit} (Inverse = Wrap)
+Instance Finite {Associativity} (All = $List [Lft, Rght])
+Instance Finite {T + U} <Finite T, Finite U> (All = (Left . All) :+ (Right . All))
+Instance Finite {Logical} (All = $List [False, True])
+Instance Finite {Maybe T} <Finite T> (All = Nothing : (Wrap . All))
+Instance Finite {Modular N} (All = Branch N {Zero -> Empty_List, Next _ -> All_Modular Zr})
+Instance Finite {Ordering} (All = $List [LT,  EQ,  GT])
+Instance Finite {T * U} <Finite T, Finite U> (All = Merge All All)
+Instance Finite {Unit} (All = Lift Unit)
+Def Fold_Either [T : Star, U : Star, V : Star] (f : T -> U, g : V -> U, x : T + V) : U = Match x {Left y -> f y, Right y -> g y}
+Def Fold_List [T : Star, U : Star] (x : T, f : U -> T -> T, y : List U) : T =
+  Match y {Empty_List -> x, z : a -> f z (Fold_List x f a)}
+Def Fold_Logical [T : Star] (x : T, y : T, z : Logical) : T = Match z {False -> x, True -> y}
+Def Fold_Maybe [T : Star, U : Star] (x : T, f : U -> T, y : Maybe U) : T = Match y {Nothing -> x, Wrap z -> f z}
+Def Fold_Pair [T : Star, U : Star, V : Star] (f : T -> U -> V, x & y : T * U) : V = f x y
+Def Fold_Unit [T : Star] : T -> Unit -> T = Lift
+Instance Functor {Arrow _} ((f . g) x = f (g x))
+Instance Functor {Either _} (Apply = Apply_right)
+Instance Functor {List} (Apply f = Fold_List Empty_List (Construct_List . f))
+Instance Functor {Maybe} (Apply f = Fold_Maybe Nothing (Wrap . f))
+Instance Functor {Pair _} (Apply = Apply_right)
+Def Greater [T : Star] <Ord T> (x : T, y : T) : Logical = Match Compare x y {GT -> True, _ -> False}
+Def Greater_or_equal [T : Star] <Ord T> (x : T, y : T) : Logical = Match Compare x y {LT -> False, _ -> True}
+Def Id [T : Star] <Ring T> : T = Convert 1
+Def Identity [T : Star] (x : T) : T = x
+Def Interleave [T : Star] (x : List T, y : List (List T)) : List T =
+  Match y {Empty_List -> Empty_List, z : a -> z :+ Bind (Cat x) a}
+Def Is_zero [T : Star] : T -> Logical = Equal Zr
+Instance Lattice {_ -> T} <Lattice T> (And = Zip And, Or = Zip Or)
+Instance Lattice {Logical} (And = Times, Or x = x ? True)
+Instance Lattice {Modular N} (x /\ y = Match Compare x y {LT -> x, _ -> y}, x \/ y = Match Compare x y {LT -> y, _ -> x})
+Instance Lattice {T * U} <Lattice T, Lattice U> ((x & y) /\ (z & a) = x /\ z & y /\ a, (x & y) \/ (z & a) = x \/ z & y \/ a)
+Instance Lattice {Unit} (Unit /\ Unit = Unit, Unit \/ Unit = Unit)
+Def Less [T : Star] <Ord T> (x : T, y : T) : Logical = Match Compare x y {LT -> True, _ -> False}
+Def Less_or_equal [T : Star] <Ord T> (x : T, y : T) : Logical = Match Compare x y {GT -> False, _ -> True}
+Def List [F : Star -> Star, T : Star] <Sequence F> : F T -> List T = Fold_right Construct_List Empty_List
+Instance Max_lattice {_ -> T} <Max_lattice T> (Max = Lift Max)
+Instance Max_lattice {Logical} (Max = True)
+Instance Max_lattice {Modular N} <Nonzero N> (Max = Convert -1)
+Instance Max_lattice {T * U} <Max_lattice T, Max_lattice U> (Max = Max & Max)
+Instance Max_lattice {Unit} (Max = Unit)
+Def Merge [F : Star -> Star, T : Star, U : Star] <Applicative F> : F T -> F U -> F (T * U) = Zip Pair
+Instance Min_lattice {_ -> T} <Min_lattice T> (Min = Lift Min)
+Instance Min_lattice {Logical} (Min = False)
+Instance Min_lattice {Modular N} <Nonzero N> (Min = Zr)
+Instance Min_lattice {T * U} <Min_lattice T, Min_lattice U> (Min = Min & Min)
+Instance Min_lattice {Unit} (Min = Unit)
+Instance Monad {Arrow _} (Flatten f x = f x x)
+Instance Monad {Either _} (Flatten = Left ?? Identity)
+Instance Monad {List} (Flatten = Fold_List Empty_List Cat)
+Instance Monad {Maybe} (Flatten = Fold_Maybe Nothing Identity)
+Def Negate [T : Star] <Ring T> : T -> T = Times (Convert -1)
+Def Not_equal [T : Star] <Ord T> (x : T, y : T) : Logical = Not (Equal x y)
+Def Not_zero [T : Star] <Ord T, Ring T> : T -> Logical = Not_equal Zr
+Def Or_all [F : Star -> Star, T : Star] <Sequence F, Min_lattice T> : F T -> T = Fold_right Or Min
+Instance Ord {Associativity} (Compare a b = Compare (Transf_Associativity a) (Transf_Associativity b))
+Instance Ord {T + U} <Ord T, Ord U> (
+  Compare x y =
+    Match x & y {
+      Left z & Left a -> Compare z a,
+      Left _ & Right _ -> LT,
+      Right _ & Left _ -> GT,
+      Right z & Right a -> Compare z a})
+Instance Ord {List T} <Ord T> (Compare x y = Compare (Transf_List x) (Transf_List y))
+Instance Ord {Logical} (Compare x y = Compare (Transf_Logical x) (Transf_Logical y))
+Instance Ord {Maybe T} <Ord T> (Compare x y = Compare (Transf_Maybe x) (Transf_Maybe y))
+Instance Ord {Op} (Compare o p = Compare (Transf_Op o) (Transf_Op p))
+Instance Ord {Ordering} (Compare o p = Compare (Transf_Ordering o) (Transf_Ordering p))
+Instance Ord {T * U} <Ord T, Ord U> (Compare (x & y) (z & a) = Match Compare x z {LT -> LT, EQ -> Compare y a, GT -> GT})
+Instance Ord {Unit} (Compare Unit Unit = EQ)
+Instance Ring {_ -> T} <Ring T> (Add = Add_Applicative, Convert = Convert_Applicative, Times = Times_Applicative)
+Instance Ring {Logical} (
+  Add = Not_equal,
+  Convert x = Match Convert x {0 # 2 -> False, 1 # 2 -> True},
+  Times = Fold_Logical False)
+Instance Ring {T * U} <Ring T, Ring U> (
+  (x & y) + (z & a) = x + z & y + a,
+  Convert x = Convert x & Convert x,
+  (x & y) * (z & a) = x * z & y * a)
+Instance Ring {Unit} (Unit + Unit = Unit, Convert _ = Unit, Unit * Unit = Unit)
+Instance Sequence {Either _} (Flip = (Lift . Left) ?? Apply Right, Fold_right f x y = Match y {Left _ -> x, Right z -> f z x})
+Instance Sequence {List} (Flip = Fold_List (Lift Empty_List) (Zip Construct_List), Fold_right f x = Fold_List x f)
+Instance Sequence {Maybe} (
+  Flip = Fold_Maybe (Lift Nothing) (Apply Wrap)
   Fold_right f x y = Match y {Nothing -> x, Wrap z -> f z x})
-Instance Functor{Either _}(Apply = Apply_right)
-Instance Functor{Function _}(Apply f g x = f (g x))
-Instance Functor{List}(Apply f x = Match x {Empty_List -> Empty_List, Construct_List y z -> Construct_List (f y) (f . z)})
-Instance Functor{Maybe}(Apply f x = Match x {Nothing -> Nothing, Wrap y -> Wrap (f y)})
-Instance Functor{Pair _}(Apply = Apply_right)
-Def Greater[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> True, _ -> False}
-Def Greater_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> False, _ -> True}
-Def Id[T : Star]<Ring T> : T = Convert 1
-Def Identity[T : Star](x : T) : T = x
-Def Interleave[T : Star](x : List T, y : List (List T)) : List T =
-  Match y {Empty_List -> Empty_List, Construct_List z a -> Cat z (Flatten (Cat x . a))}
-Def Is_Zero[T : Star]<Ord T, Ring T> : T -> Logical = Equal Zr
-Def Less[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> True, _ -> False}
-Def Less_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> False, _ -> True}
-Def Max[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> y, _ -> x}
-Def Min[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> x, _ -> y}
-Def Minus[T : Star]<Ring T>(x : T, y : T) : T = x + Negate y
-Instance Monad{Either _}(Bind x f = Match x {Left y -> Left y, Right y -> f y})
-Instance Monad{Function _}(Bind f g x = g (f x) x)
-Instance Monad{List}(Bind x f = Match x {Empty_List -> Empty_List, Construct_List y z -> Cat (f y) (Bind z f)})
-Instance Monad{Maybe}(Bind x f = Match x {Nothing -> Nothing, Wrap y -> f y})
-Def Multiply'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Multiply
-Def Nand(x : Logical, y : Logical) : Logical = Not (Min x y)
-Def Negate'[F : Star -> Star, T : Star]<Functor F, Ring T> : F T -> F T = Apply Negate
-Def Nor(x : Logical, y : Logical) : Logical = Not (Max x y)
-Def Not(x : Logical) : Logical = Match x {False -> True, True -> False}
-Def Not_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> False, _ -> True}
-Instance Ord{Comparison}(
-  Compare x y =
-    Match x {
-      LT -> Match y {LT -> EQ, _ -> LT},
-      EQ -> Match y {LT -> GT, EQ -> EQ, GT -> LT},
-      GT -> Match y {GT -> EQ, _ -> GT}})
-Instance Ord{Either T U}<Ord T, Ord U>(
-  Compare x y =
-    Match x {
-      Left z -> Match y {Left w -> Compare z w, Right _ -> LT},
-      Right z -> Match y {Left _ -> GT, Right w -> Compare z w}})
-Instance Ord{List T}<Ord T>(
-  Compare x y =
-    Match x {
-      Empty_List -> Match y {Empty_List -> EQ, Construct_List _ _ -> LT},
-      Construct_List z a -> Match y {Empty_List -> GT, Construct_List b c -> Compare (Pair z a) (Pair b c)}})
-Instance Ord{Logical}(
-  Compare x y = Match x {False -> Match y {False -> EQ, True -> LT}, True -> Match y {False -> GT, True -> EQ}})
-Instance Ord{Maybe T}<Ord T>(
-  Compare x y =
-    Match x {Nothing -> Match y {Nothing -> EQ, Wrap _ -> LT}, Wrap z -> Match y {Nothing -> GT, Wrap w -> Compare z w}})
-Instance Ord{Pair T U}<Ord T, Ord U>(
-  Compare (Pair x y) (Pair z a) = Match Compare x z {LT -> LT, EQ -> Compare y a, GT -> GT})
-Instance Ring{Logical}(Add = Not_equal, Convert x = Equal (Convert x) (1 # 2), Multiply = Min, Negate = Identity)
-Instance Ring{Pair T U}<Ring T, Ring U>(
-  Add (Pair x y) (Pair z a) = Pair (x + z) (y + a),
-  Convert x = Pair (Convert x) (Convert x),
-  Multiply (Pair x y) (Pair z a) = Pair (x * z) (y * a),
-  Negate (Pair x y) = Pair (Negate x) (Negate y))
-Def Write[T : Star]<Writeable T>(x : T) : List Char = First (Write_brackets x)
-Def Write'[T : Star]<Writeable T>(x : List Char, y : T) : List Char = Cat x (Cat (Lift " ") (Brackets 0 y))
-Instance Writeable{Char}(
-  Write_brackets c = Pair (Match c {Newline -> !List !["N", "e", "w", "l", "i", "n", "e"], _ -> !List ![""", c, """]}) 0)
-Instance Writeable{Comparison}(
-  Write_brackets x = Pair (Match x {LT -> !List !["L", "T"], EQ -> !List !["E", "Q"], GT -> !List !["G", "T"]}) 0)
-Instance Writeable{Either T U}<Writeable T, Writeable U>(
-  Write_brackets x =
-    Pair
-      (Match x {
-        Left y -> Cat (!List !["L", "e", "f", "t", " "]) (Brackets 0 y),
-        Right y -> Cat (!List !["R", "i", "g", "h", "t", " "]) (Brackets 0 y)})
-      1)
-Instance Writeable{List T}<Writeable T>(
+Instance Sequence {Pair _} (Flip (x & y) = Pair x . y, Fold_right f x (_ & y) = f y x)
+Def Sort [T : Star] <Ord T> (x : List T) : List T = Let y & z = Split_0 x In Merge 
+Def Split [F : Star -> Star, T : Star, U : Star] <Functor F> (f : F (T * U)) : F T * F U = First . f & Second . f
+Def Split_Either [T : Star, U : Star, V : Star] (f : Either T U -> V) : (T -> V) * (U -> V) = f . Left & f . Right
+Def Split_Logical [T : Star] (f : Logical -> T) : T * T = f False & f True
+Def Split_Maybe [T : Star, U : Star] (f : Maybe T -> U) : U * (T -> U) = f Nothing & f . Wrap
+Def Split_Pair [T : Star, U : Star, V : Star] (f : T * U -> V, x : T, y : U) : V = f (x & y)
+Def Split_Unit [T : Star] (f : Unit -> T) : T = f Unit
+Def Times_Applicative [F : Star -> Star, T : Star] <Applicative F, Ring T> : F T -> F T -> F T = Zip Times
+Def Times_all [F : Star -> Star, T : Star] <Sequence F, Ring T> : F T -> T = Fold_right Times Id
+Def To_List [F : Star -> Star, T : Star] <Sequence F> : F T -> List T = Fold_right Construct_List Empty_List
+Def Transf_Associativity (x : Associativity) : Unit + Unit = (Match x {Lft -> Left, Rght -> Right}) Unit
+Def Transf_List [T : Star] (x : List T) : Unit + T * List T = Match x {Empty_List -> Left Unit, y : z -> Right (y & z)}
+Def Transf_Logical (x : Logical) : Unit + Unit = (Left ? Right) x Unit
+Def Transf_Maybe [T : Star] : Maybe T -> Unit + T = Fold_Maybe (Left Unit) Right
+Def Transf_Op (Op x p a : Op) : List Char * Int * Associativity = x & p & a
+Def Transf_Ordering (o : Ordering) : Unit + Unit + Unit = (Match o {LT -> Left, EQ -> Right . Left, GT -> Right . Right}) Unit
+Def Traverse [T : Star, F : Star -> Star, U : Star, G : Star -> Star] <Applicative F, Sequence G> (
+  f : T -> F U,
+  x : G T) : F (G U) =
+    Flip (f . x)
+Def Whitespace : List Char = Lift " "
+Def Write [T : Star] <Writeable T> (x : T) : List Char = Let Op y _ _ = Write_brackets x In y
+Def Write_List [T : Star] <Writeable T> (x : List Char, y : List T) : List Char =
+  x ... Lift "[" :+ Interleave ($List [",", " "]) (Write . y) :+ Lift "]"
+Def Write_application_0 [T : Star] <Writeable T> (x : List Char, y : T) : Op =
+  Op (x :+ Whitespace :+ Brackets 1 Lft Rght y) 1 Lft
+Def Write_application_1 [T : Star] <Writeable T> (Op x _ _ : Op) : T -> Op = Write_application_0 x
+Def Write_name (x : List Char) : Op = Op x 0 Lft
+Def Write_op [T : Star, U : Star] <Writeable T, Writeable U> (Op x p a : Op, y : T, z : U) : Op =
+  Op (Brackets p a Lft y :+ Whitespace :+ x :+ Whitespace :+ Brackets p a Rght z) p a
+Instance Writeable {Associativity} (
+  Write_brackets x = Write_name (Match x {Lft -> $List ["L", "f", "t"], Rght -> $List ["R", "g", "h", "t"]}))
+Instance Writeable {Char} (
+  Write_brackets c = Write_name (Match c {Newline -> $List ["N", "e", "w", "l", "i", "n", "e"], _ -> $List [""", c, """]}))
+Instance Writeable {T + U} <Writeable T, Writeable U> (
+  Write_brackets = Write_application_0 ($List ["L", "e", "f", "t"]) ?? Write_application_0 ($List ["R", "i", "g", "h", "t"]))
+Instance Writeable {List T} <Writeable T> (
   Write_brackets x =
     Match x {
-      Empty_List -> Pair (!List !["E", "m", "p", "t", "y", "_", "L", "i", "s", "t"]) 0,
-      Construct_List y z ->
-        Cat (!List !["!", "L", "i", "s", "t", " ", "!", "["]) (Cat (Interleave (!List ![",", " "]) (Write . x)) (Lift "]")) &
-        1})
-Instance Writeable{Logical}(
-  Write_brackets x = Pair (Match x {False -> !List !["F", "a", "l", "s", "e"], True -> !List !["T", "r", "u", "e"]}) 0)
-Instance Writeable{Maybe T}<Writeable T>(
-  Write_brackets x =
-    Match x {
-      Nothing -> !List !["N", "o", "t", "h", "i", "n", "g"] & 0,
-      Wrap y -> Cat (!List !["W", "r", "a", "p", " "]) (Brackets 0 y) & 1})
-Instance Writeable{Pair T U}<Writeable T, Writeable U>(Write_brackets (Pair x y) =
-  Cat (Brackets 1 x) (Cat (!List ![" ", "&", " "]) (Brackets 2 y)) & 2)
-Def Zip[F : Star -> Star, T : Star, U : Star, V : Star]<Applicative F>(f : T -> U -> V, x : F T) : F U -> F V = Compose (f . x)
-Def Zr[T : Star]<Ring T> : T = Convert 0
+      Empty_List -> Write_name ($List ["E", "m", "p", "t", "y", "_", "L", "i", "s", "t"]),
+      y : Empty_List -> $List ["L", "i", "f", "t"] ... y,
+      _ -> Write_List ($List ["$", "L", "i", "s", "t"]) x})
+Instance Writeable {Logical} (
+  Write_brackets = Write_name . ($List ["F", "a", "l", "s", "e"] ? $List ["T", "r", "u", "e"]))
+Instance Writeable {Maybe T} <Writeable T> (
+  Write_brackets =
+    Fold_Maybe (Write_name ($List ["N", "o", "t", "h", "i", "n", "g"])) (Write_application_0 ($List ["W", "r", "a", "p"])))
+Instance Writeable {Op} (Write_brackets (Op x p a) = $List ["O", "p"] ... x .!. p .!. a)
+Instance Writeable {Ordering} (
+  Write_brackets o = Write_name (Match o {LT -> $List ["L", "T"], EQ -> $List ["E", "Q"], GT -> $List ["G", "T"]}))
+Instance Writeable {T * U} <Writeable T, Writeable U> (Write_brackets = Fold_Pair (Write_op (Op (Lift "&") 9 Rght)))
+Instance Writeable {Unit} (Write_brackets Unit = Write_name ($List ["U", "n", "i", "t"]))
+Def Zip [T : Star, U : Star, V : Star, F : Star -> Star] <Applicative F> (f : T -> U -> V, x : F T, y : F U) : F V = f . x ! y
+Def Zr [T : Star] <Ring T> : T = Convert 0
 ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

@@ -1,109 +1,251 @@
 ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
-Load (Standard.awf)
-Branching Array[T : Star]{Zero -> Empty_Array, Next N -> Construct_Array(Head : T, Tail : Array N T)}
-Struct Complex[T : Star](Real : T, Imaginary : T)
-~/
-Struct Fraction(Num : Int, Den : Int) =
-  Let
-    Pair Sign_Num Num' = Separate Num, Pair Sign_Den Den' = Separate Den, GCD_Num_Den = GCD Num_0 Den_0, 
-  In
-    Fraction () (Div' GCD_Num_Den}
-/~
-Hidden Struct Fraction(Num : Int, Den : Int)
-Hidden Struct Polynomial[T : Star](Coefficients : List T)
-Struct Quaternion[T : Star](Qr : T, Qx : T, Qy : T, Qz : T)
-Branching Square[T : Star]{
-  Zero -> Empty_Square,
-  Next N -> Construct_Square(Fst_Square : T, Top_row_Square : Array N T, Left_column_Square : Array N T, Square' : Square N T)}
-Struct Toeplitz[N : Nat, T : Star](Toeplitz' : Array N T)
-Branching Triangle[T : Star]{
-  Zero -> Empty_Triangle,
-  Next N -> Construct_Triangle(Fst_Triangle : T, Top_row_Triangle : Array N T, Triangle' : Triangle N T)}
-Class Commutative{_ : Star}<Ring>
-Class Mat{F : Nat -> Star -> Star}(
-  Adj[N : Nat, T : Star]<Commutative T> : F N T -> F N T,
-  Adj_Det[N : Nat, T : Star]<Commutative T> : F N T -> F N T * T,
-  Characteristic[N : Nat, T : Star]<Commutative T> : F N T -> Array (Next N) T,
-  Det[N : Nat, T : Star]<Commutative T> : F N T -> T,
-  Matrix_by_vector[N : Nat, T : Star]<Ring T> : F N T -> Array N T -> Array N T,
-  Vector_by_matrix[N : Nat, T : Star]<Ring T> : Array N T -> F N T -> Array N T)
-Operator !+ Add' 1 Left
-Def Add'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Add
-Instance Applicative{Complex}(Compose (Complex f g) (Complex x y) = Complex (f x) (g y), Lift x = Complex x x)
-Instance Applicative{Quaternion}(
-  Compose (Quaternion f g h i) (Quaternion x y z a) = Quaternion (f x) (g y) (h z) (i a),
-  Lift x = Quaternion x x x x)
-Def Array_to_List[N : Nat, T : Star] : Array N T -> List T =
-  Branch N {Zero -> Empty_Array -> Empty_List, Next _ -> Construct_Array x y -> x : Array_to_List y}
-Instance Commutative{Complex T}<Commutative T>
-Instance Commutative{Int}
-Instance Commutative{Logical}
-Instance Commutative{Pair T U}<Commutative T, Commutative U>
-Def Div_left'[F : Star -> Star, T : Star]<Functor F, Field T>(x : T, y : F T) : Maybe (F T) =
-  (z -> Multiply_left z y) . Inverse x
-Def Div_right'[F : Star -> Star, T : Star]<Functor F, Field T>(x : F T, y : T) : Maybe (F T) = Multiply_right x . Inverse y
-Instance Field{Complex T}<Commutative T, Field T>(
-  Inverse (Complex x y) = Div_right' (Complex x (Negate y)) (Sum_squares (!List ![x, y])))
-Instance Field{Quaternion T}<Commutative T, Field T>(
-  Inverse (Quaternion x y z a) =
-    Div_right' (Quaternion x (Negate y) (Negate z) (Negate a)) (Sum_squares (!List ![x, y, z, a])))
-Instance Finite{Array N T}<Finite T>(All = Branch N {Zero -> Lift Empty_Array, Next _ -> Zip Construct_Array All All})
-Instance Functor{Array N}(
-  Apply f = Branch N {Zero -> Empty_Array -> Empty_Array, Next _ -> Construct_Array x y -> Construct_Array (f x) (Apply f y)})
-Instance Functor{Complex}(Apply f (Complex x y) = Complex (f x) (f y))
-Instance Functor{Quaternion}(Apply f (Quaternion x y z a) = Quaternion (f x) (f y) (f z) (f a))
-Def GCD(x : Int, y : Int) : Int = Crash
-Def Multiply_left[T : Star, F : Star -> Star]<Functor F, Ring T>(x : T, y : F T) : F T = Multiply x . y
-Def Multiply_right[F : Star -> Star, T : Star]<Functor F, Ring T>(x : F T, y : T) : F T = (z -> z * y) . x
-Instance Ord{Array N T}<Ord T>(
-  Compare =
-    Branch N {
-      Zero -> Empty_Array -> Empty_Array -> EQ,
-      Next _ -> Construct_Array x y -> Construct_Array z a -> Compare (Pair x y) (Pair z a)})
-Instance Ord{Complex T}<Ord T>(Compare (Complex x y) (Complex z a) = Compare (Pair x y) (Pair z a))
-Instance Ord{Quaternion T}<Ord T>(
-  Compare (Quaternion x y z a) (Quaternion b c d e) = Compare (Pair x (Pair y (Pair z a))) (Pair b (Pair c (Pair d e))))
-Instance Ring{Complex T}<Ring T>(
-  Add = Add',
-  Convert x = Complex (Convert x) Zr,
-  Multiply (Complex x y) (Complex z a) = Complex (Minus (x * z) (y * a)) (x * a + y * z),
-  Negate = Negate')
-Instance Ring{Quaternion T}<Ring T>(
-  Add = Add',
-  Convert x = Quaternion (Convert x) Zr Zr Zr,
-  Multiply (Quaternion x y z a) (Quaternion b c d e) =
-    Quaternion
-      (Minus (Minus (Minus (x * b) (y * c)) (z * d)) (a * e))
-      (Minus (x * c + y * b) (z * e) + a * d)
-      (Minus (x * d + y * e + z * b) (a * c))
-      (Minus (x * e) (y * d) + z * c + a * b),
-  Negate = Negate')
-Def Separate(x : Int) : Int * Int = Match Compare x 0 {LT -> Pair -1 (Negate x), EQ -> Pair 0 0, GT -> Pair 1 x}
-Def Sqr[T : Star]<Ring T>(x : T) : T = x * x
-Def Sum[F : Star -> Star, T : Star]<Foldable F, Ring T> : F T -> T = Fold_right Add Zr
-Def Sum_squares[F : Star -> Star, T : Star]<Foldable F, Functor F, Ring T>(x : F T) : T = Sum (Sqr . x)
-Instance Writeable{Array N T}<Writeable T>(
-  Write_Brackets x = Branch N {
-    Zero -> !List !["E", "m", "p", "t", "y", "_", "A", "r", "r", "a", "y"] & 0,
+Load (Data.awf, Standard.awf)
+Syntax $Array :: [Expr] -> Expr = $foldr Construct_Array Empty_Array
+Syntax $Polynomial ($x :: [Expr]) :: Expr = Polynomial ($List $x)
+Syntax $Square ($x :: [[Expr]]) :: Expr = $Table_to_Square ($Table $x)
+Syntax $Table ($x :: [[Expr]]) :: Expr = $Table ($Array ($map {[Expr], Expr} $Array $x))
+Operator ; Construct_Array 4 Right
+Data Array [N : Star, T : Star] =
+  Branch N {Zero -> Struct Empty_Array, Next N' -> Struct Construct_Array (Head : T, Tail : Array N' T)}
+Data Complex [T : Star] = Struct Complex (Real : T, Imaginary : T)
+Struct Fraction = Struct !Fraction' (Num : Int, Den : Int)
+Struct Polynomial [T : Star, U : Star] = Algebraic {!Polynomial' (Dictionary T U)}
+Data Square [N : Nat, T : Star] = Struct Table_to_Square (Square_to_Table : Table N N T)
+Data Table [M : Nat, N : Nat, T : Star] = Struct Table (Rows : Array M (Array N T))
+Class Commutative {T : Star} <Ring T>
+Def Abs (x : Int) : Int = Match Compare 0 x {LT -> x, EQ -> 0, GT -> Negate x}
+Instance Applicative {Array N} (
+  Compose = Branch N {Zero -> Empty_Array -> Empty_Array -> Empty_Array, Next _ -> f ; x -> y ; z -> f y ; x ! z},
+  Lift x = Branch N {Zero -> Empty_Array, Next _ -> x ; Lift x})
+Instance Applicative {Complex} (Complex f g ! Complex x y = Complex (f x) (g y), Lift x = Complex x x)
+Instance Applicative {Square _} (
+  Table_to_Square x ! Table_to_Square y = Table_to_Square (x ! y),
+  Lift x = Table_to_Square (Lift x))
+Instance Applicative {Table _ _} (Table x ! Table y = Table (Zip Compose x y), Lift x = Table (Lift (Lift x)))
+Def !Characteristic [N : Nat, T : Star] <Commutative T> : Array N (Array N T) -> Array (Next N) T =
+  Branch N {
+    Zero -> Empty_Array -> Id,
     Next _ ->
-      Cat
-        (!List !["!", "A", "r", "r", "a", "y", " ", "!", "["])
-        (Cat (Interleave (!List ![",", " "]) (Write . Array_to_List x)) (Lift "]")) &
-      1})
-Instance Writeable{Complex T}<Writeable T>(
-  Write_Brackets (Complex x y) = !List !["C", "o", "m", "p", "l", "e", "x"] ... x ... y & 1)
-Instance Writeable{Fraction}(Write_Brackets (Fraction x y) = !List !["F", "r", "a", "c", "t", "i", "o", "n"] ... x ... y & 1)
-Instance Writeable{Quaternion T}<Writeable T>(
-  Write_Brackets (Quaternion x y z a) = !List !["Q", "u", "a", "t", "e", "r", "n", "i", "o", "n"] ... x ... y ... z ... a & 1)
-Instance Writeable{Square N T}<Writeable T>(
+      (x ; y) ; z ->
+        Let
+          a = Tail . z
+        In
+          Characteristic'
+            (
+              Convert -1 ;
+              x ;
+              Row_times_Column Times y . Iterate (Square_times_Column Times (Table_to_Square (Table a))) (Head . z))
+            (Zr ; Characteristic a)}
+Def !Characteristic' [N : Nat, T : Star] <Commutative T> (x : Array N T, y : Array N T) : Array N T -> Array N T =
+  Branch N {Zero -> Empty_Array, Next _ -> Row_times_Column Times x y ; Characteristic' (Init x) (Tail y)}
+Def Coefficients [T : Star, U : Star] (Polynomial' x : Polynomial T U) : List (T * U) = Entries x
+Def Column_times_Row [T : Star, U : Star, V : Star, M : Nat, N : Nat] (
+  f : T -> U -> V,
+  x : Array M T,
+  y : Array N U) : Table M N V =
+    Table (Times_right (Times_left f) x y)
+Instance Commutative {Array _ T} <Commutative T>
+Instance Commutative {_ -> T} <Commutative T>
+Instance Commutative {Complex T} <Commutative T>
+Instance Commutative {Fraction}
+Instance Commutative {Int}
+Instance Commutative {Logical}
+Instance Commutative {Modular N} <Nonzero N>
+Instance Commutative {T * U} <Commutative T, Commutative U>
+Instance Commutative {Polynomial T U} <Ring T, Commutative U>
+Instance Commutative {Unit}
+Instance Comp_lattice {Array _ T} <Comp_lattice T> (Not = Apply Not)
+Instance Comp_lattice {Square _ T} <Comp_lattice T> (Not = Apply Not)
+Instance Comp_lattice {Table _ _ T} <Comp_lattice T> (Not = Apply Not)
+Def !Convert_Square [N : Nat, T : Star] <Ring T> (x : Int) : Array N (Array N T) =
+  Branch N {Zero -> Empty_Array, Next _ -> (Convert x ; Zr) ; Construct_Array Zr . Convert_Square x}
+Def Diagonal_times_Square [T : Star, U : Star, V : Star, N : Nat] (
+  f : T -> U -> V,
+  x : Array N T,
+  Table_to_Square y : Square N U) : Square N V =
+    Table_to_Square (Diagonal_times_Table f x y)
+Def Diagonal_times_Table [T : Star, U : Star, V : Star, M : Nat, N : Nat] (
+  f : T -> U -> V,
+  x : Array M T,
+  Table y : Table M N U) : Table M N V =
+    Table (Zip (Times_left f) x y)
+Def Empty_Columns [N : Nat, T : Star] : Table 0 N T = Table Empty_Array
+Def Empty_Columns [N : Nat, T : Star] : Table N 0 T = Table (Lift Empty_Array)
+Def Empty_Square [T : Star] : Square 0 T = Table_to_Square Empty_Table
+Def Empty_Table [T : Star] : Table 0 0 T = Empty_Columns
+Instance Field {Array _ T} <Field T> (Inverse = Traverse Inverse)
+Instance Field {Complex T} <Commutative T, Field T> (
+  Inverse (Complex x y) = Times_right Times (Complex x (Negate y)) . Inverse (Sqr x + Sqr y))
+Instance Field {Fraction} (
+  Inverse (Fraction' x y) =
+    Match Sign x {-1 -> Wrap (Fraction' (Negate y) (Negate x)), 0 -> Nothing, 1 -> Wrap (Fraction' y x)})
+Instance Field {Square _ T} <Commutative T, Field T> (
+  Inverse x =
+    Let
+      y ; z = Characteristic (Rows (Square_to_Table x))
+    In
+      Times_right Times (Add_all (Times_left Times . z ! Iterate (Times x) x)) . Inverse (Negate y))
+Instance Finite {Array _ T} <Finite T> (All = Branch N {Zero -> Lift Empty_Array, Next _ -> Construct_Array . All ! All})
+Instance Finite {Complex T} <Finite T> (All = Complex . All ! All)
+Instance Finite {Polynomial T U} <Finite T, Finite U, Ring U> (All = Polynomial' . Filter (Contains Zero) All)
+Instance Finite {Square _ T} <Finite T> (All = Table_to_Square . All)
+Instance Finite {Table _ _ T} <Finite T> (All = Table . All)
+Def Fraction (x : Int, y : Int) : Fraction = Match Sign y & gcd (Abs x) y {1 & 1 -> Fraction' x y}
+Instance Functor {Array N} (Apply f = Branch N {Zero -> Empty_Array -> Empty_Array, Next _ -> x ; y -> f x ; f . y})
+Instance Functor {Complex} (f . Complex x y = Complex (f . x) (f . y))
+Instance Functor {Square _} (f . Table_to_Square x = Table_to_Square (f . x))
+Instance Functor {Table _ _} (f . Table x = Table (Apply f . x))
+Def Init [N : Nat, T : Star] (x ; y : Array (Next N) T) : Array N T = Branch N {Zero -> Empty_Array, Next _ -> x ; Init y}
+Def Iterate [N : Nat, T : Star] (f : T -> T, x : T) : Array N T = Branch N {Zero -> Empty_Array, Next _ -> x ; Iterate (f x)}
+Instance Lattice {Array _ T} <Lattice T> (And = Zip And, Or = Zip Or)
+Instance Lattice {Square _ T} <Lattice T> (And = Zip And, Or = Zip Or)
+Instance Lattice {Table _ _ T} <Lattice T> (And = Zip And, Or = Zip Or)
+Instance Max_lattice {Array _ T} <Max_lattice T> (Max = Lift Max)
+Instance Max_lattice {Square _ T} <Max_lattice T> (Max = Lift Max)
+Instance Max_lattice {Table _ _ T} <Max_lattice T> (Max = Lift Max)
+Instance Min_lattice {Array _ T} <Min_lattice T> (Min = Lift Min)
+Instance Min_lattice {Square _ T} <Min_lattice T> (Min = Lift Min)
+Instance Min_lattice {Table _ _ T} <Min_lattice T> (Min = Lift Min)
+Def !Normalise_Fraction (x : Int, y : Int) : Fraction = Let f z = Div z (gcd x y) In Fraction' (f x) (f y)
+Def !Normalise_Polynomial [T : Star, U : Star] <Ring U> (x : Dictionary T U) : Polynomial T U = Polynomial' (Filter Not_zero x)
+Instance Ord {Array N T} <Ord T> (Compare x y = Branch N {Zero -> EQ, Next _ -> Compare (Transf_Array x) (Transf_Array y)})
+Instance Ord {Complex T} <Ord T> (Compare x y = Compare (Transf_Complex x) (Transf_Complex y))
+Instance Ord {Fraction} (Compare (Fraction' x y) (Fraction' z a) = Compare (x * a) (y * z))
+Instance Ord {Polynomial T U} <Ord T, Ord U> (Compare (Polynomial' x) (Polynomial' y) = Compare x y)
+Instance Ord {Square _ T} <Ord T> (Compare (Table_to_Square x) (Table_to_Square y) = Compare x y)
+Instance Ord {Table _ _ T} <Ord T> (Compare (Table x) (Table y) = Compare x y)
+Def Polynomial [T : Star, U : Star] <Ord T, Ord U, Ring U> (x : List (T * U)) : Polynomial T U =
+  Match Contains Zero (Second . x) {False -> Polynomial' (Dictionary x)}
+Instance Ring {Array _ T} <Ring T> (Add = Zip Add, Convert x = Lift (Convert x), Times = Zip Times)
+Instance Ring {Complex T} <Ring T> (
+  Add = Zip Add,
+  Convert x = Complex (Convert x) Zr,
+  Complex x y * Complex z a = Complex (x * z + Negate (y * a)) (x * a + y * z))
+Instance Ring {Fraction} (
+  Fraction' x y + Fraction' z a = Normalise_Fraction (x * a + y * z) (y * a),
+  Convert x = Fraction' x 1,
+  Fraction' x y * Fraction' z a = Normalise_Fraction (x * z) (y * a))
+Instance Ring {Polynomial T U} <Ord T, Ring T, Ring U> (
+  Polynomial' x + Polynomial' y = Normalise_Polynomial (Join Add x y),
+  Convert x = Normalise_Polynomial (Dictionary (Lift (Zr & Convert x))),
+  Polynomial' x * Polynomial' y = Normalise_Polynomial (Times_Polynomial ((z & a -> b & c -> z + b & a * c) . x ! y)))
+Instance Ring {Square _ T} <Ring T> (
+  Add = Zip Add,
+  Convert x = Table_to_Square (Table (Convert_Square x)),
+  Times = Square_times_Square Times)
+Def Row_times_Column [T : Star, U : Star, V : Star, N : Nat] <Ring V> (f : T -> U -> V, x : Array N T, y : Array N U) : V =
+  Add_all (f . x ! y)
+Def Row_times_Square [T : Star, U : Star, V : Star, N : Nat] <Ring V> (
+  f : T -> U -> V,
+  x : Array N T,
+  Table_to_Square y : Square N U) : Array N V =
+    Row_times_Table f x y
+Def Row_times_Table [T : Star, U : Star, V : Star, M : Nat, N : Nat] <Ring V> (
+  f : T -> U -> V,
+  x : Array M T,
+  Table y : Table M N U) : Array N V =
+    Row_times_Column (Times_left f) x y
+Instance Sequence {Array N} (
+  Flip = Branch N {Zero -> Empty_Array -> Lift Empty_Array, Next _ -> x ; y -> Construct_Array . x ! Flip y},
+  Fold_right f x = Branch N {Zero -> x, y ; z -> f y (Fold_right f x z)})
+Def !Split_0 [T : Star] (x : List T) : List T * List T =
+  Match x {Empty_List -> Empty_List & Empty_List, y ; z -> Apply_Left (Construct_List y) (Split_1 z)}
+Def !Split_1 [T : Star] (x : List T) : List T * List T =
+  Match x {Empty_List -> Empty_List & Empty_List, y ; z -> Apply_Right (Construct_List y) (Split_0 z)}
+Def Sqr [T : Star] <Ring T> (x : T) : T = x * x
+Def Square_times_Column [T : Star, U : Star, V : Star, N : Nat] <Ring V> (
+  f : T -> U -> V,
+  Table_to_Square x : Square N T) : Array N U -> Array N V =
+    Table_times_Column f x
+Def Square_times_Diagonal [T : Star, U : Star, V : Star, N : Nat] (
+  f : T -> U -> V,
+  Table_to_Square x : Square N T,
+  y : Array N U) : Square N V =
+    Table_to_Square (Table_times_Diagonal f x y)
+Def Square_times_Square [T : Star, U : Star, V : Star, N : Nat] <Ring V> (
+  f : T -> U -> V,
+  Table_to_Square x : Square N T,
+  Table_to_Square y : Square N U) : Square N V =
+    Table_to_Square (Table_times_Table f x y)
+Def Square_times_Table [T : Star, U : Star, V : Star, M : Nat, N : Nat] <Ring V> (
+  f : T -> U -> V,
+  Table_to_Square x : Square M T) : Table M N U -> Table M N V =
+    Table_times_Table f x
+Def Strictly_sorted [T : Star] <Ord T> (x : List T) : Logical = Match x {Empty_List -> True, y : z -> Strictly_sorted' y z}
+Def !Strictly_sorted' [T : Star] <Ord T> (x : T, y : List T) : Logical =
+  Match y {Empty_List -> True, z : a -> Less x z /\ Strictly_sorted' z a}
+Def Table_times_Column [T : Star, U : Star, V : Star, M : Nat, N : Nat] <Ring V> (
+  f : T -> U -> V,
+  Table x : Table M N T,
+  y : Array N U) : Array M V =
+    Times_right (Row_times_Column f) x y
+Def Table_times_Diagonal [T : Star, U : Star, V : Star, M : Nat, N : Nat] (
+  f : T -> U -> V,
+  Table x : Table M N T) : Array N U -> Table M N V =
+    Table (Times_right (Zip f) x y)
+Def Table_times_Square [T : Star, U : Star, V : Star, M : Nat, N : Nat] <Ring V> (
+  f : T -> U -> V,
+  x : Table M N T,
+  Table_to_Square y : Square N U) : Table M N V =
+    Table_times_Table f x y
+Def Table_times_Table [T : Star, U : Star, V : Star, L : Nat, M : Nat, N : Nat] <Ring V> (
+  f : T -> U -> V,
+  Table x : Table L M T,
+  y : Table M N U) : Table L N V =
+    Table (Times_right (Row_times_Table f) x y)
+Def !Times_Polynomial [T : Star, U : Star] <Ord T, Ring U> (x : List (T * U)) : List (T * U) =
+  Let
+    y & z = Split_0 x
+  In
+    Add_Polynomial (Times_Polynomial y) (Times_Polynomial z)
+Def Times_left [T : Star, U : Star, V : Star, F : Star -> Star] <Functor F> (f : T -> U -> V, x : T) : F U -> F V = Apply (f x)
+Def Times_right [T : Star, U : Star, V : Star, F : Star -> Star] <Functor F> (f : T -> U -> V, x : F T, y : U) : F V =
+  (z -> f z y) . x
+Def !Transf_Array [N : Nat, T : Star] (x ; y : Array (Next N) T) : T * Array N T = x & y
+Def !Transf_Complex [T : Star] (Complex x y : Complex T) : T * T = x & y
+Instance Writeable {Array N T} <Writeable T> (
   Write_Brackets x =
-    Branch N {Zero -> !List !["E", "m", "p", "t", "y", "_", "S", "q", "u", "a", "r", "e"] & 0, Next _ -> Crash})
-Instance Writeable{Toeplitz N T}<Writeable T>(Write_Brackets (Toeplitz x) =
-  Cat
-    (!List !["!", "T", "o", "e", "p", "l", "i", "t", "z", " ", "!", "["])
-    (Cat (Interleave (!List ![",", " "]) (Write . Array_to_List x)) (Lift "]")) &
-  1)
-Instance Writeable{Triangle N T}<Writeable T>(
-  Write_Brackets x =
-    Branch N {Zero -> !List !["E", "m", "p", "t", "y", "_", "T", "r", "i", "a", "n", "g", "l", "e"] & 0, Next _ -> Crash})
+    Branch N {
+      Zero -> Write_name ($List ["E", "m", "p", "t", "y", "_", "A", "r", "r", "a", "y"]),
+      Next N' ->
+        Branch N' {
+          Zero -> $List ["L", "i", "f", "t"] ... Head x,
+          Next _ -> Write_List ["$", "A", "r", "r", "a", "y"] (To_List x)}})
+Instance Writeable {Complex T} <Writeable T> (Write_brackets (Complex x y) = $List ["C", "o"] ... x .!. y)
+Instance Writeable {Fraction} (Write_brackets (Fraction x y) = $List ["F", "r", "a", "c", "t", "i", "o", "n"] ... x .!. y)
+Instance Writeable {Polynomial T U} <Writeable T, Writeable U> (
+  Write_brackets (Polynomial' x) =
+    Match x {
+      Empty_List -> Write_name ($List ["Z", "e", "r", "o"]),
+      y : Empty_List -> $List ["C", "o", "n", "v", "e", r", "t"] ... y,
+      _ : _ : _ -> Write_List ($List ["P", "o", "l", "y", "n", "o", "m", "i", "a", "l"]) x}})
+Instance Writeable {Square N T} <Writeable T> (
+  Write_Brackets (Table_to_Square (Table x)) =
+    Branch N {
+      Zero -> Write_name ($List ["E", "m", "p", "t", "y", "_", "S", "q", "u", "a", "r", "e"]),
+      Next N' ->
+        Branch N' {
+          Zero -> $List ["$", "L", "i", "f", "t"] ... Head (Head x),
+          Next _ -> Write_Table ($List ["$", "S", "q", "u", "a", "r", "e"]) x}})
+Instance Writeable {Table M N T} <Writeable T> (
+  Write_brackets (Table x) =
+    Let
+      w_0 = Write_name ($List ["E", "m", "p", "t", "y", "_", "R", "o", "w", "s"]),
+      w_1 = Write_Table ($List ["$", "T", "a", "b", "l", "e"]) x
+    In
+      Branch M {
+        Zero ->
+          Write_name
+            (Branch N {
+              Zero -> $List ["E", "m", "p", "t", "y", "_", "T", "a", "b", "l", "e"],
+              Next _ -> $List ["E", "m", "p", "t", "y", "_", "C", "o", "l", "u", "m", "n", "s"]}),
+        Next M' ->
+          Branch M' {
+            Zero ->
+              Branch N {
+                Zero -> w_0,
+                Next N' -> Branch N' {Zero -> $List ["$", "L", "i", "f", "t"] ... Head (Head x), Next _ -> w_1}},
+            Next _ -> Branch N {Zero -> w_0, Next _ -> w_1}}})
+Def gcd (x : Int, y : Int) : Int = Let z = Abs x, a = Abs y In Match Compare z a {LT -> gcd' z a, EQ -> z, GT -> gcd' a z}
+Def !gcd' (x : Int, y : Int) : Int = Match x {0 -> y, _ -> gcd' (Mod y x) x}
 ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

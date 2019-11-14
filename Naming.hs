@@ -1,259 +1,338 @@
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
-module Naming where
+module Naming (
+  Arrow_2 (..),
+  Binding_2 (..),
+  Class_3 (..),
+  Constructor_2 (..),
+  Data_3 (..),
+  Data_branch_3 (..),
+  Def_or_instance_2 (..),
+  Field_2 (..),
+  File_4 (..),
+  Method_3 (..),
+  Term_2 (..),
+  Term_pattern_5 (..),
+  Type_pattern_3 (..),
+  Type_pattern_4 (..),
+  Type_variable_1 (..),
+  naming_file,
+  naming_term) where
   import Data.Bifunctor
-  import Data.Map
+  import Dictionary
+  import Errors
+  import Modular
   import Standard
-  import Tokenise
+  import Transf
   import Tree
-  data Alg_pat_1 =
-    Application_alg_pat_1 Location_0 String [Alg_pat_1] |
-    Blank_alg_pat_1 |
-    Char_alg_pat_1 Char |
-    Int_alg_pat_1 Integer |
-    Modular_alg_pat_1 Modular |
-    Name_alg_pat_1 String
+  data Arrow_2 = Arrow_2 Term_pattern_5 Term_2 deriving Show
+  data Binding_2 = Binding_2 Name Term_2 deriving Show
+  data Class_2 = Class_2 String Type_variable_0 [Constraint_0] [Method_2] deriving Show
+  data Class_3 = Class_3 String Type_variable_1 [Constraint_0] [Method_3] deriving Show
+  data Constructor_2 = Constructor_2 Status String [Type_3] deriving Show
+  data Data_2 = Data_2 Status String [Type_variable_0] Data_branch_2 deriving Show
+  data Data_3 = Data_3 Status String [Type_variable_1] Data_branch_3 deriving Show
+  data Data_branch_2 =
+    Algebraic_data_2 [Constructor_2] |
+    Branch_data_2 Name (Data_branch_2, (Name, Data_branch_2)) |
+    Struct_data_2 Status String [Field_2]
       deriving Show
-  data Case_2 = Case_2 Alg_pat_1 Expression_1 deriving Show
-  data Class_1 = Class_1 String (Name, Kind_0) [Constraint_0] [Method_1] deriving Show
-  data Class_2 = Class_2 String (String, Kind_0) [Constraint_0] [Method_2] deriving Show
-  data Data_1 = Data_1 String [(Name, Kind_0)] Data_br_1 deriving Show
-  data Data_2 = Data_2 String [(String, Kind_0)] Data_br_2 deriving Show
-  data Data_br_1 =
-    Algebraic_data_1 [Form_1] |
-    Branching_data_1 Name (Data_br_1, Name, Data_br_1) |
-    Struct_data_1 Status String [(String, Type_8)]
+  data Data_branch_3 =
+    Algebraic_data_3 [Constructor_2] |
+    Branch_data_3 Name (Data_branch_3, (String, Data_branch_3)) |
+    Struct_data_3 Status String [Field_2]
       deriving Show
-  data Data_br_2 =
-    Algebraic_data_2 [Form_1] |
-    Branching_data_2 Name (Data_br_2, String, Data_br_2) |
-    Struct_data_2 Status String [(String, Type_8)]
+  data Def_or_instance_2 =
+    Def_2 Line_and_char Status String [Type_variable_1] [Constraint_0] Type_2 Term_2 |
+    Instance_2 Line_and_char Name Type_pattern_4 [Constraint_0] [Binding_2]
       deriving Show
-  data Def_2 =
-    Basic_def_2 Location_0 String Kinds_constraints Type_8 Expression_9 |
-    Instance_2 Location_0 Name (Name, [Pattern_1]) [Constraint_0] [(Name, Expression_9)]
+  data Field_2 = Field_2 String Type_3 deriving Show
+  data Method_2 = Method_2 String [Type_variable_0] [Constraint_0] Type_3 deriving Show
+  data Method_3 = Method_3 String [Type_variable_1] [Constraint_0] Type_3 deriving Show
+  data Term_2 =
+    Application_term_2 Term_2 Term_2 |
+    Arrow_term_2 Arrow_2 |
+    Branch_term_2 Name (Term_2, (Type_pattern_3, Term_2)) |
+    Int_term_2 Integer |
+    Match_term_2 Term_2 [Arrow_2] |
+    Modular_term_2 Modular_0 |
+    Name_term_2 Name
       deriving Show
-  data Def_3 =
-    Basic_def_3 Location_0 String Kinds_constraints' Type_8 Expression_1 |
-    Instance_3 Location_0 Name (Name, [Pattern_0]) [Constraint_0] [(Name, Expression_1)]
+  data Term_pattern_5 =
+    Blank_term_pattern_5 |
+    Int_term_pattern_5 Integer |
+    Modular_term_pattern_5 Modular_0 |
+    Name_term_pattern_5 String |
+    Struct_term_pattern_5 Name [Term_pattern_5]
       deriving Show
-  data Expression_1 =
-    Application_expression_1 Expression_1 Expression_1 |
-    Branch_expression_1 Name Expression_1 Pattern_0 Expression_1 |
-    Char_expression_1 Char |
-    Function_expression_1 Pat' Expression_1 |
-    Int_expression_1 Integer |
-    Match_expression_1 Expression_1 [Case_2] |
-    Modular_expression_1 Modular |
-    Name_expression_1 Name |
-    Write_expression_1
-      deriving Show
-  data Form_1 = Form_1 Status String [Type_8] deriving Show
-  data Kinds_constraints' = Kinds_constraints' [(String, Kind_0)] [Constraint_0] deriving Show
-  data Method_1 = Method_1 String Kinds_constraints Type_8 deriving Show
-  data Method_2 = Method_2 String Kinds_constraints' Type_8 deriving Show
-  data Pat' = Application_pat' Name [Pat'] | Blank_pat' | Name_pat' String deriving Show
-  data Tree_4 = Tree_4 [Data_1] [Class_1] [Def_2] deriving Show
-  data Tree_5 = Tree_5 [Data_2] [Class_2] [Def_3] deriving Show
-  naming ::
+  data File_3 = File_3 [Data_2] [Class_2] [Def_or_instance_1] deriving Show
+  data File_4 = File_4 [Data_3] [Class_3] [Def_or_instance_2] deriving Show
+  data Type_pattern_3 = Blank_type_pattern_3 | Name_type_pattern_3 String deriving Show
+  data Type_pattern_4 = Type_pattern_4 Name [Type_pattern_3] deriving Show
+  data Type_variable_1 = Type_variable_1 String Kind_0 deriving Show
+  naming_arrow :: String -> Dictionary Language_or_location -> Dictionary Language_or_location -> Arrow_1 -> Err Arrow_2
+  naming_arrow file_name types terms_0 (Arrow_1 term_pattern term) =
     (
+      naming_term_pattern term_pattern file_name terms_0 >>=
+      \(terms_1, term_pattern') -> Arrow_2 term_pattern' <$> naming_term file_name types terms_1 term)
+  naming_binding :: String -> Dictionary Language_or_location -> Dictionary Language_or_location -> Binding_1 -> Err Binding_2
+  naming_binding file_name types terms (Binding_1 name term) = Binding_2 name <$> naming_term file_name types terms term
+  naming_class_0 ::
+    (
+      Class_1 ->
+      String  ->
+      (Dictionary Language_or_location, Dictionary Language_or_location) ->
+      Err ((Dictionary Language_or_location, Dictionary Language_or_location), Class_2))
+  naming_class_0 (Class_1 line_and_char name_0 type_variable constraints methods) file_name (terms_0, classes_0) =
+    (
+      (\(classes_1, name_1) -> \(terms_1, methods') ->
+        ((terms_1, classes_1), Class_2 name_1 type_variable constraints methods')) <$>
+      naming_name "class" (Name line_and_char name_0) file_name classes_0 <*>
+      transf_list naming_method_0 methods file_name terms_0)
+  naming_class_1 :: String -> Dictionary Language_or_location -> Class_2 -> Err Class_3
+  naming_class_1 file_name types_0 (Class_2 name type_variable constraints methods) =
+    (
+      naming_type_variable type_variable file_name types_0 >>=
+      \(types_1, type_variable') ->
+        Class_3 name type_variable' constraints <$> traverse (naming_method_1 file_name types_1) methods)
+  naming_constructor ::
+    Constructor_1 -> String -> Dictionary Language_or_location -> Err (Dictionary Language_or_location, Constructor_2)
+  naming_constructor (Constructor_1 line_and_char status name_0 types) file_name terms =
+    second (\name_1 -> Constructor_2 status name_1 types) <$> naming_name "term" (Name line_and_char name_0) file_name terms
+  naming_data_0 ::
+    (
+      Data_1 ->
       String ->
-      Tree_2 ->
-      ((Locations, Locations, Locations), (Locations, Locations), Map' (Map' Location')) ->
-      Err (((Locations, Locations, Locations), (Locations, Locations), Map' (Map' Location')), Tree_5))
-  naming f a b = naming_1 f a b >>= \(((c, e, i), g, h), d) -> (,) ((c, e, i), g, h) <$> naming_2 f d (c, i)
-  naming_1 ::
+      (Dictionary Language_or_location, Dictionary Language_or_location) ->
+      Err ((Dictionary Language_or_location, Dictionary Language_or_location), Data_2))
+  naming_data_0 (Data_1 line_and_char status name_0 type_variables data_branch) file_name (types_0, terms_0) =
     (
+      (\(types_1, name_1) -> \(terms_1, data_branch') ->
+        ((types_1, terms_1), Data_2 status name_1 type_variables data_branch')) <$>
+      naming_name "type" (Name line_and_char name_0) file_name types_0 <*>
+      naming_data_branch_0 data_branch file_name terms_0)
+  naming_data_1 :: String -> Dictionary Language_or_location -> Data_2 -> Err Data_3
+  naming_data_1 file_name types_0 (Data_2 status name type_variables data_branch) =
+    (
+      naming_type_variables type_variables file_name types_0 >>=
+      \(types_1, type_variables') -> Data_3 status name type_variables' <$> naming_data_branch_1 file_name types_1 data_branch)
+  naming_data_branch_0 ::
+    Data_branch_1 -> String -> Dictionary Language_or_location -> Err (Dictionary Language_or_location, Data_branch_2)
+  naming_data_branch_0 data_branch_0 file_name terms_0 =
+    case data_branch_0 of
+      Algebraic_data_1 constructors -> second Algebraic_data_2 <$> transf_list naming_constructor constructors file_name terms_0
+      Branch_data_1 type_variable_0 (data_branch_1, (type_variable_1, data_branch_2)) ->
+        (
+          naming_data_branch_0 data_branch_1 file_name terms_0 >>=
+          \(terms_1, data_branch'_0) ->
+            (
+              second (\data_branch'_1 -> Branch_data_2 type_variable_0 (data_branch'_0, (type_variable_1, data_branch'_1))) <$>
+              naming_data_branch_0 data_branch_2 file_name terms_1))
+      Struct_data_1 line_and_char status name_0 fields ->
+        (
+          naming_name "term" (Name line_and_char name_0) file_name terms_0 >>=
+          \(terms_1, name_1) -> second (Struct_data_2 status name_1) <$> transf_list naming_field fields file_name terms_1)
+  naming_data_branch_1 :: String -> Dictionary Language_or_location -> Data_branch_2 -> Err Data_branch_3
+  naming_data_branch_1 file_name types_0 data_branch_0 =
+    case data_branch_0 of
+      Algebraic_data_2 constructors -> Right (Algebraic_data_3 constructors)
+      Branch_data_2 type_variable_0 (data_branch_1, (type_variable_1, data_branch_2)) ->
+        (
+          Branch_data_3 type_variable_0 <$>
+          (
+            (,) <$>
+            naming_data_branch_1 file_name types_0 data_branch_1 <*>
+            (
+              naming_name "type" type_variable_1 file_name types_0 >>=
+              \(types_1, type_variable') -> (,) type_variable' <$> naming_data_branch_1 file_name types_1 data_branch_2)))
+      Struct_data_2 status name fields -> Right (Struct_data_3 status name fields) 
+  naming_def_or_instance_0 ::
+    (
+      Def_or_instance_1 ->
       String ->
-      Tree_2 ->
-      ((Locations, Locations, Locations), (Locations, Locations), Map' (Map' Location')) ->
-      Err (((Locations, Locations, Locations), (Locations, Locations), Map' (Map' Location')), Tree_4))
-  naming_1 f (Tree_2 j' j a g b) ((k0, k1, k2), (l0, l), x) =
+      (Dictionary Language_or_location, Dictionary' Language_or_location) ->
+      Err ((Dictionary Language_or_location, Dictionary' Language_or_location), ()))
+  naming_def_or_instance_0 def_or_instance file_name (terms_0, instances_0) =
+    case def_or_instance of
+      Def_1 line_and_char _ name _ _ _ _ ->
+        (\(terms_1, _) -> ((terms_1, instances_0), ())) <$> naming_name "term" (Name line_and_char name) file_name terms_0
+      Instance_1 line_and_char (Name _ cls) (Type_pattern_2 (Name _ typ) _) _ _ ->
+        bimap
+          (\language_or_location -> Conflicting_instances cls typ language_or_location file_name line_and_char)
+          (\instances_1 -> ((terms_0, instances_1), ()))
+          (add (cls, typ) (Location file_name line_and_char) instances_0)
+  naming_def_or_instance_1 ::
+    String -> Dictionary Language_or_location -> Dictionary Language_or_location -> Def_or_instance_1 -> Err Def_or_instance_2
+  naming_def_or_instance_1 file_name types_0 terms def_or_instance =
+    case def_or_instance of
+      Def_1 line_and_char status name type_variables constraints typ term ->
+        (
+          naming_type_variables type_variables file_name types_0 >>=
+          \(types_1, type_variables') ->
+            (
+              Def_2 line_and_char status name type_variables' constraints typ <$>
+              naming_term file_name types_1 terms term))
+      Instance_1 line_and_char cls type_pattern constraints bindings ->
+        (
+          naming_type_pattern_1 type_pattern file_name types_0 >>=
+          \(types_1, type_pattern') ->
+            (
+              Instance_2 line_and_char cls type_pattern' constraints <$>
+              traverse (naming_binding file_name types_1 terms) bindings))
+  naming_field :: Field_1 -> String -> Dictionary Language_or_location -> Err (Dictionary Language_or_location, Field_2)
+  naming_field (Field_1 name typ) file_name terms =
+    second (\name' -> Field_2 name' typ) <$> naming_name "term" name file_name terms
+  naming_file ::
     (
-      (,) <$> ((,) <$> naming_ops f l0 j' <*> naming_ops f l j) <*> naming_datas_1 f a (k0, k2) >>=
-      \(m, ((d0, d1), e)) ->
+      File_2 ->
+      String ->
+      (
+        Dictionary Language_or_location,
+        Dictionary Language_or_location,
+        Dictionary Language_or_location,
+        Dictionary Language_or_location,
+        Dictionary Language_or_location,
+        Dictionary' Language_or_location) ->
+      Err
         (
-          naming_classes_0 f g (k1, d1) >>=
-          \((t0, t1), e') -> (\(h, (i, y)) -> (((d0, t0, i), m, y), Tree_4 e e' h)) <$> naming_defs_1 f b (t1, x)))
-  naming_2 :: String -> Tree_4 -> (Locations, Locations) -> Err Tree_5
-  naming_2 e (Tree_4 a f b) (i0, i1) =
-    Tree_5 <$> naming_datas_2 e a i0 <*> naming_classes_1 e f i0 <*> naming_defs_2 e b (i0, i1)
-  naming_alg_pats :: String -> Locations -> [Alg_pat_7] -> Err (Locations, [Alg_pat_1])
-  naming_alg_pats a c d =
-    case d of
-      [] -> Right (c, [])
-      e : f -> naming_alg_pattern a c e >>= \(g, h) -> second ((:) h) <$> naming_alg_pats a g f
-  naming_alg_pattern :: String -> Locations -> Alg_pat_7 -> Err (Locations, Alg_pat_1)
-  naming_alg_pattern a c d =
-    case d of
-      Application_alg_pat_7 g e f -> second (Application_alg_pat_1 g e) <$> naming_alg_pats a c f
-      Blank_alg_pat_7 -> Right (c, Blank_alg_pat_1)
-      Char_alg_pat_7 e -> Right (c, Char_alg_pat_1 e)
-      Int_alg_pat_7 e -> Right (c, Int_alg_pat_1 e)
-      Modular_alg_pat_7 e -> Right (c, Modular_alg_pat_1 e)
-      Name_alg_pat_7 e -> second Name_alg_pat_1 <$> naming_name a e c
-  naming_application :: String -> Locations -> Err Expression_1 -> Expression_9 -> Err Expression_1
-  naming_application a b c d = c >>= \e -> Application_expression_1 e <$> naming_expression a d b
-  naming_args :: String -> [(Name, t)] -> Locations -> Err [(String, t)]
-  naming_args a b c =
-    case b of
-      [] -> Right []
-      (d, e) : f -> naming_name a d c >>= \(g, h) -> (:) (h, e) <$> naming_args a f g
-  naming_argument ::
-    (String -> t -> Locations -> Err (Locations, u)) -> String -> (t, v) -> Locations -> Err (Locations, (u, v))
-  naming_argument a e (b, c) d = second (flip (,) c) <$> a e b d
-  naming_arguments ::
-    (String -> t -> Locations -> Err (Locations, u)) -> String -> [(t, v)] -> Locations -> Err (Locations, [(u, v)])
-  naming_arguments = naming_list <$> naming_argument
-  naming_arguments' :: String -> (String -> t -> Locations -> Err (Locations, u)) -> [(t, v)] -> Locations -> Err [(u, v)]
-  naming_arguments' c a b = (<$>) snd <$> naming_arguments a c b
-  naming_case :: String -> Locations -> Case_1 -> Err Case_2
-  naming_case a g (Case_1 c d) = naming_alg_pattern a g c >>= \(e, f) -> Case_2 f <$> naming_expression a d e
-  naming_cases :: String -> [Case_1] -> Locations -> Err [Case_2]
-  naming_cases a b c = traverse (naming_case a c) b
-  naming_class_0 :: String -> Class_7 -> (Locations, Locations) -> Err ((Locations, Locations), Class_1)
-  naming_class_0 a (Class_7 b c h d) (e0, e1) =
-    (\(f, g) -> bimap ((,) f) (Class_1 g c h)) <$> naming_name a b e0 <*> naming_methods_0 a d e1
-  naming_class_1 :: String -> Class_1 -> Locations -> Err Class_2
-  naming_class_1 a (Class_1 b (c, d) h e) f = naming_name a c f >>= \(i, g) -> Class_2 b (g, d) h <$> naming_methods_1 a e i
-  naming_classes_0 :: String -> [Class_7] -> (Locations, Locations) -> Err ((Locations, Locations), [Class_1])
-  naming_classes_0 a b c =
-    case b of
-      [] -> Right (c, [])
-      d : e -> naming_class_0 a d c >>= \(f, g) -> second ((:) g) <$> naming_classes_0 a e f
-  naming_classes_1 :: String -> [Class_1] -> Locations -> Err [Class_2]
-  naming_classes_1 a b c =
-    case b of
-      [] -> Right []
-      d : e -> naming_class_1 a d c >>= \g -> (:) g <$> naming_classes_1 a e c
-  naming_data_1 :: String -> Data_6 -> (Locations, Locations) -> Err ((Locations, Locations), Data_1)
-  naming_data_1 a (Data_6 b c d e) (f0, f1) =
-    (\(g, _) -> bimap ((,) g) (Data_1 c d)) <$> naming_name a (Name b c) f0 <*> naming_data_br_0 a (f1, e)
-  naming_data_2 :: String -> Data_1 -> Locations -> Err Data_2
-  naming_data_2 a (Data_1 b c d) e = naming_kinds a (e, c) >>= \(f, g) -> Data_2 b g <$> naming_data_br_1 (a, f) d
-  naming_data_br_0 :: String -> (Locations, Data_br_6) -> Err (Locations, Data_br_1)
-  naming_data_br_0 a (b, c) =
-    case c of
-      Algebraic_data_6 d -> second Algebraic_data_1 <$> naming_forms a d b
-      Branching_data_6 d (e, f, g) ->
-        naming_data_br_0 a (b, e) >>= \(h, i) -> second (\j -> Branching_data_1 d (i, f, j)) <$> naming_data_br_0 a (h, g)
-      Struct_data_6 e f g h -> naming_name a (Name e g) b >>= \(i, _) -> second (Struct_data_1 f g) <$> naming_fields a h i
-  naming_data_br_1 :: (String, Locations) -> Data_br_1 -> Err Data_br_2
-  naming_data_br_1 (a, b) c =
-    case c of
-      Algebraic_data_1 d -> Right (Algebraic_data_2 d)
-      Branching_data_1 d (e, f, g) ->
+          (
+            Dictionary Language_or_location,
+            Dictionary Language_or_location,
+            Dictionary Language_or_location,
+            Dictionary Language_or_location,
+            Dictionary Language_or_location,
+            Dictionary' Language_or_location),
+          File_4))
+  naming_file file file_name names =
+    (
+      naming_file_0 file file_name names >>=
+      \((type_operators, term_operators, types, terms, classes, instances), file') ->
+        (,) (type_operators, term_operators, types, terms, classes, instances) <$> naming_file_1 file_name types terms file')
+  naming_file_0 ::
+    (
+      File_2 ->
+      String ->
+      (
+        Dictionary Language_or_location,
+        Dictionary Language_or_location,
+        Dictionary Language_or_location,
+        Dictionary Language_or_location,
+        Dictionary Language_or_location,
+        Dictionary' Language_or_location) ->
+      Err
         (
-          (\h -> \(i, j) -> Branching_data_2 d (h, i, j)) <$>
-          naming_data_br_1 (a, b) e <*> (naming_name a f b >>= \(h, i) -> (,) i <$> naming_data_br_1 (a, h) g))
-      Struct_data_1 d e f -> Right (Struct_data_2 d e f)
-  naming_datas_1 :: String -> [Data_6] -> (Locations, Locations) -> Err ((Locations, Locations), [Data_1])
-  naming_datas_1 = naming_list naming_data_1
-  naming_datas_2 :: String -> [Data_1] -> Locations -> Err [Data_2]
-  naming_datas_2 f a b =
-    case a of
-      [] -> Right []
-      c : d -> naming_data_2 f c b >>= \e -> (:) e <$> naming_datas_2 f d b
-  naming_def_1 :: String -> Def_1 -> (Locations, Map' (Map' Location')) -> Err (Def_2, (Locations, Map' (Map' Location')))
-  naming_def_1 i a (g, z) =
-    case a of
-      Basic_def_1 (Name h j) b x e -> (\(f, _) -> (Basic_def_2 h j b x e, (f, z))) <$> naming_name i (Name h j) g
-      Instance_1 b (Name r3 k) (Name d l, f) h e ->
-        let
-          u = Library (Location_1 i b)
-          m n = Right (Instance_2 b (Name r3 k) (Name d l, f) h e, (g, n z))
-        in
-          case Data.Map.lookup k z of
-            Nothing -> m (insert k (singleton l u))
-            Just w ->
-              case Data.Map.lookup l w of
-                Nothing -> m (insert k (insert l u w))
-                Just t -> Left (location_err ("instances of " ++ k ++ " " ++ l) t b)
-  naming_def_2 :: String -> Def_2 -> (Locations, Locations) -> Err Def_3
-  naming_def_2 j a (b0, b1) =
-    case a of
-      Basic_def_2 k c d f g -> (\(_, i) -> Basic_def_3 k c i f) <$> naming_kinds' j (b0, d) <*> naming_expression j g b1
-      Instance_2 f c (d, g) k e -> (\(_, i) -> Instance_3 f c (d, i) k) <$> naming_patterns j g b0 <*> naming_nameexprs j b1 e
-  naming_defs_1 :: String -> [Def_1] -> (Locations, Map' (Map' Location')) -> Err ([Def_2], (Locations, Map' (Map' Location')))
-  naming_defs_1 a b c =
-    case b of
-      [] -> Right ([], c)
-      d : e -> naming_def_1 a d c >>= \(f, g) -> first ((:) f) <$> naming_defs_1 a e g
-  naming_defs_2 :: String -> [Def_2] -> (Locations, Locations) -> Err [Def_3]
-  naming_defs_2 = naming_list' naming_def_2
-  naming_expression :: String -> Expression_9 -> Locations -> Err Expression_1
-  naming_expression g a b =
-    case a of
-      Application_expression_9 c d -> naming_application g b (naming_expression g c b) d
-      Branch_expression_9 c d e h ->
+          (
+            Dictionary Language_or_location,
+            Dictionary Language_or_location,
+            Dictionary Language_or_location,
+            Dictionary Language_or_location,
+            Dictionary Language_or_location,
+            Dictionary' Language_or_location),
+          File_3))
+  naming_file_0
+    (File_2 type_operators term_operators datas classes defs_and_instances)
+    file_name
+    (type_operators_0, term_operators_0, types_0, terms_0, classes_0, instances_0) =
+      (
+        naming_operators "type" type_operators file_name type_operators_0 >>=
+        \type_operators_1 ->
+          (
+            naming_operators "term" term_operators file_name term_operators_0 >>=
+            \term_operators_1 ->
+              (
+                transf_list naming_data_0 datas file_name (types_0, terms_0) >>=
+                \((types_1, terms_1), datas') ->
+                  (
+                    transf_list naming_class_0 classes file_name (terms_1, classes_0) >>=
+                    \((terms_2, classes_1), classes') ->
+                      (
+                        transf_list naming_def_or_instance_0 defs_and_instances file_name (terms_2, instances_0) >>=
+                        \((terms_3, instances_1), _) ->
+                          Right
+                            (
+                              (type_operators_1, term_operators_1, types_1, terms_3, classes_1, instances_1),
+                              File_3 datas' classes' defs_and_instances))))))
+  naming_file_1 :: String -> Dictionary Language_or_location -> Dictionary Language_or_location -> File_3 -> Err File_4
+  naming_file_1 file_name types terms (File_3 datas classes defs_and_instances) =
+    (
+      File_4 <$>
+      traverse (naming_data_1 file_name types) datas <*>
+      traverse (naming_class_1 file_name types) classes <*>
+      traverse (naming_def_or_instance_1 file_name types terms) defs_and_instances)
+  naming_method_0 :: Method_1 -> String -> Dictionary Language_or_location -> Err (Dictionary Language_or_location, Method_2)
+  naming_method_0 (Method_1 name type_variables constraints typ) file_name terms =
+    second (\name' -> Method_2 name' type_variables constraints typ) <$> naming_name "term" name file_name terms
+  naming_method_1 :: String -> Dictionary Language_or_location -> Method_2 -> Err Method_3
+  naming_method_1 file_name types (Method_2 name type_variables constraints typ) =
+    (
+      (\(_, type_variables') -> Method_3 name type_variables' constraints typ) <$>
+      naming_type_variables type_variables file_name types)
+  naming_name :: String -> Name -> String -> Dictionary Language_or_location -> Err (Dictionary Language_or_location, String)
+  naming_name kind (Name line_and_char name) file_name names_0 =
+    (
+      bimap
+        (\language_or_location -> Conflicting_definitions kind name language_or_location file_name line_and_char)
+        (\names_1 -> (names_1, name))
+        (add name (Location file_name line_and_char) names_0))
+  naming_operators :: String -> [Name] -> String -> Dictionary Language_or_location -> Err (Dictionary Language_or_location)
+  naming_operators kind operators file_name operators_0 =
+    fst <$> transf_list (naming_name (kind ++ " operator")) operators file_name operators_0
+  naming_term :: String -> Dictionary Language_or_location -> Dictionary Language_or_location -> Term_1 -> Err Term_2
+  naming_term file_name types_0 terms_0 term_0 =
+    case term_0 of
+      Application_term_1 term_1 term_2 ->
+        Application_term_2 <$> naming_term file_name types_0 terms_0 term_1 <*> naming_term file_name types_0 terms_0 term_2
+      Arrow_term_1 arrow -> Arrow_term_2 <$> naming_arrow file_name types_0 terms_0 arrow
+      Branch_term_1 type_variable (term_1, (type_pattern, term_2)) ->
         (
-          (\i -> \(j, k) -> Branch_expression_1 c i j k) <$>
-          naming_expression g d b <*>
-          (naming_pattern g e b >>= \(i, j) -> (,) j <$> naming_expression g h i))
-      Char_expression_9 c -> Right (Char_expression_1 c)
-      Function_expression_9 c d -> naming_fun g b c d
-      Int_expression_9 c -> Right (Int_expression_1 c)
-      Match_expression_9 c d -> Match_expression_1 <$> naming_expression g c b <*> naming_cases g d b
-      Modular_expression_9 c -> Right (Modular_expression_1 c)
-      Name_expression_9 c -> Right (Name_expression_1 c)
-  naming_fields :: String -> [(Name, Type_8)] -> Locations -> Err (Locations, [(String, Type_8)])
-  naming_fields = naming_arguments naming_name
-  naming_form :: String -> Form_6 -> Locations -> Err (Locations, Form_1)
-  naming_form a (Form_6 b c d e) f = second (\g -> Form_1 c g e) <$> naming_name a (Name b d) f
-  naming_forms :: String -> [Form_6] -> Locations -> Err (Locations, [Form_1])
-  naming_forms = naming_list naming_form
-  naming_fun :: String -> Locations -> Pat_2 -> Expression_9 -> Err Expression_1
-  naming_fun x b z w = naming_pat x z b >>= \(a, c) -> Function_expression_1 c <$> naming_expression x w a
-  naming_kinds :: String -> (Locations, [(Name, Kind_0)]) -> Err (Locations, [(String, Kind_0)])
-  naming_kinds a (b, c) = naming_arguments naming_name a c b
-  naming_kinds' :: String -> (Locations, Kinds_constraints) -> Err (Locations, Kinds_constraints')
-  naming_kinds' a (b, Kinds_constraints c d) = second (\e -> Kinds_constraints' e d) <$> naming_kinds a (b, c)
-  naming_list' :: (String -> t -> u -> Err v) -> String -> [t] -> u -> Err [v]
-  naming_list' a g b c =
-    case b of
-      [] -> Right []
-      d : e -> a g d c >>= \f -> (:) f <$> naming_list' a g e c
-  naming_method_0 :: String -> Method_9 -> Locations -> Err (Locations, Method_1)
-  naming_method_0 a (Method_9 b c d) e = second (\f -> Method_1 f c d) <$> naming_name a b e
-  naming_method_1 :: String -> Method_1 -> Locations -> Err Method_2
-  naming_method_1 a (Method_1 b c d) e = (\(_, f) -> Method_2 b f d) <$> naming_kinds' a (e, c)
-  naming_methods_0 :: String -> [Method_9] -> Locations -> Err (Locations, [Method_1])
-  naming_methods_0 a b c =
-    case b of
-      [] -> Right (c, [])
-      d : e -> naming_method_0 a d c >>= \(f, g) -> second ((:) g) <$> naming_methods_0 a e f
-  naming_methods_1 :: String -> [Method_1] -> Locations -> Err [Method_2]
-  naming_methods_1 a b c =
-    case b of
-      [] -> Right []
-      d : e -> naming_method_1 a d c >>= \g -> (:) g <$> naming_methods_1 a e c
-  naming_nameexprs :: String -> Locations -> [(Name, Expression_9)] -> Err [(Name, Expression_1)]
-  naming_nameexprs a b c =
-    case c of
-      [] -> Right []
-      (d, e) : f -> naming_expression a e b >>= \g -> (:) (d, g) <$> naming_nameexprs a b f
-  naming_names' :: String -> Locations -> [Name] -> Err [String]
-  naming_names' a b c =
-    case c of
-      [] -> Right []
-      d : e -> naming_name a d b >>= \(f, g) -> (:) g <$> naming_names' a f e
-  naming_ops :: String -> Locations -> [Name] -> Err Locations
-  naming_ops a b c =
-    case c of
-      [] -> Right b
-      Name d e : i ->
-        case Data.Map.lookup e b of
-          Nothing -> naming_ops a (insert e (Library (Location_1 a d)) b) i
-          Just g -> Left (location_err ("definitions of " ++ e) g d)
-  naming_pat :: String -> Pat_2 -> Locations -> Err (Locations, Pat')
-  naming_pat a c d =
-    case c of
-      Application_pat_2 b e -> second (\h -> Application_pat' b h) <$> naming_pats a e d
-      Blank_pat_2 -> Right (d, Blank_pat')
-      Name_pat_2 b -> second Name_pat' <$> naming_name a b d
-  naming_pats :: String -> [Pat_2] -> Locations -> Err (Locations, [Pat'])
-  naming_pats a b c =
-    case b of
-      [] -> Right (c, [])
-      d : e -> naming_pat a d c >>= \(g, h) -> second ((:) h) <$> naming_pats a e g
+          Branch_term_2 type_variable <$>
+          (
+            (,) <$>
+            naming_term file_name types_0 terms_0 term_1 <*>
+            (
+              naming_type_pattern_0 type_pattern file_name types_0 >>=
+              \(types_1, type_pattern') -> (,) type_pattern' <$> naming_term file_name types_1 terms_0 term_2)))
+      Int_term_1 x -> Right (Int_term_2 x)
+      Let_term_1 term_pattern term_1 term_2 ->
+        (
+          naming_term_pattern term_pattern file_name terms_0 >>=
+          \(terms_1, term_pattern') ->
+            (
+              (\term'_0 -> \term'_1 -> Application_term_2 (Arrow_term_2 (Arrow_2 term_pattern' term'_1)) term'_0) <$>
+              naming_term file_name types_0 terms_1 term_1 <*>
+              naming_term file_name types_0 terms_1 term_2))
+      Match_term_1 term_1 arrows ->
+        (
+          Match_term_2 <$>
+          naming_term file_name types_0 terms_0 term_1 <*>
+          traverse (naming_arrow file_name types_0 terms_0) arrows)
+      Modular_term_1 x -> Right (Modular_term_2 x)
+      Name_term_1 name -> Right (Name_term_2 name)
+  naming_term_pattern ::
+    Term_pattern_3 -> String -> Dictionary Language_or_location -> Err (Dictionary Language_or_location, Term_pattern_5)
+  naming_term_pattern term_pattern file_name terms =
+    case term_pattern of
+      Struct_term_pattern_3 name term_patterns ->
+        second (Struct_term_pattern_5 name) <$> transf_list naming_term_pattern term_patterns file_name terms
+      Blank_term_pattern_3 -> Right (terms, Blank_term_pattern_5)
+      Int_term_pattern_3 x -> Right (terms, Int_term_pattern_5 x)
+      Modular_term_pattern_3 x -> Right (terms, Modular_term_pattern_5 x)
+      Name_term_pattern_3 name -> second Name_term_pattern_5 <$> naming_name "term" name file_name terms
+  naming_type_pattern_0 ::
+    Type_pattern_0 -> String -> Dictionary Language_or_location -> Err (Dictionary Language_or_location, Type_pattern_3)
+  naming_type_pattern_0 type_pattern file_name types =
+    case type_pattern of
+      Blank_type_pattern_0 -> Right (types, Blank_type_pattern_3)
+      Name_type_pattern_0 name -> second Name_type_pattern_3 <$> naming_name "type" name file_name types
+  naming_type_pattern_1 ::
+    Type_pattern_2 -> String -> Dictionary Language_or_location -> Err (Dictionary Language_or_location, Type_pattern_4)
+  naming_type_pattern_1 (Type_pattern_2 name type_patterns) file_name types =
+    second (Type_pattern_4 name) <$> transf_list naming_type_pattern_0 type_patterns file_name types
+  naming_type_variable ::
+    Type_variable_0 -> String -> Dictionary Language_or_location -> Err (Dictionary Language_or_location, Type_variable_1)
+  naming_type_variable (Type_variable_0 name kind) file_name types =
+    second (\name' -> Type_variable_1 name' kind) <$> naming_name "type" name file_name types
+  naming_type_variables ::
+    [Type_variable_0] -> String -> Dictionary Language_or_location -> Err (Dictionary Language_or_location, [Type_variable_1])
+  naming_type_variables = transf_list naming_type_variable
 --------------------------------------------------------------------------------------------------------------------------------

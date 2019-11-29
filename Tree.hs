@@ -46,7 +46,7 @@ module Tree (
   data Data_branch_0 =
     Algebraic_data_0 [Constructor_0] |
     Branch_data_0 Name (Data_branch_0, (Name, Data_branch_0)) |
-    Struct_data_0 Line_and_char Status String [Field_0]
+    Struct_data_0 Line_and_char String [Field_0]
       deriving Show
   data Def_or_instance_0 =
     Def_0 Line_and_char Status String [Type_variable_0] [Constraint_0] [(Term_pattern_1, Type_0)] Type_0 Term_0 |
@@ -57,7 +57,7 @@ module Tree (
   data File_1 = File_1 [Name] File_0 deriving Show
   data Input = Check [Name] | Eval [Name] Term_0 deriving Show
   data Kind_0 = Arrow_kind_0 Kind_0 Kind_0 | Nat_kind_0 | Star_kind_0 deriving (Eq, Show)
-  data Method_0 = Method_0 Name [Type_variable_0] [Constraint_0] Type_1 deriving Show
+  data Method_0 = Method_0 Name [Type_variable_0] Type_1 deriving Show
   data Modular_1 = Modular_1 Line_and_char Modular_0 deriving Show
   data Operator_0 = Operator_0 String Integer Associativity deriving Show
   data Operator_1 = Operator_1 Line_and_char String Operator_0 deriving Show
@@ -313,7 +313,7 @@ module Tree (
   parse_match_term :: Parser Term_0
   parse_match_term = Match_term_0 <$ parse_token Match_token <*> parse_term <*> parse_curly (parse_list parse_arrow)
   parse_method :: Parser Method_0
-  parse_method = Method_0 <$> parse_name <*> parse_type_variables <*> parse_constraints <* parse_colon <*> parse_type_1
+  parse_method = Method_0 <$> parse_name <*> parse_type_variables <* parse_colon <*> parse_type_1
   parse_modular :: Parser Modular_1
   parse_modular =
     Modular_1 <$> parse_line_and_char <*> (flip Modular_0 <$> parse_nat <* parse_certain_operator "#" <*> parse_nat)
@@ -420,7 +420,6 @@ module Tree (
       Struct_data_0 <$>
       parse_line_and_char <*
       parse_token Struct_token <*>
-      parse_status <*>
       parse_name' <*>
       parse_optional_1 parse_round (Field_0 <$> parse_name <* parse_colon <*> parse_type_1))
   parse_term :: Parser Term_0

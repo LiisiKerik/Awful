@@ -26,10 +26,12 @@ module Errors (Err, Error (..), Language_or_location (..), Line_and_char (..), L
     Mixed_operator_associativities String String Line_and_char Line_and_char |
     Parse_error String Line_and_char |
     Pattern_error String Line_and_char |
+    Private_struct String String Line_and_char |
     Too_many_arguments String Line_and_char String |
     Type_mismatch Loc |
     Type_variable_is_not_of_kind_Nat String String Line_and_char |
     Undefined String String String Line_and_char |
+    Unnecessary_access_modifier_before_constructor String String Line_and_char |
     Unresolved_type_variables Loc
       deriving Show
   data Language_or_location = Language | Location String Line_and_char deriving Show
@@ -148,6 +150,8 @@ module Errors (Err, Error (..), Language_or_location (..), Line_and_char (..), L
         "Parse error at " ++ write_file_name_and_line_and_char file_name line_and_char ++ "."
       Pattern_error file_name line_and_char ->
         "Pattern error at " ++ write_file_name_and_line_and_char file_name line_and_char ++ "."
+      Private_struct name file_name line_and_char ->
+        "Private struct " ++ name ++ " at " ++ write_file_name_and_line_and_char file_name line_and_char ++ "."
       Too_many_arguments file_name a b ->
         "Type " ++ b ++ " at " ++ write_file_name_and_line_and_char file_name a ++ " has been given too many arguments."
       Type_mismatch a ->
@@ -163,6 +167,8 @@ module Errors (Err, Error (..), Language_or_location (..), Line_and_char (..), L
         "Type variable " ++ name ++ " at " ++ write_file_name_and_line_and_char file_name location ++ " is not of kind Nat."
       Undefined kind x file_name line_and_char ->
         "Undefined " ++ kind ++ " " ++ x ++ " at " ++ write_file_name_and_line_and_char file_name line_and_char ++ "."
+      Unnecessary_access_modifier_before_constructor e file_name d ->
+        "Unnecessary access modifier before constructor " ++ e ++ " at " ++ write_file_name_and_line_and_char file_name d ++ "."
       Unresolved_type_variables a ->
         (
           "Unresolved type variables in " ++

@@ -29,26 +29,26 @@ module Naming (
   data Binding_2 = Binding_2 Name Term_2 deriving Show
   data Class_2 = Class_2 String Type_variable_0 [Constraint_0] [Method_2] deriving Show
   data Class_3 = Class_3 String Type_variable_1 [Constraint_0] [Method_3] deriving Show
-  data Constructor_2 = Constructor_2 Status String [Type_3] deriving Show
+  data Constructor_2 = Constructor_2 Line_and_char Status String [Type_3] deriving Show
   data Data_2 = Data_2 Status String [Type_variable_0] Data_branch_2 deriving Show
   data Data_3 = Data_3 Status String [Type_variable_1] Data_branch_3 deriving Show
   data Data_branch_2 =
     Algebraic_data_2 [Constructor_2] |
     Branch_data_2 Name (Data_branch_2, (Name, Data_branch_2)) |
-    Struct_data_2 Status String [Field_2]
+    Struct_data_2 Line_and_char String [Field_2]
       deriving Show
   data Data_branch_3 =
     Algebraic_data_3 [Constructor_2] |
     Branch_data_3 Name (Data_branch_3, (String, Data_branch_3)) |
-    Struct_data_3 Status String [Field_2]
+    Struct_data_3 Line_and_char String [Field_2]
       deriving Show
   data Def_or_instance_2 =
     Def_2 Line_and_char Status String [Type_variable_1] [Constraint_0] Type_2 Term_2 |
     Instance_2 Line_and_char Name Type_pattern_4 [Constraint_0] [Binding_2]
       deriving Show
   data Field_2 = Field_2 String Type_3 deriving Show
-  data Method_2 = Method_2 String [Type_variable_0] [Constraint_0] Type_3 deriving Show
-  data Method_3 = Method_3 String [Type_variable_1] [Constraint_0] Type_3 deriving Show
+  data Method_2 = Method_2 String [Type_variable_0] Type_3 deriving Show
+  data Method_3 = Method_3 String [Type_variable_1] Type_3 deriving Show
   data Term_2 =
     Application_term_2 Term_2 Term_2 |
     Arrow_term_2 Arrow_2 |
@@ -67,7 +67,7 @@ module Naming (
       deriving Show
   data File_3 = File_3 [Data_2] [Class_2] [Def_or_instance_1] deriving Show
   data File_4 = File_4 [Data_3] [Class_3] [Def_or_instance_2] deriving Show
-  data Type_pattern_3 = Blank_type_pattern_3 | Name_type_pattern_3 String deriving Show
+  data Type_pattern_3 = Blank_type_pattern_3 | Name_type_pattern_3 String deriving (Eq, Ord, Show)
   data Type_pattern_4 = Type_pattern_4 Name [Type_pattern_3] deriving Show
   data Type_variable_1 = Type_variable_1 String Kind_0 deriving Show
   naming_arrow :: String -> Dictionary Language_or_location -> Dictionary Language_or_location -> Arrow_1 -> Err Arrow_2
@@ -98,7 +98,9 @@ module Naming (
   naming_constructor ::
     Constructor_1 -> String -> Dictionary Language_or_location -> Err (Dictionary Language_or_location, Constructor_2)
   naming_constructor (Constructor_1 line_and_char status name_0 types) file_name terms =
-    second (\name_1 -> Constructor_2 status name_1 types) <$> naming_name "term" (Name line_and_char name_0) file_name terms
+    (
+      second (\name_1 -> Constructor_2 line_and_char status name_1 types) <$>
+      naming_name "term" (Name line_and_char name_0) file_name terms)
   naming_data_0 ::
     (
       Data_1 ->
@@ -128,10 +130,11 @@ module Naming (
             (
               second (\data_branch'_1 -> Branch_data_2 type_variable_0 (data_branch'_0, (type_variable_1, data_branch'_1))) <$>
               naming_data_branch_0 data_branch_2 file_name terms_1))
-      Struct_data_1 line_and_char status name_0 fields ->
+      Struct_data_1 line_and_char name_0 fields ->
         (
           naming_name "term" (Name line_and_char name_0) file_name terms_0 >>=
-          \(terms_1, name_1) -> second (Struct_data_2 status name_1) <$> transf_list naming_field fields file_name terms_1)
+          \(terms_1, name_1) ->
+            second (Struct_data_2 line_and_char name_1) <$> transf_list naming_field fields file_name terms_1)
   naming_data_branch_1 :: String -> Dictionary Language_or_location -> Data_branch_2 -> Err Data_branch_3
   naming_data_branch_1 file_name types_0 data_branch_0 =
     case data_branch_0 of
@@ -145,7 +148,7 @@ module Naming (
             (
               naming_name "type" type_variable_1 file_name types_0 >>=
               \(types_1, type_variable') -> (,) type_variable' <$> naming_data_branch_1 file_name types_1 data_branch_2)))
-      Struct_data_2 status name fields -> Right (Struct_data_3 status name fields) 
+      Struct_data_2 line_and_char name fields -> Right (Struct_data_3 line_and_char name fields)
   naming_def_or_instance_0 ::
     (
       Def_or_instance_1 ->
@@ -260,13 +263,11 @@ module Naming (
       traverse (naming_class_1 file_name types) classes <*>
       traverse (naming_def_or_instance_1 file_name types terms) defs_and_instances)
   naming_method_0 :: Method_1 -> String -> Dictionary Language_or_location -> Err (Dictionary Language_or_location, Method_2)
-  naming_method_0 (Method_1 name type_variables constraints typ) file_name terms =
-    second (\name' -> Method_2 name' type_variables constraints typ) <$> naming_name "term" name file_name terms
+  naming_method_0 (Method_1 name type_variables typ) file_name terms =
+    second (\name' -> Method_2 name' type_variables typ) <$> naming_name "term" name file_name terms
   naming_method_1 :: String -> Dictionary Language_or_location -> Method_2 -> Err Method_3
-  naming_method_1 file_name types (Method_2 name type_variables constraints typ) =
-    (
-      (\(_, type_variables') -> Method_3 name type_variables' constraints typ) <$>
-      naming_type_variables type_variables file_name types)
+  naming_method_1 file_name types (Method_2 name type_variables typ) =
+    (\(_, type_variables') -> Method_3 name type_variables' typ) <$> naming_type_variables type_variables file_name types
   naming_name :: String -> Name -> String -> Dictionary Language_or_location -> Err (Dictionary Language_or_location, String)
   naming_name kind (Name line_and_char name) file_name names_0 =
     (

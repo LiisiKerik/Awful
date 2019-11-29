@@ -1,6 +1,6 @@
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
-module Eval where
+module Eval (standard_naming_typing, tokenise_parse_naming_typing_eval) where
   import Data.Set
   import Data.Map
   import Dictionary
@@ -17,57 +17,26 @@ module Eval where
         case c of
           0 -> Nothing
           _ -> (\d -> div (a * d + b) c) <$> div_finite c (mod (- b) c) (mod a c)
-  eval :: Dictionary Expr_2 -> Term_4 -> String
+  eval :: Dictionary Polymorphic_term -> Term_4 -> String
   eval a b =
     case eval' a b of
       Just c -> tostr c
       Nothing -> "Crash"
-  eval' :: Dictionary Expr_2 -> Term_4 -> Maybe Term_4
+  eval' :: Dictionary Polymorphic_term -> Term_4 -> Maybe Term_4
   eval' a c =
     case c of
-      Application_expression_2 d e ->
+      Add_Int_term_4 (Int_term_4 x) (Int_term_4 y) -> Just (Int_term_4 (x + y))
+      Add_Modular_term_4 n (Modular_term_4 x) (Modular_term_4 y) -> Just (Modular_term_4 (mod (x + y) n))
+      Application_term_4 d e ->
         (
           (,) <$> eval' a d <*> eval' a e >>=
-          \h ->
-            case h of
-              (Add_Int_0_expression_2, Int_expression_2 l) -> Just (Add_Int_1_expression_2 l)
-              (Add_Int_1_expression_2 k, Int_expression_2 n) -> Just (Int_expression_2 (k + n))
-              (Add_Modular_0_expression_2 k, Modular_expression_2 l) -> Just (Add_Modular_1_expression_2 k l)
-              (Add_Modular_1_expression_2 l k, Modular_expression_2 n) -> Just (Modular_expression_2 (mod (k + n) l))
-              (Compare_Int_0_expression_2, Int_expression_2 k) -> Just (Compare_Int_1_expression_2 k)
-              (Compare_Int_1_expression_2 k, Int_expression_2 l) -> Just (Algebraic_expression_2 (show (compare k l)) [])
-              (Compare_Modular_0_expression_2, Modular_expression_2 k) -> Just (Compare_Modular_1_expression_2 k)
-              (Compare_Modular_1_expression_2 k, Modular_expression_2 l) ->
-                Just (Algebraic_expression_2 (show (compare k l)) [])
-              (Convert_Int_expression_2, j) -> Just j
-              (Convert_Modular_expression_2 k, Int_expression_2 l) -> Just (Modular_expression_2 (mod l k))
-              (Div_0_expression_2, Int_expression_2 k) -> Just (Div_1_expression_2 k)
-              (Div_1_expression_2 k, Int_expression_2 l) ->
-                Just
-                  (case l of
-                    0 -> nothing_algebraic
-                    _ -> wrap_algebraic (Int_expression_2 (div k l)))
-              (Field_expression_2 k, Algebraic_expression_2 _ l) -> Just (l !! fromIntegral k)
-              (Function_expression_2 k l, j) -> eval_pat j k l >>= eval' a
-              (Inverse_Modular_expression_2 k, Modular_expression_2 l) ->
-                Just
-                  (case div_finite k 1 l of
-                    Nothing -> nothing_algebraic
-                    Just w -> wrap_algebraic (Modular_expression_2 w))
-              (Mod_0_expression_2, Int_expression_2 k) -> Just (Mod_1_expression_2 k)
-              (Mod_1_expression_2 k, Int_expression_2 l) ->
-                Just
-                  (case l of
-                    0 -> nothing_algebraic
-                    _ -> wrap_algebraic (Int_expression_2 (mod k l)))
-              (Multiply_Int_0_expression_2, Int_expression_2 k) -> Just (Multiply_Int_1_expression_2 k)
-              (Multiply_Int_1_expression_2 k, Int_expression_2 l) -> Just (Int_expression_2 (k * l))
-              (Multiply_Modular_0_expression_2 k, Modular_expression_2 l) -> Just (Multiply_Modular_1_expression_2 k l)
-              (Multiply_Modular_1_expression_2 l k, Modular_expression_2 n) -> Just (Modular_expression_2 (mod (k * n) l))
-              (Negate_Int_expression_2, Int_expression_2 k) -> Just (Int_expression_2 (- k))
-              (Negate_Modular_expression_2 k, Modular_expression_2 l) -> Just (Modular_expression_2 (mod (- l) k))
+          \m ->
+            case m of
+              (Algebraic_term_4 t x, y) -> Just (Algebraic_term_4 t (x ++ [y]))
+              (Arrow_term_4 (Arrow_4 k l), j) -> eval_pat j k l >>= eval' a
+              (Field_term_4 n, Algebraic_term_4 _ fields) -> Just (fields !! n)
               _ -> undefined)
-      Branch_expression_2 b d e f ->
+      Branch_term_4 b d e f ->
         eval'
           a
           (case b of
@@ -79,21 +48,62 @@ module Eval where
                 f
             Name_type_4 "Zero" -> d
             _ -> undefined)
-      Match_expression_2 b d -> eval' a b >>= \e -> eval' a (eval_match e d)
-      Glob_expression_2 d b e ->
+      Compare_Int_term_4 (Int_term_4 x) (Int_term_4 y) -> Just (Algebraic_term_4 (show (compare x y)) [])
+      Compare_Modular_term_4 (Modular_term_4 x) (Modular_term_4 y) -> Just (Algebraic_term_4 (show (compare x y)) [])
+      Convert_Modular_term_4 n (Int_term_4 x) -> Just (Modular_term_4 (mod x n))
+      Div_term_4 (Int_term_4 x) (Int_term_4 y) ->
+        case y > 0 of
+          False -> Nothing
+          True -> Just (Int_term_4 (div x y))
+      Inverse_Modular_term_4 n (Modular_term_4 x) ->
+        Just
+          (case div_finite n 1 x of
+            Nothing -> Algebraic_term_4 "Nothing" []
+            Just y -> Algebraic_term_4 "Wrap" [Modular_term_4 y])
+      Match_term_4 b d -> eval' a b >>= \e -> eval' a (eval_match e d)
+      Mod_term_4 (Int_term_4 x) (Int_term_4 y) ->
+        case y > 0 of
+          False -> Nothing
+          True -> Just (Int_term_4 (mod x y))
+      Glob_term_4 d b e ->
         let
           j k l m = eval' a (repl_expr (Data.Map.fromList (zip k l)) m)
         in
           case b of
-            Nothing -> Data.Map.lookup d a >>= \(Expr_2 _ g h) -> j g e h
+            Nothing -> Data.Map.lookup d a >>= \(Parametric_term g h) -> j g e h
             Just i ->
               let
                 (k, l) = typestring i []
               in
-                Data.Map.lookup (d ++ " " ++ k) a >>= \(Expr_2 f g h) ->
-                  case f of
-                    Nothing -> undefined
-                    Just m -> j (m ++ g) (l ++ e) h
+                let
+                  Ad_hoc_term u v = a ! d
+                in
+                  case v ! k of
+                    Add_Modular_term ->
+                      Just
+                        (Arrow_term_4
+                          (Arrow_4
+                            (Name_term_pattern_6 "x")
+                            (Arrow_term_4
+                              (Arrow_4
+                                (Name_term_pattern_6 "y")
+                                (Add_Modular_term_4 (nat_to_int (head l)) (Loc_term_4 "x") (Loc_term_4 "y"))))))
+                    Convert_Modular_term ->
+                      Just
+                        (Arrow_term_4
+                          (Arrow_4 (Name_term_pattern_6 "x") (Convert_Modular_term_4 (nat_to_int (head l)) (Loc_term_4 "x"))))
+                    Implementation w x -> j (w ++ u) (l ++ e) x
+                    Times_Modular_term ->
+                      Just
+                        (Arrow_term_4
+                          (Arrow_4
+                            (Name_term_pattern_6 "x")
+                            (Arrow_term_4
+                              (Arrow_4
+                                (Name_term_pattern_6 "y")
+                                (Times_Modular_term_4 (nat_to_int (head l)) (Loc_term_4 "x") (Loc_term_4 "y"))))))
+      Times_Int_term_4 (Int_term_4 x) (Int_term_4 y) -> Just (Int_term_4 (x * y))
+      Times_Modular_term_4 n (Modular_term_4 x) (Modular_term_4 y) -> Just (Modular_term_4 (mod (x * y) n))
       _ -> Just c
   eval_match :: Term_4 -> [Arrow_4] -> Term_4
   eval_match a b =
@@ -106,15 +116,15 @@ module Eval where
   eval_pat :: Term_4 -> Term_pattern_6 -> Term_4 -> Maybe Term_4
   eval_pat a b c =
     case (a, b) of
-      (Algebraic_expression_2 d e, Struct_term_pattern_6 f g) ->
+      (Algebraic_term_4 d e, Struct_term_pattern_6 f g) ->
         case d == f of
           False -> Nothing
           True -> eval_pats (zip e g) c
-      (Int_expression_2 d, Int_term_pattern_6 e) ->
+      (Int_term_4 d, Int_term_pattern_6 e) ->
         case d == e of
           False -> Nothing
           True -> Just c
-      (Modular_expression_2 d, Modular_term_pattern_6 e) ->
+      (Modular_term_4 d, Modular_term_pattern_6 e) ->
         case d == e of
           False -> Nothing
           True -> Just c
@@ -126,8 +136,12 @@ module Eval where
     case a of
       [] -> Just b
       (c, d) : e -> eval_pat c d b >>= eval_pats e
-  nothing_algebraic :: Term_4
-  nothing_algebraic = Algebraic_expression_2 "Nothing" []
+  nat_to_int :: Type_4 -> Integer
+  nat_to_int a =
+    case a of
+      Application_type_4 (Name_type_4 "Next") b -> 1 + nat_to_int b
+      Name_type_4 "Zero" -> 0
+      _ -> undefined
   repl_expr :: Dictionary Type_4 -> Term_4 -> Term_4
   repl_expr a b =
     let
@@ -135,12 +149,12 @@ module Eval where
       f = repl3 a
     in
       case b of
-        Algebraic_expression_2 c d -> Algebraic_expression_2 c (e <$> d)
-        Application_expression_2 c d -> Application_expression_2 (e c) (e d)
-        Branch_expression_2 c d g h -> Branch_expression_2 (f c) (e d) g (e h)
-        Function_expression_2 c d -> Function_expression_2 c (e d)
-        Glob_expression_2 c d g -> Glob_expression_2 c (f <$> d) (f <$> g)
-        Match_expression_2 c d -> Match_expression_2 (e c) ((\(Arrow_4 g h) -> Arrow_4 g (e h)) <$> d)
+        Algebraic_term_4 c d -> Algebraic_term_4 c (e <$> d)
+        Application_term_4 c d -> Application_term_4 (e c) (e d)
+        Branch_term_4 c d g h -> Branch_term_4 (f c) (e d) g (e h)
+        Arrow_term_4 (Arrow_4 c d) -> Arrow_term_4 (Arrow_4 c (e d))
+        Glob_term_4 c d g -> Glob_term_4 c (f <$> d) (f <$> g)
+        Match_term_4 c d -> Match_term_4 (e c) ((\(Arrow_4 g h) -> Arrow_4 g (e h)) <$> d)
         _ -> b
   repl3 :: Dictionary Type_4 -> Type_4 -> Type_4
   repl3 a b =
@@ -167,15 +181,14 @@ module Eval where
         (
           (
             Dictionary Kind_0,
-            Dictionary [Type_variable_1],
             Dictionary Constructor_3,
-            Dictionary Type_5,
+            Dictionary Polymorphic_type,
             Dictionary Class_6,
             Dictionary Class_5,
             Dictionary (Dictionary [[String]]),
             Dictionary Kind_0),
           (Dictionary Operator_0, Dictionary Operator_0)),
-        Dictionary Expr_2) ->
+        Dictionary Polymorphic_term) ->
       Err
         (
           (
@@ -190,33 +203,32 @@ module Eval where
           (
             (
               Dictionary Kind_0,
-              Dictionary [Type_variable_1],
               Dictionary Constructor_3,
-              Dictionary Type_5,
+              Dictionary Polymorphic_type,
               Dictionary Class_6,
               Dictionary Class_5,
               Dictionary (Dictionary [[String]]),
               Dictionary Kind_0),
             (Dictionary Operator_0, Dictionary Operator_0)),
-          Dictionary Expr_2))
+          Dictionary Polymorphic_term))
   standard_naming_typing f a ((b, b0), (c, (u0, u1)), g) =
     (
       standard_file f u0 u1 a b >>=
       \(t0, (t1, t2, n')) ->
-        naming_file n' f b0 >>= \(d0, e) -> (\(h, i) -> ((t0, d0), (h, (t1, t2)), i)) <$> typing f e (c, g))
+        naming_file n' f b0 >>= \(d0, e) -> (\(h, i) -> ((t0, d0), (h, (t1, t2)), i)) <$> typing f (c, g) e)
   subst_expr :: String -> Term_4 -> Term_4 -> Term_4
   subst_expr a b c =
     let
       f x = subst_expr a x c
     in
       case b of
-        Algebraic_expression_2 d e -> Algebraic_expression_2 d (f <$> e)
-        Application_expression_2 d e -> Application_expression_2 (f d) (f e)
-        Branch_expression_2 d e g h -> Branch_expression_2 d (f e) g (f h)
-        Function_expression_2 d e -> Function_expression_2 d (if subst_help a d then e else f e)
-        Loc_expression_2 d -> if d == a then c else b
-        Match_expression_2 d e ->
-          Match_expression_2 (f d) ((\(Arrow_4 g h) -> Arrow_4 g (if subst_help a g then h else f h)) <$> e)
+        Algebraic_term_4 d e -> Algebraic_term_4 d (f <$> e)
+        Application_term_4 d e -> Application_term_4 (f d) (f e)
+        Branch_term_4 d e g h -> Branch_term_4 d (f e) g (f h)
+        Arrow_term_4 (Arrow_4 d e) -> Arrow_term_4 (Arrow_4 d (if subst_help a d then e else f e))
+        Loc_term_4 d -> if d == a then c else b
+        Match_term_4 d e ->
+          Match_term_4 (f d) ((\(Arrow_4 g h) -> Arrow_4 g (if subst_help a g then h else f h)) <$> e)
         _ -> b
   subst_help :: String -> Term_pattern_6 -> Bool
   subst_help a b =
@@ -228,16 +240,14 @@ module Eval where
     (
       (Set String, Dictionary Language_or_location, Dictionary Language_or_location) ->
       Dictionary Kind_0 ->
-      (Dictionary [Type_variable_1], Dictionary Constructor_3, Dictionary Type_5) ->
-      Dictionary Expr_2 ->
+      (Dictionary Constructor_3, Dictionary Polymorphic_type) ->
+      Dictionary Polymorphic_term ->
       Term_0 ->
       Dictionary (Dictionary [[String]]) ->
       Dictionary Operator_0 ->
       Err String)
-  tokenise_parse_naming_typing_eval (c0, f3, c) f (g, h, i) l e u q2 =
-    standard_term "input" q2 c0 e >>= \e' -> naming_term "input" f3 c e' >>= \j -> eval l <$> type_expr' (f, g, h, i) j u
+  tokenise_parse_naming_typing_eval (c0, f3, c) f (h, i) l e u q2 =
+    standard_term "input" q2 c0 e >>= \e' -> naming_term "input" f3 c e' >>= \j -> eval l <$> type_expr' (f, h, i) j u
   tostr :: Term_4 -> String
   tostr x = show x
-  wrap_algebraic :: Term_4 -> Term_4
-  wrap_algebraic x = Algebraic_expression_2 "Wrap" [x]
 --------------------------------------------------------------------------------------------------------------------------------

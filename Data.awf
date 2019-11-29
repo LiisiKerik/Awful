@@ -110,6 +110,9 @@ Def !Union' [T : Star, U : Star] <Ord T, Ord U> (x : List (T * U), y : List (T *
       _ & Empty_List -> Wrap x,
       (z & a) : b & (c & d) : e ->
         Match Compare z c {LT -> f z a b y, EQ -> Match Compare a d {EQ -> f z a b e, _ -> Nothing}, GT -> f c d x e}}
+````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+`Def Sort [T : Star] <Ord T> (x : List T) : List T = Let y & z = Split_0 x In Merge
+~/
 Def Write_Empty : Op = Write_name ($List ["E", "m", "p", "t", "y"])
 Instance Writeable {Dictionary T U} <Writeable T, Writeable U> (
   Write_brackets (Dictionary' x) =
@@ -118,4 +121,4 @@ Instance Writeable {Dictionary T U} <Writeable T, Writeable U> (
       _ -> Write_List ($List ["$", "D", "i", "c", "t", "i", "o", "n", "a", "r", "y"]) x})
 Instance Writeable {Set T} <Writeable T> (
   Write_Brackets (Set' x) = Match x {Empty_List -> Write_Empty, _ -> Write_List ($List ["$", "S", "e", "t"]) x})
-````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+/~

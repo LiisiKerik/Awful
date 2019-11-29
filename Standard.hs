@@ -33,14 +33,14 @@ module Standard (
   data Data_branch_1 =
     Algebraic_data_1 [Constructor_1] |
     Branch_data_1 Name (Data_branch_1, (Name, Data_branch_1)) |
-    Struct_data_1 Line_and_char Status String [Field_1]
+    Struct_data_1 Line_and_char String [Field_1]
       deriving Show
   data Def_or_instance_1 =
     Def_1 Line_and_char Status String [Type_variable_0] [Constraint_0] Type_2 Term_1 |
     Instance_1 Line_and_char Name Type_pattern_2 [Constraint_0] [Binding_1]
       deriving Show
   data Field_1 = Field_1 Name Type_3 deriving Show
-  data Method_1 = Method_1 Name [Type_variable_0] [Constraint_0] Type_3 deriving Show
+  data Method_1 = Method_1 Name [Type_variable_0] Type_3 deriving Show
   data Operator_2 = Operator_2 Line_and_char Operator_0 deriving Show
   data Term_1 =
     Application_term_1 Term_1 Term_1 |
@@ -184,9 +184,9 @@ module Standard (
             (Data.Set.union constructors_0 constructors_1, Branch_data_1 n (data'_1, (n', data'_2)))) <$>
           standard_data' file_name type_operators data_1 <*>
           standard_data' file_name type_operators data_2)
-      Struct_data_0 line_and_char status x fields ->
+      Struct_data_0 line_and_char x fields ->
         (
-          (\fields' -> (Data.Set.singleton x, Struct_data_1 line_and_char status x fields')) <$>
+          (\fields' -> (Data.Set.singleton x, Struct_data_1 line_and_char x fields')) <$>
           traverse (standard_field file_name type_operators) fields)
   standard_datas :: String -> Dictionary Operator_0 -> [Data_0] -> Err (Set String, [Data_1])
   standard_datas file_name b c = (\d -> (Data.Set.unions (fst <$> d), snd <$> d)) <$> traverse (standard_data file_name b) c
@@ -379,5 +379,5 @@ module Standard (
           standard_term z c b h <*>
           std_let z (b, c) i e)
   std_mthd :: String -> Dictionary Operator_0 -> Method_0 -> Err Method_1
-  std_mthd m d (Method_0 b a c e) = Method_1 b a c <$> standard_type m d e
+  std_mthd m d (Method_0 b a e) = Method_1 b a <$> standard_type m d e
 --------------------------------------------------------------------------------------------------------------------------------

@@ -1,9 +1,5 @@
 ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
 Load (Data.awf, Standard.awf)
-Syntax $Array :: [Expr] -> Expr = $foldr Construct_Array Empty_Array
-Syntax $Polynomial ($x :: [Expr]) :: Expr = Polynomial ($List $x)
-Syntax $Square ($x :: [[Expr]]) :: Expr = $Table_to_Square ($Table $x)
-Syntax $Table ($x :: [[Expr]]) :: Expr = $Table ($Array ($map {[Expr], Expr} $Array $x))
 Operator ; Construct_Array 4 Right
 Data Array [N : Star, T : Star] =
   Branch N {Zero -> Struct Empty_Array, Next N' -> Struct Construct_Array (Head : T, Tail : Array N' T)}

@@ -1,98 +1,125 @@
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
-module Eval (eval') where
-  import Data.Map
-  import Dictionary
-  import Errors
-  import Typing
-  eval' :: Dictionary Term_3 -> Term_3 -> Err String
+module Eval (eval, run) where
+  import Control.Monad.Except (MonadError (..))
+  import Control.Monad.Reader (MonadReader (..), ReaderT, runReaderT)
+  import Data.Bifunctor (first)
+  import Data.Foldable (traverse_)
+  import Data.Map ((!), empty, lookup, singleton, withoutKeys)
+  import Data.Set (Set, empty, singleton)
+  import Dictionary (Dictionary) -- delete
+  import Errors (Err, Err', Error (..), Error' (..), Eval_err, Evaluation_error (..))
+  import Typing (Arrow (..), Term (..), Term_pattern (..), Test (..))
+  type Eval = ReaderT (Dictionary Term) Maybe
+  collect_variables :: Term_pattern -> Set String
+  collect_variables term_pattern =
+    case term_pattern of
+      Blank_term_pattern -> Data.Set.empty
+      Int_term_pattern _ -> Data.Set.empty
+      Name_term_pattern name -> Data.Set.singleton name
+  eval :: Dictionary Term -> Term -> Err String
+  eval terms term = first Evaluation_error (eval' terms term)
+  eval' :: Dictionary Term -> Term -> Eval_err String
   eval' terms term =
-    case eval_term terms term of
-      Nothing -> Left Evaluation_crashed
+    case runReaderT (eval_term term) terms of
+      Nothing -> Left Crashed
       Just term' -> write_term term'
-  eval_arrow :: Arrow_3 -> Term_3 -> Maybe Term_3
-  eval_arrow (Arrow_3 term_pattern term_0) term_1 =
-    (\terms -> replace_term terms term_0) <$> eval_term_pattern term_pattern term_1
-  eval_arrows :: Term_3 -> [Arrow_3] -> Maybe Term_3
+  eval_arrow :: Arrow -> Term -> Eval Term
+  eval_arrow (Arrow term_pattern term_0) term_1 =
+    do
+      substitutions <- eval_term_pattern term_pattern term_1
+      return (replace_variables_in_term substitutions term_0)
+  eval_arrows :: Term -> [Arrow] -> Eval Term
   eval_arrows term arrows =
     case arrows of
-      [] -> Nothing
-      arrow : arrows' ->
-        case eval_arrow arrow term of
-          Nothing -> eval_arrows term arrows'
-          Just term' -> Just term'
-  eval_term :: Dictionary Term_3 -> Term_3 -> Maybe Term_3
-  eval_term terms term =
+      [] -> throwError ()
+      arrow : arrows' -> catchError (eval_arrow arrow term) (\() -> eval_arrows term arrows')
+  eval_term :: Term -> Eval Term
+  eval_term term =
     case term of
-      Add_Int_term_3 (Int_term_3 int_0) (Int_term_3 int_1) -> Just (Int_term_3 (int_0 + int_1))
-      Application_term_3 term_0 term_1 ->
+      Add_Int_term (Int_term i) (Int_term j) -> return (Int_term (i + j))
+      Application_term term_0 term_1 ->
         do
-          Arrow_term_3 arrow <- eval_term terms term_0
-          term' <- eval_term terms term_1
+          Arrow_term arrow <- eval_term term_0
+          term' <- eval_term term_1
           term'' <- eval_arrow arrow term'
-          eval_term terms term''
-      Compare_Int_term_3 (Int_term_3 int_0) (Int_term_3 int_1) ->
+          eval_term term''
+{-
+      Compare_Int_term (Int_term int_0) (Int_term int_1) ->
         Just
           (case compare int_0 int_1 of
-            LT -> LT_term_3
-            EQ -> EQ_term_3
-            GT -> GT_term_3)
-      Div_term_3 (Int_term_3 int_0) (Int_term_3 int_1) -> Just (Int_term_3 (div int_0 int_1))
-      Match_term_3 term' arrows ->
+            LT -> LT_term
+            EQ -> EQ_term
+            GT -> GT_term)
+-}
+      Crash_term -> throwError ()
+      Div_term (Int_term i) (Int_term j) ->
+        case j > 0 of
+          False -> throwError ()
+          True -> return (Int_term (div i j))
+      Match_term term' arrows ->
         do
-          term'' <- eval_term terms term'
+          term'' <- eval_term term'
           term''' <- eval_arrows term'' arrows
-          eval_term terms term'''
-      Mod_term_3 (Int_term_3 int_0) (Int_term_3 int_1) -> Just (Int_term_3 (mod int_0 int_1))
-      Name_term_3 name -> Data.Map.lookup name terms
-      Times_Int_term_3 (Int_term_3 int_0) (Int_term_3 int_1) -> Just (Int_term_3 (int_0 * int_1))
-      _ -> Just term
-  eval_term_pattern :: Term_pattern_3 -> Term_3 -> Maybe (Dictionary Term_3)
+          eval_term term'''
+      Mod_term (Int_term i) (Int_term j) ->
+        case j > 0 of
+          False -> throwError ()
+          True -> return (Int_term (mod i j))
+      Name_term name ->
+        do
+          terms <- ask
+          eval_term (terms ! name)
+      Times_Int_term (Int_term i) (Int_term j) -> return (Int_term (i * j))
+      _ -> return term
+  eval_term_pattern :: Term_pattern -> Term -> Eval (Dictionary Term)
   eval_term_pattern term_pattern term =
     case (term_pattern, term) of
-      (Int_term_pattern_3 int_0, Int_term_3 int_1) ->
-        case int_0 == int_1 of
-          False -> Nothing
-          True -> Just empty
-      (Name_term_pattern_3 name, _) -> Just (singleton name term)
-      (Struct_term_pattern_3 "EQ", EQ_term_3) -> Just empty
-      (Struct_term_pattern_3 "GT", GT_term_3) -> Just empty
-      (Struct_term_pattern_3 "LT", LT_term_3) -> Just empty
-      _ -> Nothing
-  gather_variables :: Term_pattern_3 -> [String]
-  gather_variables term_pattern =
-    case term_pattern of
-      Int_term_pattern_3 _ -> []
-      Name_term_pattern_3 name -> [name]
-      Struct_term_pattern_3 _ -> []
-  replace_arrow :: Dictionary Term_3 -> Arrow_3 -> Arrow_3
-  replace_arrow terms (Arrow_3 term_pattern term) =
-    Arrow_3 term_pattern (replace_term (delete_keys terms (gather_variables term_pattern)) term)
-  replace_term :: Dictionary Term_3 -> Term_3 -> Term_3
-  replace_term terms term =
+      (Blank_term_pattern, _) -> return Data.Map.empty
+      (Int_term_pattern i, Int_term j) ->
+        case i == j of
+          False -> throwError ()
+          True -> return Data.Map.empty
+      (Name_term_pattern name, _) -> return (Data.Map.singleton name term)
+      _ -> throwError ()
+  replace_variables_in_arrow :: Dictionary Term -> Arrow -> Arrow
+  replace_variables_in_arrow substitutions (Arrow term_pattern term) =
+    Arrow term_pattern (replace_variables_in_term (withoutKeys substitutions (collect_variables term_pattern)) term)
+  replace_variables_in_term :: Dictionary Term -> Term -> Term
+  replace_variables_in_term substitutions term =
     case term of
-      Add_Int_term_3 term_0 term_1 -> Add_Int_term_3 (replace_term terms term_0) (replace_term terms term_1)
-      Application_term_3 term_0 term_1 -> Application_term_3 (replace_term terms term_0) (replace_term terms term_1)
-      Arrow_term_3 arrow -> Arrow_term_3 (replace_arrow terms arrow)
-      Compare_Int_term_3 term_0 term_1 -> Compare_Int_term_3 (replace_term terms term_0) (replace_term terms term_1)
-      Div_term_3 term_0 term_1 -> Div_term_3 (replace_term terms term_0) (replace_term terms term_1)
-      EQ_term_3 -> EQ_term_3
-      GT_term_3 -> GT_term_3
-      Int_term_3 int -> Int_term_3 int
-      LT_term_3 -> LT_term_3
-      Match_term_3 term' arrows -> Match_term_3 (replace_term terms term') (replace_arrow terms <$> arrows)
-      Mod_term_3 term_0 term_1 -> Mod_term_3 (replace_term terms term_0) (replace_term terms term_1)
-      Name_term_3 name ->
-        case Data.Map.lookup name terms of
+      Add_Int_term term_0 term_1 ->
+        Add_Int_term (replace_variables_in_term substitutions term_0) (replace_variables_in_term substitutions term_1)
+      Application_term term_0 term_1 ->
+        Application_term (replace_variables_in_term substitutions term_0) (replace_variables_in_term substitutions term_1)
+      Arrow_term arrow -> Arrow_term (replace_variables_in_arrow substitutions arrow)
+      -- Compare_Int_term term_0 term_1 -> Compare_Int_term (replace_variables_in_term terms term_0) (replace_variables_in_term terms term_1)
+      Crash_term -> Crash_term
+      Div_term term_0 term_1 ->
+        Div_term (replace_variables_in_term substitutions term_0) (replace_variables_in_term substitutions term_1)
+      Int_term i -> Int_term i
+      Match_term term' arrows ->
+        Match_term (replace_variables_in_term substitutions term') (replace_variables_in_arrow substitutions <$> arrows)
+      Mod_term term_0 term_1 ->
+        Mod_term (replace_variables_in_term substitutions term_0) (replace_variables_in_term substitutions term_1)
+      Name_term name ->
+        case Data.Map.lookup name substitutions of
           Nothing -> term
           Just term' -> term'
-      Times_Int_term_3 term_0 term_1 -> Times_Int_term_3 (replace_term terms term_0) (replace_term terms term_1)
-  write_term :: Term_3 -> Err String
+      Times_Int_term term_0 term_1 ->
+        Times_Int_term (replace_variables_in_term substitutions term_0) (replace_variables_in_term substitutions term_1)
+  run :: Dictionary Term -> [Test] -> Err' ()
+  run terms = traverse_ (run' terms)
+  run' :: Dictionary Term -> Test -> Err' ()
+  run' terms (Test line_and_char term_0 term_1) =
+    do
+      (term_0', term_1') <- first (Run_error line_and_char) ((,) <$> eval' terms term_0 <*> eval' terms term_1)
+      case term_0' == term_1' of
+        False -> Left (Test_failed line_and_char term_0' term_1')
+        True -> return ()
+  write_term :: Term -> Eval_err String
   write_term term =
     case term of
-      EQ_term_3 -> Right "EQ"
-      GT_term_3 -> Right "GT"
-      Int_term_3 int -> Right (show int)
-      LT_term_3 -> Right "LT"
-      _ -> Left The_result_is_not_writeable
+      Int_term i -> Right (show i)
+      _ -> Left Not_writeable
 --------------------------------------------------------------------------------------------------------------------------------

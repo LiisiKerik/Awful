@@ -1,25 +1,44 @@
 --------------------------------------------------------------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall #-}
-module Transf (Transf, f_transf, get_state, read_context, return_result, run, set_state) where
-  import Data.Bifunctor
-  newtype Transf t u f v = Transf {transf :: t -> u -> f (u, v)}
-  instance Monad f => Applicative (Transf t u f) where
-    Transf f <*> Transf g = Transf (\x -> \y -> f x y >>= \(z, h) -> second h <$> g x z)
-    pure x = Transf (\_ -> \y -> return (y, x))
-  instance Functor f => Functor (Transf t u f) where
-    fmap f (Transf g) = Transf (\x -> \y -> second f <$> g x y)
-  instance Monad f => Monad (Transf t u f) where
-    Transf f >>= g = Transf (\x -> \y -> f x y >>= \(z, a) -> transf (g a) x z)
-  f_transf :: (f (u, v) -> f' (u, v') -> f'' (u, v'')) -> Transf t u f v -> Transf t u f' v' -> Transf t u f'' v''
-  f_transf f (Transf g) (Transf h) = Transf (\x -> \y -> f (g x y) (h x y))
-  get_state :: Applicative f => Transf t u f u
-  get_state = Transf (\_ -> \x -> pure (x, x))
-  read_context :: Applicative f => Transf t u f t
-  read_context = Transf (\x -> \y -> pure (y, x))
-  return_result :: f (t, u) -> Transf v t f u
-  return_result x = Transf (\_ -> \_ -> x)
-  run :: Functor f => Transf t u f v -> t -> u -> f v
-  run (Transf f) x y = snd <$> f x y
-  set_state :: Applicative f => t -> Transf u t f ()
-  set_state x = Transf (\_ -> \_ -> pure (x, ()))
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+module Transf (PairT (..), RST, SPT, SWT, evalSPT, evalSWT, runRST, runSPT) where
+  import Control.Applicative (Alternative (..))
+  import Control.Monad (MonadPlus (..), join)
+  import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+  import Control.Monad.Trans.State.Strict (StateT, runStateT)
+  import Control.Monad.Trans.Writer.Strict (WriterT, runWriterT)
+  import Control.Monad.Writer.Strict (MonadWriter (..))
+  import Data.Bifunctor (second)
+  newtype PairT output f t = PairT {runPairT :: (output, f t)}
+      deriving Show
+  type RST env state f = ReaderT env (StateT state f)
+  type SPT state output f = StateT state (PairT output f)
+  type SWT state output f = StateT state (WriterT output f)
+  instance (Alternative f, Monoid output) => Alternative (PairT output f) where
+    PairT (output_0, x) <|> PairT (output_1, y) = PairT (output_0 <> output_1, x <|> y)
+    empty = PairT (mempty, empty)
+  instance (Applicative f, Monoid output) => Applicative (PairT output f) where
+    PairT (output_0, x) <*> PairT (output_1, y) = PairT (output_0 <> output_1, x <*> y)
+    pure x = PairT (mempty, pure x)
+  instance Functor f => Functor (PairT output f) where
+    fmap f (PairT (output, x)) = PairT (output, f <$> x)
+  instance (Monad f, Monoid output, Traversable f) => Monad (PairT output f) where
+    PairT (output, x) >>= f =
+      let
+        PairT (output', y) = traverse f x
+      in
+        PairT (output <> output', join y)
+  instance (MonadPlus f, Monoid output, Traversable f) => MonadPlus (PairT output f)
+  instance (Monad f, Monoid output, Traversable f) => MonadWriter output (PairT output f) where
+    listen (PairT (output, x)) = PairT (output, (\y -> (y, output)) <$> x)
+    pass (PairT (output, x)) = PairT (foldr ($) output (snd <$> x), fst <$> x)
+    tell output = PairT (output, return ())
+  evalSPT :: Functor f => SPT state output f t -> state -> (output, f t)
+  evalSPT f state = second (fmap fst) (runSPT f state)
+  evalSWT :: Functor f => SWT state output f t -> state -> f (t, output)
+  evalSWT f state = (\((x, _), output) -> (x, output)) <$> runWriterT (runStateT f state)
+  runRST :: RST env state f t -> env -> state -> f (t, state)
+  runRST f env = runStateT (runReaderT f env)
+  runSPT :: SPT state output f t -> state -> (output, f (t, state))
+  runSPT f state = runPairT (runStateT f state)
 --------------------------------------------------------------------------------------------------------------------------------

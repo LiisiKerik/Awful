@@ -1,0 +1,32 @@
+````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+Import ()
+~/
+Instance Applicative {Arrow _} ((f ! g) x = f x (g x), Lift x _ = x)
+/~
+Def Compose_Arrow : (Int -> Int -> Int) -> (Int -> Int) -> Int -> Int = f -> g -> x -> f x (g x)
+Def Lift_Arrow : Int -> Int -> Int = x -> _ -> x
+~/
+Instance Functor {Arrow _} ((f . g) x = f (g x))
+/~
+Def Apply_Arrow : (Int -> Int) -> (Int -> Int) -> Int -> Int = f -> g -> x -> f (g x)
+~/
+Def Id [T : Star] <Ring T> : T = Convert 1
+/~
+Def Id : Int = Convert 1
+~/
+Def Identity [T : Star] (x : T) : T = x
+/~
+Def Identity : Int -> Int = x -> x
+~/
+Instance Monad {Arrow _} (Flatten f x = f x x)
+/~
+Def Flatten_Arrow : (Int -> Int -> Int) -> Int -> Int = f -> x -> f x x
+~/
+Def Negate [T : Star] <Ring T> : T -> T = Times (Convert -1)
+/~
+Def Negate : Int -> Int = Times (Convert -1)
+~/
+Def Zr [T : Star] <Ring T> : T = Convert 0
+/~
+Def Zr : Int = Convert 0
+````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````

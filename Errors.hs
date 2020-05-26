@@ -8,6 +8,7 @@ module Errors (
   Error' (..),
   Eval_err,
   Evaluation_error (..),
+  L (..),
   Language_or_location (..),
   Line_and_char,
   Type_err,
@@ -24,7 +25,7 @@ module Errors (
   type Err' = Either Error'
   data Error =
     Circular_dependency_between_files [String] |
-    Conflicting_definitions_of_term String Language_or_location String Line_and_char |
+    Conflicting_definitions String String Language_or_location String Line_and_char |
     Error String Error' |
     Evaluation_error Evaluation_error |
     Input_error |
@@ -34,6 +35,7 @@ module Errors (
     Failed_to_find_file String Line_and_char |
     Int_starting_with_zero Line_and_char |
     Invalid_character Line_and_char |
+    Kind_mismatch Line_and_char |
     Missing_end_comment |
     Negation_of_int_starting_with_zero Line_and_char |
     Parse_error Line_and_char |
@@ -44,6 +46,8 @@ module Errors (
       deriving Show
   type Eval_err = Either Evaluation_error
   data Evaluation_error = Crashed | Not_writeable
+      deriving Show
+  data L t = L Line_and_char t
       deriving Show
   data Language_or_location = Language | Location String Line_and_char
       deriving Show
@@ -73,9 +77,11 @@ module Errors (
     case err of
       Circular_dependency_between_files file_names ->
         "Circular dependency between files [" ++ intercalate "," file_names ++ "]."
-      Conflicting_definitions_of_term name language_or_location file_name line_and_char ->
+      Conflicting_definitions typ name language_or_location file_name line_and_char ->
         (
-          "Conflicting definitions of term " ++
+          "Conflicting definitions of " ++
+          typ ++
+          " " ++
           name ++
           (case language_or_location of
             Language -> " in the language and at "
@@ -96,6 +102,7 @@ module Errors (
             "Int starting with zero at " ++ write_file_name_and_line_and_char file_name line_and_char ++ "."
           Invalid_character line_and_char ->
             "Invalid character at " ++ write_file_name_and_line_and_char file_name line_and_char ++ "."
+          Kind_mismatch line_and_char -> "Kind mismatch in " ++ write_file_name_and_line_and_char file_name line_and_char ++ "."
           Missing_end_comment -> "Missing end comment in " ++ file_name ++ "."
           Negation_of_int_starting_with_zero line_and_char ->
             "Negation of int starting with zero at " ++ write_file_name_and_line_and_char file_name line_and_char ++ "."

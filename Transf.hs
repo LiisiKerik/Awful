@@ -36,9 +36,11 @@ module Transf (PairT (..), RST, SPT, SWT, evalSPT, evalSWT, runRST, runSPT) wher
   evalSPT :: Functor f => SPT state output f t -> state -> (output, f t)
   evalSPT f state = second (fmap fst) (runSPT f state)
   evalSWT :: Functor f => SWT state output f t -> state -> f (t, output)
-  evalSWT f state = (\((x, _), output) -> (x, output)) <$> runWriterT (runStateT f state)
+  evalSWT f state = (\(x, _, output) -> (x, output)) <$> runSWT f state
   runRST :: RST env state f t -> env -> state -> f (t, state)
   runRST f env = runStateT (runReaderT f env)
   runSPT :: SPT state output f t -> state -> (output, f (t, state))
   runSPT f state = runPairT (runStateT f state)
+  runSWT :: Functor f => SWT state output f t -> state -> f (t, state, output)
+  runSWT f state = (\((x, state'), output) -> (x, state', output)) <$> runWriterT (runStateT f state)
 --------------------------------------------------------------------------------------------------------------------------------

@@ -3,12 +3,20 @@ Import ()
 ~/
 Instance Applicative {Arrow _} ((f ! g) x = f x (g x), Lift x _ = x)
 /~
-Def Compose_Arrow : (Int -> Int -> Int) -> (Int -> Int) -> Int -> Int = f -> g -> x -> f x (g x)
-Def Lift_Arrow : Int -> Int -> Int = x -> _ -> x
+Def Compose_Arrow [T : Type, U : Type, V : Type] : Arrow (Arrow T (Arrow U V)) (Arrow (Arrow T U) (Arrow T V)) = f -> g -> x -> f x (g x)
+Def Lift_Arrow [T : Type, U : Type] : Arrow T (Arrow U T) = x -> _ -> x
+~/
+Def Apply_discard [T : Star, F : Star -> Star, U : Star] <Functor F> (x : T, y : F U) : F T = Lift x . y
+/~
+Def Apply_discard [T : Type, F : Type -> Type, U : Type] : Arrow (Arrow (Arrow U T) (Arrow (F U) (F T))) (Arrow T (Arrow (F U) (F T))) = Apply_f -> x -> y -> Apply_f (Lift_Arrow x) y
 ~/
 Instance Functor {Arrow _} ((f . g) x = f (g x))
 /~
-Def Apply_Arrow : (Int -> Int) -> (Int -> Int) -> Int -> Int = f -> g -> x -> f (g x)
+Def Apply_Arrow [T : Type, U : Type, V : Type] : Arrow (Arrow T U) (Arrow (Arrow V T) (Arrow V U)) = f -> g -> x -> f (g x)
+~/
+Def Bind [T : Star, F : Star -> Star, U : Star] <Monad F> (f : T -> F U, x : F T) : F U = Flatten (f . x)
+/~
+Def Bind [F : Type -> Type, T : Type, U : Type] : Arrow (Arrow (Arrow T (F U)) (Arrow (F T) (F (F U)))) (Arrow (Arrow (F (F U)) (F U)) (Arrow (Arrow T (F U)) (Arrow (F T) (F U)))) = Apply_f -> Flatten_f -> f -> x -> Flatten_f (Apply_f f x)
 ~/
 Def Id [T : Star] <Ring T> : T = Convert 1
 /~
@@ -16,15 +24,15 @@ Def Id : Int = Convert 1
 ~/
 Def Identity [T : Star] (x : T) : T = x
 /~
-Def Identity : Int -> Int = x -> x
+Def Identity [T : Type] : Arrow T T = x -> x
 ~/
 Instance Monad {Arrow _} (Flatten f x = f x x)
 /~
-Def Flatten_Arrow : (Int -> Int -> Int) -> Int -> Int = f -> x -> f x x
+Def Flatten_Arrow [T : Type, U : Type] : Arrow (Arrow T (Arrow T U)) (Arrow T U) = f -> x -> f x x
 ~/
 Def Negate [T : Star] <Ring T> : T -> T = Times (Convert -1)
 /~
-Def Negate : Int -> Int = Times (Convert -1)
+Def Negate : Arrow Int Int = Times (Convert -1)
 ~/
 Def Zr [T : Star] <Ring T> : T = Convert 0
 /~

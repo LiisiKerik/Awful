@@ -2,6 +2,8 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE StandaloneDeriving #-}
 module Tokens (Token (..), Tokens, current_line_and_char, nom_token, Tokens.null, tokenise) where
+  import Control.Monad.Except (MonadError (..))
+  import Control.Monad.State.Strict (MonadState (..), StateT, runStateT)
   import Data.Bifunctor (first)
   import Data.Char (isDigit, isLetter)
   import Errors (Err', Error' (..), Line_and_char, init_line_and_char, next_char, next_line)
@@ -18,10 +20,6 @@ module Tokens (Token (..), Tokens, current_line_and_char, nom_token, Tokens.null
     Tilde_char |
     Word_char Char
       deriving Show
-{-
-    In_token |
-    Let_token
--}
   data Token =
     Algebraic_token |
     Blank_token |
@@ -54,41 +52,102 @@ module Tokens (Token (..), Tokens, current_line_and_char, nom_token, Tokens.null
       deriving Show
   data Token' = Token' Line_and_char Token
       deriving Show
+  type Tokeniser = StateT (Line_and_char, [Char']) Err'
   data Tokens = Tokens [Token'] Line_and_char
       deriving Show
   deriving instance Eq Token
-  add_token :: Line_and_char -> Token -> Tokens -> Tokens
-  add_token line_and_char token (Tokens tokens end_line_and_char) =
-    Tokens (Token' line_and_char token : tokens) end_line_and_char
+  add_token :: Tokeniser (Token, [Token']) -> Tokeniser [Token']
+  add_token tokenise'' =
+    do
+      line_and_char <- get_line_and_char
+      (token, tokens) <- tokenise''
+      return (Token' line_and_char token : tokens)
+  classify_char :: Char -> Char'
+  classify_char c =
+    case c of
+      '\n' -> Newline_char
+      ' ' -> Space_char
+      '(' -> Delimiter_char Left_round_token
+      ')' -> Delimiter_char Right_round_token
+      ',' -> Delimiter_char Comma_token
+      '-' -> Minus_char
+      '/' -> Slash_char
+      '[' -> Delimiter_char Left_square_token
+      ']' -> Delimiter_char Right_square_token
+      '`' -> Tick_char
+      '{' -> Delimiter_char Left_curly_token
+      '}' -> Delimiter_char Right_curly_token
+      '~' -> Tilde_char
+      _ ->
+        case (is_operator c, is_letter c, isDigit c) of
+          (True, False, False) -> Operator_char c
+          (False, True, False) -> Word_char c
+          (False, False, True) -> Nat_char c
+          _ -> Invalid_char
   current_line_and_char :: Tokens -> Line_and_char
   current_line_and_char (Tokens tokens end_line_and_char) =
     case tokens of
       [] -> end_line_and_char
       Token' line_and_char _ : _ -> line_and_char
-  end_tokens :: Line_and_char -> Err' Tokens
-  end_tokens line_and_char = Right (Tokens [] line_and_char)
-  gather_token :: (Char' -> Maybe Char) -> (String -> Token) -> Line_and_char -> [Char'] -> Err' Tokens
-  gather_token token_char string_to_token line_and_char text =
-    (\(token, tokens) -> add_token line_and_char (string_to_token token) tokens) <$> gather_token' token_char line_and_char text
-  gather_token' :: (Char' -> Maybe Char) -> Line_and_char -> [Char'] -> Err' (String, Tokens)
-  gather_token' token_char line_and_char text =
-    case text of
-      [] -> (,) "" <$> end_tokens line_and_char
-      char' : text' ->
-        case token_char char' of
-          Just char -> first ((:) char) <$> gather_token' token_char (next_char line_and_char) text'
-          Nothing -> (,) "" <$> tokenise' line_and_char text
+  end_tokens :: Tokeniser [Token']
+  end_tokens = return []
+  gather_token :: (Char' -> Maybe Char) -> (String -> Token) -> Tokeniser [Token']
+  gather_token token_char string_to_token = add_token (first string_to_token <$> gather_token' token_char)
+  gather_token' :: (Char' -> Maybe Char) -> Tokeniser (String, [Token'])
+  gather_token' token_char =
+    do
+      maybe_char <- get_char 0
+      case maybe_char >>= token_char of
+        Nothing -> (,) "" <$> tokenise'
+        Just c ->
+          do
+            Tokens.next_char
+            (token, tokens) <- gather_token' token_char
+            return (c : token, tokens)
+  get_char :: Integer -> Tokeniser (Maybe Char')
+  get_char i = index i <$> get_text
+  get_line_and_char :: Tokeniser Line_and_char
+  get_line_and_char =
+    do
+      (line_and_char, _) <- get
+      return line_and_char
+  get_text :: Tokeniser [Char']
+  get_text =
+    do
+      (_, text) <- get
+      return text
+  index :: Integer -> [t] -> Maybe t
+  index i x =
+    case x of
+      [] -> Nothing
+      y : x' ->
+        case i of
+          0 -> Just y
+          _ -> index (i - 1) x'
   is_letter :: Char -> Bool
-  is_letter char = elem char ['\'', '_'] || isLetter char
+  is_letter c = elem c ['\'', '_'] || isLetter c
   is_operator :: Char -> Bool
-  is_operator char = elem char ['!', '#', '$', '%', '&', '*', '+', '.', ':', ';', '<', '=', '>', '?', '@', '\\', '^', '|']
+  is_operator c = elem c ['!', '#', '$', '%', '&', '*', '+', '.', ':', ';', '<', '=', '>', '?', '@', '\\', '^', '|']
   nat_char :: Char' -> Maybe Char
-  nat_char char' =
-    case char' of
-      Nat_char char -> Just char
+  nat_char char =
+    case char of
+      Nat_char c -> Just c
       _ -> Nothing
   nat_token :: String -> Token
-  nat_token n = Nat_token (read n)
+  nat_token i = Nat_token (read i)
+  next_char :: Tokeniser ()
+  next_char =
+    do
+      (line_and_char, text) <- get
+      case text of
+        [] -> undefined
+        char : text' ->
+          put
+            (
+              case char of
+                Newline_char -> next_line line_and_char
+                _ -> Errors.next_char line_and_char,
+              text')
   nom_token :: (Token -> Maybe t) -> Tokens -> Maybe (t, Tokens)
   nom_token f (Tokens tokens end_line_and_char) =
     case tokens of
@@ -112,117 +171,139 @@ module Tokens (Token (..), Tokens, current_line_and_char, nom_token, Tokens.null
     case operator of
       "=" -> Eq_token
       _ -> Operator_token operator
+  throw_error :: (Line_and_char -> Error') -> Tokeniser t
+  throw_error err =
+    do
+      line_and_char <- get_line_and_char
+      throwError (err line_and_char)
   tokenise :: String -> Err' Tokens
-  tokenise text = tokenise' init_line_and_char (transf_char <$> text)
-  tokenise' :: Line_and_char -> [Char'] -> Err' Tokens
-  tokenise' line_and_char text =
-    case text of
-      [] -> end_tokens line_and_char
-      char' : text' ->
-        case char' of
-          Delimiter_char delimiter_token ->
-            add_token line_and_char delimiter_token <$> tokenise' (next_char line_and_char) text'
-          Invalid_char -> Left (Invalid_character line_and_char)
-          Minus_char ->
-            case text' of
-              Nat_char char : _ ->
-                case char of
-                  '0' -> Left (Negation_of_int_starting_with_zero line_and_char)
-                  _ -> add_token line_and_char Negate_token <$> tokenise_nat (next_char line_and_char) text'
-              _ -> tokenise_operator line_and_char text
-          Nat_char char ->
-            case (char, text') of
-              ('0', Nat_char _ : _) -> Left (Int_starting_with_zero line_and_char)
-              _ -> tokenise_nat line_and_char text
-          Newline_char -> tokenise' (next_line line_and_char) text'
-          Operator_char _ -> tokenise_operator line_and_char text
-          Slash_char -> tokenise_operator line_and_char text
-          Space_char -> tokenise' (next_char line_and_char) text'
-          Tick_char -> tokenise_single_line_comment (next_char line_and_char) text'
-          Tilde_char ->
-            case text' of
-              Slash_char : text'' ->
-                case text'' of
-                  [] -> Left Missing_end_comment
-                  char'' : _ ->
-                    case operator_char char'' of
-                      Nothing -> tokenise_multiline_comment (next_char (next_char line_and_char)) text''
-                      Just _ -> tokenise_operator line_and_char text
-              _ -> tokenise_operator line_and_char text
-          Word_char _ -> gather_token word_char word_token line_and_char text
-  tokenise_multiline_comment :: Line_and_char -> [Char'] -> Err' Tokens
-  tokenise_multiline_comment line_and_char text =
-    case text of
-      [] -> Left Missing_end_comment
-      char' : text' ->
-        case char' of
-          Newline_char -> tokenise_multiline_comment (next_line line_and_char) text'
-          Slash_char -> tokenise_multiline_comment_slash (next_char line_and_char) text'
-          _ ->
-            case operator_char char' of
-              Nothing -> tokenise_multiline_comment (next_char line_and_char) text'
-              Just _ -> tokenise_multiline_comment_operator (next_char line_and_char) text'
-  tokenise_multiline_comment_slash :: Line_and_char -> [Char'] -> Err' Tokens
-  tokenise_multiline_comment_slash line_and_char text =
-    case text of
-      [] -> Left Missing_end_comment
-      char' : text' ->
-        case operator_char char' of
-          Nothing -> tokenise_multiline_comment  line_and_char text
-          Just _ ->
-            case char' of
-              Tilde_char -> tokenise_multiline_comment_slash_tilde (next_char line_and_char) text'
-              _ -> tokenise_multiline_comment_operator (next_char line_and_char) text'
-  tokenise_multiline_comment_slash_tilde :: Line_and_char -> [Char'] -> Err' Tokens
-  tokenise_multiline_comment_slash_tilde line_and_char text =
-    case text of
-      [] -> end_tokens line_and_char
-      char' : text' ->
-        case operator_char char' of
-          Nothing -> tokenise' line_and_char text
-          Just _ -> tokenise_multiline_comment_operator (next_char line_and_char) text'
-  tokenise_multiline_comment_operator :: Line_and_char -> [Char'] -> Err' Tokens
-  tokenise_multiline_comment_operator line_and_char text =
-    case text of
-      [] -> Left Missing_end_comment
-      char' : text' ->
-        case operator_char char' of
-          Nothing -> tokenise_multiline_comment line_and_char text
-          Just _ -> tokenise_multiline_comment_operator (next_char line_and_char) text'
-  tokenise_nat :: Line_and_char -> [Char'] -> Err' Tokens
+  tokenise text =
+    do
+      (tokens, (line_and_char, _)) <- runStateT tokenise' (init_line_and_char, classify_char <$> text)
+      Right (Tokens tokens line_and_char)
+  tokenise' :: Tokeniser [Token']
+  tokenise' =
+    do
+      maybe_char <- get_char 0
+      case maybe_char of
+        Nothing -> end_tokens
+        Just char ->
+          case char of
+            Delimiter_char token ->
+              add_token
+                (do
+                  Tokens.next_char
+                  tokens <- tokenise'
+                  return (token, tokens))
+            Invalid_char -> throw_error Invalid_character
+            Minus_char ->
+              do
+                maybe_char' <- get_char 1
+                case maybe_char' >>= nat_char of
+                  Nothing -> tokenise_operator
+                  Just c ->
+                    case c of
+                      '0' -> throw_error Negation_of_int_starting_with_zero
+                      _ ->
+                        add_token
+                          (do
+                            Tokens.next_char
+                            tokens <- tokenise_nat
+                            return (Negate_token, tokens))
+            Nat_char c ->
+              do
+                maybe_char' <- get_char 1
+                case (c, maybe_char' >>= nat_char) of
+                  ('0', Just _) -> throw_error Int_starting_with_zero
+                  _ -> tokenise_nat
+            Newline_char ->
+              do
+                Tokens.next_char
+                tokenise'
+            Operator_char _ -> tokenise_operator
+            Slash_char -> tokenise_operator
+            Space_char ->
+              do
+                Tokens.next_char
+                tokenise'
+            Tick_char ->
+              do
+                Tokens.next_char
+                tokenise_single_line_comment
+            Tilde_char ->
+              do
+                maybe_char' <- get_char 1
+                maybe_char'' <- get_char 2
+                case (maybe_char', maybe_char'' >>= operator_char) of
+                  (Just Slash_char, Nothing) ->
+                    do
+                      Tokens.next_char
+                      Tokens.next_char
+                      tokenise_multiline_comment
+                  _ -> tokenise_operator
+            Word_char _ -> tokenise_word
+  tokenise_multiline_comment :: Tokeniser [Token']
+  tokenise_multiline_comment =
+    do
+      maybe_char <- get_char 0
+      case maybe_char of
+        Nothing -> throwError Missing_end_comment
+        Just char ->
+          do
+            Tokens.next_char
+            case char of
+              Slash_char -> tokenise_multiline_comment_slash
+              _ ->
+                case operator_char char of
+                  Nothing -> tokenise_multiline_comment
+                  Just _ -> tokenise_multiline_comment_operator
+  tokenise_multiline_comment_operator :: Tokeniser [Token']
+  tokenise_multiline_comment_operator =
+    do
+      maybe_char <- get_char 0
+      case maybe_char >>= operator_char of
+        Nothing -> tokenise_multiline_comment
+        Just _ ->
+          do
+            Tokens.next_char
+            tokenise_multiline_comment_operator
+  tokenise_multiline_comment_slash :: Tokeniser [Token']
+  tokenise_multiline_comment_slash =
+    do
+      maybe_char <- get_char 0
+      case maybe_char >>= operator_char of
+        Nothing -> tokenise_multiline_comment
+        Just c ->
+          do
+            Tokens.next_char
+            case c of
+              '~' -> tokenise_multiline_comment_slash_tilde
+              _ -> tokenise_multiline_comment_operator
+  tokenise_multiline_comment_slash_tilde :: Tokeniser [Token']
+  tokenise_multiline_comment_slash_tilde =
+    do
+      maybe_char <- get_char 0
+      case maybe_char >>= operator_char of
+        Nothing -> tokenise'
+        Just _ -> tokenise_multiline_comment_operator
+  tokenise_nat :: Tokeniser [Token']
   tokenise_nat = gather_token nat_char nat_token
-  tokenise_operator :: Line_and_char -> [Char'] -> Err' Tokens
+  tokenise_operator :: Tokeniser [Token']
   tokenise_operator = gather_token operator_char operator_token
-  tokenise_single_line_comment :: Line_and_char -> [Char'] -> Err' Tokens
-  tokenise_single_line_comment line_and_char text =
-    case text of
-      [] -> end_tokens line_and_char
-      char' : text' ->
-        case char' of
-          Newline_char -> tokenise' (next_line line_and_char) text'
-          _ -> tokenise_single_line_comment (next_char line_and_char) text'
-  transf_char :: Char -> Char'
-  transf_char char =
-    case char of
-      '\n' -> Newline_char
-      ' ' -> Space_char
-      '(' -> Delimiter_char Left_round_token
-      ')' -> Delimiter_char Right_round_token
-      ',' -> Delimiter_char Comma_token
-      '-' -> Minus_char
-      '/' -> Slash_char
-      '[' -> Delimiter_char Left_square_token
-      ']' -> Delimiter_char Right_square_token
-      '`' -> Tick_char
-      '{' -> Delimiter_char Left_curly_token
-      '}' -> Delimiter_char Right_curly_token
-      '~' -> Tilde_char
-      _ ->
-        case (is_operator char, is_letter char, isDigit char) of
-          (True, False, False) -> Operator_char char
-          (False, True, False) -> Word_char char
-          (False, False, True) -> Nat_char char
-          _ -> Invalid_char
+  tokenise_single_line_comment :: Tokeniser [Token']
+  tokenise_single_line_comment =
+    do
+      maybe_char <- get_char 0
+      case maybe_char of
+        Nothing -> end_tokens
+        Just char ->
+          do
+            Tokens.next_char
+            case char of
+              Newline_char -> tokenise'
+              _ -> tokenise_single_line_comment
+  tokenise_word :: Tokeniser [Token']
+  tokenise_word = gather_token word_char word_token
   word_char :: Char' -> Maybe Char
   word_char char' =
     case char' of
@@ -241,9 +322,7 @@ module Tokens (Token (..), Tokens, current_line_and_char, nom_token, Tokens.null
       "Def" -> Def_token
       "Eval" -> Eval_token
       "Import" -> Import_token
-      -- "In" -> In_token
       "Instance" -> Instance_token
-      -- "Let" -> Let_token
       "Match" -> Match_token
       "Run" -> Run_token
       "Struct" -> Struct_token

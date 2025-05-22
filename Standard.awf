@@ -1,40 +1,164 @@
-````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
-Import ()
-~/
-Instance Applicative {Arrow _} ((f ! g) x = f x (g x), Lift x _ = x)
-/~
-Def Compose_Arrow [T : Type, U : Type, V : Type] : Arrow (Arrow T (Arrow U V)) (Arrow (Arrow T U) (Arrow T V)) = f -> g -> x -> f x (g x)
-Def Lift_Arrow [T : Type, U : Type] : Arrow T (Arrow U T) = x -> _ -> x
-~/
-Def Apply_discard [T : Star, F : Star -> Star, U : Star] <Functor F> (x : T, y : F U) : F T = Lift x . y
-/~
-Def Apply_discard [T : Type, F : Type -> Type, U : Type] : Arrow (Arrow (Arrow U T) (Arrow (F U) (F T))) (Arrow T (Arrow (F U) (F T))) = Apply_f -> x -> y -> Apply_f (Lift_Arrow x) y
-~/
-Instance Functor {Arrow _} ((f . g) x = f (g x))
-/~
-Def Apply_Arrow [T : Type, U : Type, V : Type] : Arrow (Arrow T U) (Arrow (Arrow V T) (Arrow V U)) = f -> g -> x -> f (g x)
-~/
-Def Bind [T : Star, F : Star -> Star, U : Star] <Monad F> (f : T -> F U, x : F T) : F U = Flatten (f . x)
-/~
-Def Bind [F : Type -> Type, T : Type, U : Type] : Arrow (Arrow (Arrow T (F U)) (Arrow (F T) (F (F U)))) (Arrow (Arrow (F (F U)) (F U)) (Arrow (Arrow T (F U)) (Arrow (F T) (F U)))) = Apply_f -> Flatten_f -> f -> x -> Flatten_f (Apply_f f x)
-~/
-Def Id [T : Star] <Ring T> : T = Convert 1
-/~
-Def Id : Int = Convert 1
-~/
-Def Identity [T : Star] (x : T) : T = x
-/~
-Def Identity [T : Type] : Arrow T T = x -> x
-~/
-Instance Monad {Arrow _} (Flatten f x = f x x)
-/~
-Def Flatten_Arrow [T : Type, U : Type] : Arrow (Arrow T (Arrow T U)) (Arrow T U) = f -> x -> f x x
-~/
-Def Negate [T : Star] <Ring T> : T -> T = Times (Convert -1)
-/~
-Def Negate : Arrow Int Int = Times (Convert -1)
-~/
-Def Zr [T : Star] <Ring T> : T = Convert 0
-/~
-Def Zr : Int = Convert 0
-````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+Algebraic Tree[T : Star](Empty_Tree, Construct_Tree T (Tree T) (Tree T))
+Class Alternative{F : Star -> Star}<Applicative>(Cat[T : Star] : F T -> F T -> F T, Empty[T : Star] : F T)
+Class Applicative{F : Star -> Star}<Functor>(Apply[T : Star, U : Star] : F (T -> U) -> F T -> F U, Lift[T : Star] : T -> F T)
+Class Braided{F : Star -> Star -> Star}(
+  Associate[T : Star, U : Star, V : Star] : F (F T U) V -> F T (F U V),
+  Bimap[T : Star, U : Star, V : Star, W : Star] : (T -> U) -> (V -> W) -> F T V -> F U W,
+  Commute[T : Star, U : Star] : F T U -> F U T)
+Class Finite{T : Star}<Ord>(All : List T)
+Class Finite_Modular{N : !Nat}(All_Modular : List (Modular N))
+Class Functor{F : Star -> Star}(Fmap[T : Star, U : Star] : (T -> U) -> F T -> F U)
+Class Monad{F : Star -> Star}<Applicative>(Bind[T : Star, U : Star] : F T -> (T -> F U) -> F U)
+Class Monad'{F : Star -> Star}<Monad>(Unsafe[T : Star] : F T -> T)
+Operator * Multiply 0 Left
+Operator + Add 1 Left
+Def Add'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Add
+Def All_Modular'[N : !Nat]<Nonzero N>(x : Modular N, y : List (Modular N)) : List (Modular N) =
+  Let z = Construct_List x y In Match Is_Zero x {False -> All_Modular' (Minus x Identity) z, True -> z}
+Instance Alternative{List}(
+  Cat x y = Match x {Empty_List -> y, Construct_List z a -> Construct_List z (Cat a y)},
+  Empty = List)
+Instance Alternative{Maybe}(Cat x y = Match x {Nothing -> y, Wrap _ -> x}, Empty = Nothing)
+Instance Applicative{Either _}(Apply x y = Match x {Left z -> Left z, Right f -> Fmap f y}, Lift = Right)
+Instance Applicative{Function _}(Apply f g x = f x (g x), Lift x _ = x)
+Instance Applicative{List}(
+  Apply x y = Match x {Empty_List -> List, Construct_List f z -> Cat (Fmap f y) (Apply z y)},
+  Lift x = List (x))
+Instance Applicative{Maybe}(Apply x y = Match x {Nothing -> Nothing, Wrap f -> Fmap f y}, Lift = Wrap)
+Instance Braided{Either}(
+  Associate x = Match x {Left y -> Match y {Left z -> Left z, Right z -> Right (Left z)}, Right y -> Right (Right y)},
+  Bimap f g x = Match x {Left y -> Left (f y), Right y -> Right (g y)},
+  Commute x = Match x {Left y -> Right y, Right y -> Left y})
+Instance Braided{Pair}(
+  Associate (Pair (Pair x y) z) = Pair x (Pair y z),
+  Bimap f g (Pair x y) = Pair (f x) (g y),
+  Commute (Pair x y) = Pair y x)
+Def Brackets[T : Star]<Writeable T>(x : T) : List Char =
+  Let Pair y z = Write_Brackets x In Match z {False -> y, True -> Cat (Lift "(") (Cat y (Lift ")"))}
+Def Convert'[F : Star -> Star, T : Star]<Applicative F, Ring T>(x : Int) : F T = Lift (Convert x)
+Def Equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> True, Default -> False}
+Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing})
+Instance Field{Logical}(Inverse x = Match x {False -> Nothing, True -> Wrap True})
+Instance Field{Pair T U}<Field T, Field U>(Inverse (Pair x y) = Zip Pair (Inverse x) (Inverse y))
+Def Filter[T : Star, F : Star -> Star]<Alternative F, Monad F>(f : T -> Logical, x : F T) : F T =
+  Bind x (y -> Match f y {False -> Empty, True -> Lift y})
+Instance Finite{Comparison}(All = List (LT,  EQ,  GT))
+Instance Finite{Either T U}<Finite T, Finite U>(All = Cat (Fmap Left All) (Fmap Right All))
+Instance Finite{Logical}(All = List (False, True))
+Instance Finite{Maybe T}<Finite T>(All = Construct_List Nothing (Fmap Wrap All))
+`Instance Finite{Modular N}<Finite_Modular N>(All = All_Modular)
+Instance Finite{Pair T U}<Finite T, Finite U>(All = Zip Pair All All)
+Instance Finite_Modular{!Zr}(All_Modular = List)
+`Instance Finite_Modular{!Next N}(All_Modular = All_Modular' (Convert -1) List)
+Def Flatten[F : Star -> Star, T : Star]<Monad F>(x : F (F T)) : F T = Bind x Id
+Instance Functor{Either _}(Fmap = Map_right)
+Instance Functor{Function _}(Fmap f g x = f (g x))
+Instance Functor{List}(Fmap f x = Match x {Empty_List -> List, Construct_List y z -> Construct_List (f y) (Fmap f z)})
+Instance Functor{Maybe}(Fmap f x = Match x {Nothing -> Nothing, Wrap y -> Wrap (f y)})
+Instance Functor{Pair _}(Fmap = Map_right)
+Instance Functor{Tree}(
+  Fmap f x = Match x {Empty_Tree -> Empty_Tree, Construct_Tree y z a -> Construct_Tree (f y) (Fmap f z) (Fmap f a)})
+Def Greater[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> True, Default -> False}
+Def Greater_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> False, Default -> True}
+Def Id[T : Star](x : T) : T = x
+Def Identity[T : Star]<Ring T> : T = Convert 1
+Def Interleave[T : Star](x : List T, y : List (List T)) : List T =
+  Match y {Empty_List -> List, Construct_List z a -> Cat z (Flatten (Fmap (Cat x) a))}
+Def Is_Zero[T : Star]<Ord T, Ring T> : T -> Logical = Equal Zero
+Def Less[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> True, Default -> False}
+Def Less_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> False, Default -> True}
+Def Map_left[T : Star, U : Star, F : Star -> Star -> Star, V : Star]<Braided F>(f : T -> U) : F T V -> F U V = Bimap f Id
+Def Map_right[T : Star, U : Star, F : Star -> Star -> Star, V : Star]<Braided F> : (T -> U) -> F V T -> F V U = Bimap Id
+Def Max[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> y, Default -> x}
+Def Min[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> x, Default -> y}
+Def Minus[T : Star]<Ring T>(x : T, y : T) : T = x + Negate y
+Def Mod'(x : Int, y : Int) : Int = Unsafe (Mod x y)
+Instance Monad{Either _}(Bind x f = Match x {Left y -> Left y, Right y -> f y})
+Instance Monad{Function _}(Bind f g x = g (f x) x)
+Instance Monad{List}(Bind x f = Match x {Empty_List -> List, Construct_List y z -> Cat (f y) (Bind z f)})
+Instance Monad{Maybe}(Bind x f = Match x {Nothing -> Nothing, Wrap y -> f y})
+Instance Monad'{Either _}(Unsafe x = Match x {Left _ -> Crash, Right y -> y})
+Instance Monad'{Maybe}(Unsafe x = Match x {Nothing -> Crash, Wrap y -> y})
+Def Multiply'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Multiply
+Def Negate'[F : Star -> Star, T : Star]<Functor F, Ring T> : F T -> F T = Fmap Negate
+Def Not(x : Logical) : Logical = Match x {False -> True, True -> False}
+Def Not_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> False, Default -> True}
+Instance Ord{Comparison}(
+  Compare x y =
+    Match x {
+      LT -> Match y {LT -> EQ, Default -> LT},
+      EQ -> Match y {LT -> GT, EQ -> EQ, GT -> LT},
+      GT -> Match y {GT -> EQ, Default -> GT}})
+Instance Ord{Either T U}<Ord T, Ord U>(
+  Compare x y =
+    Match x {
+      Left z -> Match y {Left w -> Compare z w, Right -> LT},
+      Right z -> Match y {Left -> GT, Right w -> Compare z w}})
+Instance Ord{List T}<Ord T>(
+  Compare x y =
+    Match x {
+      Empty_List -> Match y {Empty_List -> EQ, Construct_List _ _ -> LT},
+      Construct_List z a -> Match y {Empty_List -> GT, Construct_List b c -> Compare (Pair z a) (Pair b c)}})
+Instance Ord{Logical}(
+  Compare x y = Match x {False -> Match y {False -> EQ, True -> LT}, True -> Match y {False -> GT, True -> EQ}})
+Instance Ord{Maybe T}<Ord T>(
+  Compare x y =
+    Match x {Nothing -> Match y {Nothing -> EQ, Wrap -> LT}, Wrap z -> Match y {Nothing -> GT, Wrap w -> Compare z w}})
+Instance Ord{Pair T U}<Ord T, Ord U>(
+  Compare (Pair x y) (Pair z a) = Match Compare x z {LT -> LT, EQ -> Compare y a, GT -> GT})
+Instance Ord{Tree T}<Ord T>(
+  Compare x y =
+    Match x {
+      Empty_Tree -> Match y {Empty_Tree -> EQ, Construct_Tree _ _ _ -> LT},
+      Construct_Tree z a b ->
+        Match y {Empty_Tree -> GT, Construct_Tree c d e -> Compare (Pair z (Pair a b)) (Pair c (Pair d e))}})
+Instance Ring{Logical}(Add = Not_equal, Convert x = Equal (Mod' x 2) 1, Multiply = Min, Negate = Id)
+Instance Ring{Pair T U}<Ring T, Ring U>(
+  Add (Pair x y) (Pair z a) = Pair (x + z) (y + a),
+  Convert x = Pair (Convert x) (Convert x),
+  Multiply (Pair x y) (Pair z a) = Pair (x * z) (y * a),
+  Negate (Pair x y) = Pair (Negate x) (Negate y))
+Def Write[T : Star]<Writeable T>(x : T) : List Char = First (Write_Brackets x)
+Def Write'(x : List Char, y : List (List Char)) : List Char = Interleave (Lift " ") (Construct_List x y)
+Instance Writeable{Char}(
+  Write_Brackets c =
+    Pair (Match c {Newline -> List ("N", "e", "w", "l", "i", "n", "e"), Default -> List (""", c, """)}) False)
+Instance Writeable{Comparison}(
+  Write_Brackets x = Pair (Match x {LT -> List ("L", "T"), EQ -> List ("E", "Q"), GT -> List ("G", "T")}) False)
+Instance Writeable{Either T U}<Writeable T, Writeable U>(
+  Write_Brackets x =
+    Pair
+      (Match x {
+        Left y -> Cat (List ("L", "e", "f", "t")) (Brackets y),
+        Right y -> Cat (List ("R", "i", "g", "h", "t")) (Brackets y)})
+      True)
+Instance Writeable{List T}<Writeable T>(
+  Write_Brackets x =
+    Match x {
+      Empty_List -> Pair (List ("L", "i", "s", "t")) False,
+      Construct_List y z ->
+        Pair
+          (Cat (List ("L", "i", "s", "t", " ", "(")) (Cat (Interleave (List (",", " ")) (Fmap Write x)) (Lift ")")))
+          True})
+Instance Writeable{Logical}(
+  Write_Brackets x = Pair (Match x {False -> List ("F", "a", "l", "s", "e"), True -> List ("T", "r", "u", "e")}) False)
+Instance Writeable{Maybe T}<Writeable T>(
+  Write_Brackets x =
+    Match x {
+      Nothing -> Pair (List ("N", "o", "t", "h", "i", "n", "g")) False,
+      Wrap y -> Pair (Cat (List ("W", "r", "a", "p", " ")) (Brackets y)) True})
+Instance Writeable{Pair T U}<Writeable T, Writeable U>(
+  Write_Brackets (Pair x y) = Pair (Write' (List ("P", "a", "i", "r")) (List (Brackets x, Brackets y))) True)
+Instance Writeable{Tree T}<Writeable T>(
+  Write_Brackets x =
+    Match x {
+      Empty_Tree -> Pair (List ("E", "m", "p", "t", "y", "_", "T", "r", "e", "e")) False,
+      Construct_Tree y z a ->
+        Pair
+          (Write'
+            (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "r", "e", "e"))
+            (List (Brackets y, Brackets z, Brackets a)))
+          True})
+Def Zero[T : Star]<Ring T> : T = Convert 0
+Def Zip[F : Star -> Star, T : Star, U : Star, V : Star]<Applicative F>(f : T -> U -> V, x : F T) : F U -> F V =
+  Apply (Fmap f x)

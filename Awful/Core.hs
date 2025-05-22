@@ -1,0 +1,1 @@
+module Awful.Core () where

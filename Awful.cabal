@@ -1,0 +1,33 @@
+cabal-version: 3.8
+author: Liisi Kerik
+category: Programming languages
+data-files: Standard/*.awf
+description:
+  
+name: Awful
+synopsis: Awful is a toy functional programming language.
+version: 0.0.0
+executable Awful
+  -- Kawaii-Parser, ghc, transformers
+  build-depends: base, containers, directory, filepath, mtl
+  -- eemaldada ebavajalikud extensionid
+  default-extensions:
+    -- DuplicateRecordFields,
+    -- FlexibleContexts,
+    -- FlexibleInstances,
+    NamedFieldPuns
+    -- NoFieldSelectors,
+    -- StandaloneDeriving,
+    -- TypeSynonymInstances
+  ghc-options: -Wall -Wno-x-partial -Werror
+  main-is: Awful/Main.hs
+  other-modules:
+    Awful.Core,
+    Awful.Errors,
+    Awful.Eval,
+    Awful.Modular,
+    Awful.Namechecker,
+    Awful.Operators,
+    Awful.Parser,
+    Awful.Tokeniser,
+    Awful.Typechecker

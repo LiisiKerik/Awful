@@ -16,8 +16,6 @@ Class Ring_Tuple{L : !List Star}(
   Convert_Tuple : Int -> Tuple L,
   Multiply_Tuple : Tuple L -> Tuple L -> Tuple L,
   Negate_Tuple : Tuple L -> Tuple L)
-Class Writeable_Array'{L : !List !Nat}(Write_Brackets_Array'[T : Star]<Writeable T> : Array' L T -> List Char * Logical)
-Class Writeable_Tuple{L : !List Star}(Write_Brackets_Tuple : Tuple L -> List Char * Logical)
 Instance Commutative{Tuple L}<Commutative_Tuple L>
 Instance Commutative_Tuple{!Empty_List[Star]}
 Instance Commutative_Tuple{!Construct_List[Star] T L}<Commutative T, Commutative_Tuple L>
@@ -47,23 +45,3 @@ Instance Ring_Tuple{!Construct_List[Star] T L}<Ring T, Ring_Tuple L>(
   Convert_Tuple x = Construct_Tuple (Convert x) (Convert x),
   Multiply_Tuple x y = Construct_Tuple (Multiply (Head_Tuple x) (Head_Tuple y)) (Multiply (Tail_Tuple x) (Tail_Tuple y)),
   Negate_Tuple x = Construct_Tuple (Negate (Head_Tuple x)) (Negate (Tail_Tuple x)))
-Instance Writeable{Array' N T}<Writeable T, Writeable_Array' N>(Write_Brackets = Write_Brackets_Array')
-Instance Writeable{Tuple L}<Writeable_Tuple L>(Write_Brackets = Write_Brackets_Tuple)
-Instance Writeable_Tuple{!Empty_List[Star]}(
-  Write_Brackets_Tuple _ = Pair (List ("E", "m", "p", "t", "y", "_", "T", "u", "p", "l", "e")) False)
-Instance Writeable_Tuple{!Construct_List[Star] T L}<Writeable T, Writeable_Tuple L>(
-  Write_Brackets_Tuple x =
-    Pair
-      (Write'
-        (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "u", "p", "l", "e"))
-        (List (Brackets (Head_Tuple x), Brackets (Tail_Tuple x))))
-      True)
-Instance Writeable_Array'{!Empty_List[!Nat]}(
-  Write_Brackets_Array' _ = Pair (List ("E", "m", "p", "t", "y", "_", "A", "r", "r", "a", "y", "'")) False)
-Instance Writeable_Array'{!Construct_List[!Nat] N L}<Writeable_Array N, Writeable_Array' L>(
-  Write_Brackets_Array' x =
-    Pair
-      (Cat
-        (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "A", "r", "r", "a", "y", "'", " "))
-        (Brackets (Arrays x)))
-      True)

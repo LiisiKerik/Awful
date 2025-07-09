@@ -31,7 +31,6 @@ make match expression more flexible (like case in Haskell)?
 mis juhtub kui esimeses moodulis on kusagil tüübimuutuja T ja järgmises moodulis sama nimega globaalne tüüp?
 Let f = Crash, x = f f In 0 -- tüüpimine läheb lõpmatusse tsüklisse sest puudub occur check
 can Data.Set and Data.Map imports be removed if the file uses both and disambiguates all function calls anyways?
-"./Awful eval "List (0)"" without importing Standard.awf - error message about Writeable class looks bad; fix
 let expr de-sugaring (and therefore struct name collection) completely to Standard.hs module
 all de-sugaring: remove from Tree.hs, put into Standard.hs
 simplify parsing of match expression and remove duplicate code from de-sugaring, name checking, typechecking & eval
@@ -105,9 +104,6 @@ module Awful.Typechecker (
     Add_Modular_1_expression_2 Integer Integer |
     Algebraic_expression_2 String [Expression_2] |
     Application_expression_2 Expression_2 Expression_2 |
-    Char_expression_2 Char |
-    Compare_Char_0_expression_2 |
-    Compare_Char_1_expression_2 Char |
     Compare_Int_0_expression_2 |
     Compare_Int_1_expression_2 Integer |
     Compare_Modular_0_expression_2 |
@@ -132,9 +128,7 @@ module Awful.Typechecker (
     Name_expression_2 String |
     Negate_Int_expression_2 |
     Negate_Modular_expression_2 Integer |
-    Struct_expression_2 (Map' Expression_2) |
-    Write_Brackets_Int_expression_2 |
-    Write_Brackets_Modular_expression_2 Integer
+    Struct_expression_2 String (Map' Expression_2)
       deriving Show
   data File =
     File
@@ -157,7 +151,6 @@ module Awful.Typechecker (
   data Match_Algebraic_2 = Match_Algebraic_2 [Pat_1] Expression_2 deriving Show
   data Matches_2 =
     Matches_Algebraic_2 (Map' Match_Algebraic_2) (Maybe Expression_2) |
-    Matches_char_2 (Map Char Expression_2) Expression_2 |
     Matches_Int_2 (Map Integer Expression_2) Expression_2 |
     Matches_Modular_2 (Map Integer Expression_2) (Maybe Expression_2)
       deriving Show
@@ -170,13 +163,12 @@ module Awful.Typechecker (
   data Polykind = Polykind [String] Kind_1 deriving Show
   data Prom_alg = Prom_alg [String] (Map' [Kind_1]) deriving Show
   data Strct = Strct [(String, Kind_1)] [(String, Type_1)] Type_1 deriving Show
-  data Type_1 = Application_type_1 Type_1 Type_1 | Char_type_1 Char | Int_type_1 Integer | Name_type_1 String [Kind_1]
+  data Type_1 = Application_type_1 Type_1 Type_1 | Int_type_1 Integer | Name_type_1 String [Kind_1]
     deriving (Eq, Show)
   data Type_2 = Basic_type_1 [(String, Kind_1)] (Maybe Constraint_1) [Constraint_1] Type_1 deriving Show
   data Tmatch' = Tmatch' [Pat_1] Typedexpr deriving Show
   data Typedexpr =
     Application_texpr Typedexpr Typedexpr |
-    Char_texpr Char |
     Function_texpr Pat_1 Typedexpr |
     Int_texpr Integer |
     Match_texpr Typedexpr Typedmatches |
@@ -186,7 +178,6 @@ module Awful.Typechecker (
       deriving Show
   data Typedmatches =
     Tmatch_algebraic (Map' Tmatch') (Maybe Typedexpr) |
-    Tmatch_char (Map Char Typedexpr) Typedexpr |
     Tmatch_int (Map Integer Typedexpr) Typedexpr |
     Tmatch_Modular (Map Integer Typedexpr) (Maybe Typedexpr)
       deriving Show
@@ -198,7 +189,6 @@ module Awful.Typechecker (
     in
       case c of
         Application_texpr d e -> Application_expression_2 (h d) (h e)
-        Char_texpr d -> Char_expression_2 d
         Function_texpr d e -> Function_expression_2 d (h e)
         Int_texpr d -> Int_expression_2 d
         Match_texpr d e ->
@@ -206,7 +196,6 @@ module Awful.Typechecker (
             (h d)
             (case e of
               Tmatch_algebraic f g -> Matches_Algebraic_2 ((\(Tmatch' i j) -> Match_Algebraic_2 i (h j)) <$> f) (h <$> g)
-              Tmatch_char f g -> Matches_char_2 (h <$> f) (h g)
               Tmatch_int f g -> Matches_Int_2 (h <$> f) (h g)
               Tmatch_Modular f g -> Matches_Modular_2 (h <$> f) (h <$> g))
         Modular_texpr d -> Modular_expression_2 d
@@ -218,7 +207,6 @@ module Awful.Typechecker (
             "Inverse_Modular" -> Inverse_Modular_expression_2
             "Multiply_Modular" -> Multiply_Modular_0_expression_2
             "Negate_Modular" -> Negate_Modular_expression_2
-            "Write_Brackets_Modular" -> Write_Brackets_Modular_expression_2
             _ -> undefined)
               (nat_to_int d)
         Name_texpr_0 d e f ->
@@ -245,8 +233,7 @@ module Awful.Typechecker (
         Div'_expression_2,
         Inverse_Modular_expression_2,
         Multiply_Modular_0_expression_2,
-        Negate_Modular_expression_2,
-        Write_Brackets_Modular_expression_2]
+        Negate_Modular_expression_2]
   addargs_1 c d e f g =
     let
       (h, i) = unsafe_lookup d c
@@ -319,10 +306,6 @@ module Awful.Typechecker (
               c)
             e
       Nothing -> c
-  char_kind :: Kind_1
-  char_kind = Name_kind_1 "!Char"
-  char_type :: Type_1
-  char_type = ntype "Char"
 {-
   check_kind :: String -> String -> Map' (Either Polykind Kind_1) -> Type_1 -> Err Kind_1
   check_kind j c a b =
@@ -334,7 +317,6 @@ module Awful.Typechecker (
           Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") g) h ->
             check_kind j c a e >>= \i -> if i == g then Right h else x
           _ -> x
-        Char_type_1 _ -> Right char_kind
         Int_type_1 _ -> Right int_kind
 -- TODO: are more checks necessary? is it possible that there are problems and potential crash in Name_type_1 case?
         Name_type_1 d e ->
@@ -383,12 +365,7 @@ module Awful.Typechecker (
                 []
                 []
                 (function_type (mod_type (ntype "N")) (function_type (mod_type (ntype "N")) (mod_type (ntype "N")))),
-              Method_4 "Negate_Modular" [] [] (function_type (mod_type (ntype "N")) (mod_type (ntype "N"))),
-              Method_4
-                "Write_Brackets_Modular"
-                []
-                []
-                (function_type (mod_type (ntype "N")) (pair_type (list_type char_type) logical_type))]),
+              Method_4 "Negate_Modular" [] [] (function_type (mod_type (ntype "N")) (mod_type (ntype "N")))]),
         (
           "Ord",
           Class_4
@@ -404,13 +381,7 @@ module Awful.Typechecker (
               Method_4 "Add" [] [] (function_type (ntype "T") (function_type (ntype "T") (ntype "T"))),
               Method_4 "Convert" [] [] (function_type int_type (ntype "T")),
               Method_4 "Multiply" [] [] (function_type (ntype "T") (function_type (ntype "T") (ntype "T"))),
-              Method_4 "Negate" [] [] (function_type (ntype "T") (ntype "T"))]),
-        (
-          "Writeable",
-          Class_4
-            ("T", star_kind)
-            Nothing
-            [Method_4 "Write_Brackets" [] [] (function_type (ntype "T") (pair_type (list_type char_type) logical_type))])]
+              Method_4 "Negate" [] [] (function_type (ntype "T") (ntype "T"))])]
   classes_1 :: Map' Class_5
   classes_1 = (\(Class_4 (_, a) b c) -> Class_5 a b ((\(Method_4 d _ _ _) -> d) <$> c)) <$> classes_0
   classes_2 :: Map' Kind_1
@@ -506,7 +477,6 @@ module Awful.Typechecker (
                   (Function_expression_2
                     Blank_pat_1
                     (Function_expression_2 Blank_pat_1 (Function_expression_2 Blank_pat_1 (Name_expression_2 "x")))))))),
-        ("Compare Char", Compare_Char_0_expression_2),
         ("Compare Int", Compare_Int_0_expression_2),
         (
           "Construct_List",
@@ -578,27 +548,12 @@ module Awful.Typechecker (
             (Function_expression_2
               (Name_pat_1 "y")
               (Struct_expression_2
+                "Pair"
                 (Data.Map.fromList [("First", Name_expression_2 "x"), ("Second", Name_expression_2 "y")])))),
         ("Right", Function_expression_2 (Name_pat_1 "x") (Algebraic_expression_2 "Right" [Name_expression_2 "x"])),
         ("Second", Field_expression_2 "Second"),
         ("True", Algebraic_expression_2 "True" []),
         ("Wrap", Function_expression_2 (Name_pat_1 "x") (Algebraic_expression_2 "Wrap" [Name_expression_2 "x"])),
-        ("Write_Brackets Int", Write_Brackets_Int_expression_2),
-        (
-          "Write_Brackets Modular",
-          Function_expression_2
-            Blank_pat_1
-            (Function_expression_2
-              Blank_pat_1
-              (Function_expression_2
-                Blank_pat_1
-                (Function_expression_2
-                  Blank_pat_1
-                  (Function_expression_2
-                    Blank_pat_1
-                    (Function_expression_2
-                      Blank_pat_1
-                      (Function_expression_2 (Name_pat_1 "x") (Name_expression_2 "x")))))))),
         ("Zr", Algebraic_expression_2 "Zr" [])]
   either_kind :: Kind_1 -> Kind_1 -> Kind_1
   either_kind x = Application_kind_1 (Application_kind_1 (Name_kind_1 "!Either") x)
@@ -644,7 +599,6 @@ module Awful.Typechecker (
   hkinds =
     Data.Map.fromList
       [
-        ("!Char", Star_kind),
         ("!Comparison", Star_kind),
         ("!Either", Arrow_kind (Arrow_kind Star_kind)),
         ("!Function", Arrow_kind (Arrow_kind Star_kind)),
@@ -683,9 +637,8 @@ module Awful.Typechecker (
       [
         ("Field", Data.Map.fromList [("Modular", [["Nonzero"]])]),
         ("Nonzero", Data.Map.fromList []),
-        ("Ord", Data.Map.fromList [("Char", []), ("Int", []), ("Modular", [[]])]),
-        ("Ring", Data.Map.fromList [("Int", []), ("Modular", [["Nonzero"]])]),
-        ("Writeable", Data.Map.fromList [("Int", []), ("Modular", [["Nonzero"]])])]
+        ("Ord", Data.Map.fromList [("Int", []), ("Modular", [[]])]),
+        ("Ring", Data.Map.fromList [("Int", []), ("Modular", [["Nonzero"]])])]
   int_kind :: Kind_1
   int_kind = Name_kind_1 "!Int"
   int_to_nat_type :: Integer -> Type_1
@@ -728,7 +681,6 @@ module Awful.Typechecker (
         ("!True", Polykind [] logical_kind),
         ("!Wrap", Polykind ["K"] (arrow_kind (Name_kind_1 "K") (maybe_kind (Name_kind_1 "K")))),
         ("!Zr", Polykind [] nat_kind),
-        ("Char", Polykind [] star_kind),
         ("Comparison", Polykind [] star_kind),
         ("Either", Polykind [] (arrow_kind star_kind (arrow_kind star_kind star_kind))),
         ("Function", Polykind [] (arrow_kind star_kind (arrow_kind star_kind star_kind))),
@@ -753,7 +705,6 @@ module Awful.Typechecker (
         [
           "Add",
           "Add_Modular",
-          "Char",
           "Compare",
           "Comparison",
           "Construct_List",
@@ -795,9 +746,6 @@ module Awful.Typechecker (
           "Second",
           "True",
           "Wrap",
-          "Write_Brackets",
-          "Write_Brackets_Modular",
-          "Writeable",
           "Zr"])
   logical_kind :: Kind_1
   logical_kind = Name_kind_1 "!Logical"
@@ -905,7 +853,7 @@ module Awful.Typechecker (
   promotables :: Map' Bool
   promotables =
     Data.Map.fromList
-      ((\a -> (a, True)) <$> ["Char", "Comparison", "Either", "Function", "Int", "List", "Logical", "Maybe", "Nat", "Pair"])
+      ((\a -> (a, True)) <$> ["Comparison", "Either", "Function", "Int", "List", "Logical", "Maybe", "Nat", "Pair"])
   rem_old' :: Map' (Map' (t, Status)) -> Map' (Map' t)
   rem_old' a = Data.Map.filter (\b -> not (Data.Map.null b)) (rem_old <$> a)
   repkinds :: Map' Kind_1 -> Kind_1 -> Kind_1
@@ -925,8 +873,6 @@ module Awful.Typechecker (
           Just d -> d
           Nothing -> b
       _ -> b
-  show_char :: Char -> String
-  show_char c = show [c]
   show_mod :: Integer -> Integer -> String
   show_mod a b = show b ++ " # " ++ show a
   slv :: Map' (Map' [[String]]) -> [(String, (Name, Type_1))] -> (Name -> String -> String -> String) -> Err ()
@@ -1009,11 +955,6 @@ module Awful.Typechecker (
             case d of
               Application_type_1 h i -> solvesys m ((e, h) : (f, i) : g) (a', t, u)
               Name_type_1 h _ -> solvesys' m h c g (a', t, u)
-              _ -> undefined
-          Char_type_1 e ->
-            case d of
-              Char_type_1 f -> if e == f then solvesys m g (a', t, u) else m ('!' : show e) ('!' : show f)
-              Name_type_1 f _ -> solvesys' m f c g (a', t, u)
               _ -> undefined
           Int_type_1 e ->
             case d of
@@ -1111,7 +1052,6 @@ module Awful.Typechecker (
             (f d)
             (case e of
               Tmatch_algebraic g h -> Tmatch_algebraic ((\(Tmatch' i j) -> Tmatch' i (f j)) <$> g) (f <$> h)
-              Tmatch_char g h -> Tmatch_char (f <$> g) (f h)
               Tmatch_int g h -> Tmatch_int (f <$> g) (f h)
               Tmatch_Modular g h -> Tmatch_Modular (f <$> g) (f <$> h))
         Name_texpr_0 d g e -> Name_texpr_0 d g (sysrep' a b e)
@@ -1528,7 +1468,7 @@ module Awful.Typechecker (
                               ins_new a p i,
                               j,
                               Prelude.foldl
-                                (\o1 -> \(Brnch_3 _ _ u s) ->
+                                (\o1 -> \(Brnch_3 f9 _ u s) ->
                                   let
                                     w = fst <$> s
                                   in
@@ -1539,6 +1479,7 @@ module Awful.Typechecker (
                                         (Prelude.foldr
                                           (\t -> Function_expression_2 (Name_pat_1 ('#' : t)))
                                           (Struct_expression_2
+                                            f9
                                             (Data.Map.fromList ((\t -> (t, Name_expression_2 ('#' : t))) <$> w)))
                                           w)
                                         o1)
@@ -1568,7 +1509,7 @@ module Awful.Typechecker (
                         a
                         (Prelude.foldr
                           (\f -> Function_expression_2 (Name_pat_1 ('#' : f)))
-                          (Struct_expression_2 (Data.Map.fromList ((\f -> (f, Name_expression_2 ('#' : f))) <$> e')))
+                          (Struct_expression_2 a (Data.Map.fromList ((\f -> (f, Name_expression_2 ('#' : f))) <$> e')))
                           e')
                         k)
                       e')
@@ -1791,7 +1732,8 @@ module Awful.Typechecker (
             0
             t'
             (Prelude.foldl (\y -> \(z, w) -> Data.Map.insert z (pkind w) y) n b, v2)
-            w3)
+            w3
+            Data.Set.empty)
       Instance_4 l' e' w0 w e e0 e1 f f' g' c2 r' ->
         let
           f4 = Prelude.foldl (\x -> \(y, g) -> Data.Map.insert y (pkind g) x) n e0
@@ -1902,13 +1844,14 @@ module Awful.Typechecker (
     Map' ([String], Map' [(String, Nat)]) ->
     (Map' Polykind, Map' Kind) ->
     Map' Strct ->
+    Set String ->
     Err Expression_2
-  type_expr k h a (c, d, e) f m w w' b t3 =
+  type_expr k h a (c, d, e) f m w w' b t3 x8 =
     let
       n = " in " ++ k
     in
       (
-        type_expression c d a w Data.Set.empty [] e f h [] b t3 >>=
+        type_expression c d a w x8 [] e f h [] b t3 >>=
         \(g, i, j, _, x) ->
           (
             solvesys (\y -> \p -> Left ("Type mismatch between " ++ min y p ++ " and " ++ max y p ++ n)) j (x, g, i) >>=
@@ -1938,19 +1881,8 @@ module Awful.Typechecker (
     Map' ([String], Map' [(String, Nat)]) ->
     Map' Strct ->
     Err Expression_2
-  type_expr' (b, c, d, e, i) f g h =
-    type_expr
-      "input."
-      (list_type char_type)
-      (Location_1 "input")
-      (c, d, e)
-      (Application_expression_1
-        (Name_expression_1 (Name (Location_0 0 0) "First") Nothing [])
-        (Application_expression_1 (Name_expression_1 (Name (Location_0 0 0) "Write_Brackets") Nothing []) f))
-      g
-      0
-      h
-      (b, i)
+  type_expr' (b, c, d, e, i) f g h t6 =
+    type_expr "input." (ntype "0") (Location_1 "input") (c, d, e) f g 1 h (b, i) t6 (Data.Set.singleton "0")
   type_expression ::
     Map' Alg ->
     Map' String ->
@@ -1989,7 +1921,6 @@ module Awful.Typechecker (
               (
                 (\(l, m, n, q, e') -> (Application_texpr i l, m, n, q, e')) <$>
                 type_expression v w r p j k d g (ntype (show o)) d' (r7, m8) z8))
-        Char_expression_1 c -> Right (Char_texpr c, f, (e, char_type) : h, o, c')
         Function_expression_1 c g ->
           (
             type_pat r z8 c (ntype (show o)) d (o + 1) (Data.Set.insert (show o) f) h >>=
@@ -2060,16 +1991,6 @@ module Awful.Typechecker (
                                             type_expression v w r g0 e0 f0 d j0 e a3 (r7, m8) z8)
                                         Nothing -> Left ("Incomplete match" ++ x' a7)))
                     Nothing -> Left ("Undefined algebraic constructor " ++ l ++ x' l2)
-            Matches_char_1 i j ->
-              (
-                type_expression v w r o f h d c char_type c' (r7, m8) z8 >>=
-                \(k, l, m, n, d') ->
-                  (
-                    type_matches_char v w r n l m d Data.Map.empty i e Data.Map.empty d' (r7, m8) z8 >>=
-                    \(q, t, u, x, e') ->
-                      (
-                        (\(a0, b0, c0, d0, a2) -> (Match_texpr k (Tmatch_char q a0), b0, c0, d0, a2)) <$>
-                        type_expression v w r x t u d j e e' (r7, m8) z8)))
             Matches_Int_1 i j ->
               (
                 type_expression v w r o f h d c int_type c' (r7, m8) z8 >>=
@@ -2213,7 +2134,8 @@ module Awful.Typechecker (
             w
             t'
             (Prelude.foldl (\k' -> \(l', m0) -> Data.Map.insert l' (pkind m0) k') x2 s, t4)
-            f5 >>=
+            f5
+            Data.Set.empty >>=
           \g -> type_exprs a b c d m (Data.Map.insert (y ++ " " ++ t) (f' g) i) t z w f' t' t0 (x2, t4) f5)
   type_field :: (Location_0 -> Location_1) -> (String, Type_8) -> Map' Polykind -> Map' Kind -> Err (String, Type_1)
   type_field d (a, b) c e  = (,) a <$> type_typ d b c e star_kind
@@ -2378,30 +2300,6 @@ module Awful.Typechecker (
             case Data.Map.lookup k b of
               Just _ -> "Incompatible constructors " ++ q ++ " and " ++ k ++ location (c q1) ++ " and" ++ location' (c j)
               Nothing -> "Undefined algebraic constructor " ++ k ++ location' (c j))
-  type_match_char ::
-    (
-      Map' Alg ->
-      Map' String ->
-      (Location_0 -> Location_1) ->
-      Integer ->
-      Set String ->
-      [(Type_1, Type_1)] ->
-      Map' Type_2 ->
-      Map Char Typedexpr ->
-      Match_char_1 ->
-      Type_1 ->
-      Map Char Location_0 ->
-      [(String, (Name, Type_1))] ->
-      (Map' Polykind, Map' Kind) ->
-      Map' Strct ->
-      Err (Map Char Typedexpr, Set String, [(Type_1, Type_1)], Integer, Map Char Location_0, [(String, (Name, Type_1))]))
-  type_match_char a b c d f g h i (Match_char_1 y2 j k) l x1 a' w w7 =
-    case Data.Map.lookup j x1 of
-      Just y0 -> Left (location_err' ("cases for " ++ show_char j) (c y0) (c y2))
-      Nothing ->
-        (
-          (\(m, n, o, p, b') -> (Data.Map.insert j m i, n, o, p, Data.Map.insert j y2 x1, b')) <$>
-          type_expression a b c d f g h k l a' w w7)
   type_match_int ::
     (
       Map' Alg ->
@@ -2507,30 +2405,6 @@ module Awful.Typechecker (
         (
           type_match_algebraic a b c d f g h i l k s u v a' m0 z1 >>=
           \(n, o, p, q, t, b') -> type_matches_algebraic a b c q o p h n m k t u v b' m0 z1)
-  type_matches_char ::
-    (
-      Map' Alg ->
-      Map' String ->
-      (Location_0 -> Location_1) ->
-      Integer ->
-      Set String ->
-      [(Type_1, Type_1)] ->
-      Map' Type_2 ->
-      Map Char Typedexpr ->
-      [Match_char_1] ->
-      Type_1 ->
-      Map Char Location_0 ->
-      [(String, (Name, Type_1))] ->
-      (Map' Polykind, Map' Kind) ->
-      Map' Strct ->
-      Err (Map Char Typedexpr, Set String, [(Type_1, Type_1)], Integer, [(String, (Name, Type_1))]))
-  type_matches_char a b c d f g h i j k x1 a' w1 w2 =
-    case j of
-      [] -> Right (i, f, g, d, a')
-      l : m ->
-        (
-          type_match_char a b c d f g h i l k x1 a' w1 w2 >>=
-          \(n, o, p, q, x2, b') -> type_matches_char a b c q o p h n m k x2 b' w1 w2)
   type_matches_int ::
     (
       Map' Alg ->
@@ -2711,7 +2585,7 @@ module Awful.Typechecker (
                           a
                           (Prelude.foldr
                             (\f -> Function_expression_2 (Name_pat_1 ('#' : f)))
-                            (Struct_expression_2 (Data.Map.fromList ((\f -> (f, Name_expression_2 ('#' : f))) <$> e')))
+                            (Struct_expression_2 a (Data.Map.fromList ((\f -> (f, Name_expression_2 ('#' : f))) <$> e')))
                             e')
                           k)
                         e')
@@ -2831,7 +2705,6 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
                 Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") j) k ->
                   if k == e then Application_type_1 h <$> type_type l a g d y j else x
                 _ -> x)
-        Char_type_5 b -> if e == char_kind then Right (Char_type_1 b) else x
         Int_type_5 b -> if e == int_kind then Right (Int_type_1 b) else x
         Name_type_5 (Name a' f) b ->
           und_err
@@ -2852,7 +2725,6 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
               Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") i) j ->
                 (\k -> (Application_type_1 g k, j)) <$> type_type l a f d y i
               _ -> kind_err (l a))
-      Char_type_5 e -> Right (Char_type_1 e, char_kind)
       Int_type_5 e -> Right (Int_type_1 e, int_kind)
       Name_type_5 (Name a' e) g ->
         und_err
@@ -3013,26 +2885,11 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
             (function_type (pair_type (ntype "T") (ntype "U")) (ntype "U"))),
         ("True", Basic_type_1 [] Nothing [] logical_type),
         ("Wrap", Basic_type_1 [("T", star_kind)] Nothing [] (function_type (ntype "T") (maybe_type (ntype "T")))),
-        (
-          "Write_Brackets",
-          Basic_type_1
-            [("T", star_kind)]
-            (Just (Constraint_1 "Writeable" "T"))
-            [Constraint_1 "Writeable" "T"]
-            (function_type (ntype "T") (pair_type (list_type char_type) logical_type))),
-        (
-          "Write_Brackets_Modular",
-          Basic_type_1
-            [("N", nat_kind)]
-            (Just (Constraint_1 "Nonzero" "N"))
-            [Constraint_1 "Nonzero" "N"]
-            (function_type (mod_type (ntype "N")) (pair_type (list_type char_type) logical_type))),
         ("Zr", Basic_type_1 [] Nothing [] nat_type)]
   typestring :: Type_1 -> [Type_1] -> (String, [Type_1])
   typestring a d =
     case a of
       Application_type_1 b c -> typestring b (c : d)
-      Char_type_1 b -> ('!' : show b, d)
       Int_type_1 b -> ('!' : show b, d)
       Name_type_1 b _ -> (b, d)
   typevar :: String -> (Integer, Map' Type_1, Set String) -> (Integer, Map' Type_1, Set String)

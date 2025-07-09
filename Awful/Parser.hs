@@ -20,7 +20,6 @@ module Awful.Parser (
   Match_Algebraic_0 (..),
   Match_Int_0 (..),
   Match_Modular_0 (..),
-  Match_char_0 (..),
   Matches_0 (..),
   Method (..),
   Modular (..),
@@ -57,7 +56,6 @@ module Awful.Parser (
   data Eqq = Eqq Name [Pat] Expression_0 deriving Show
   data Expression_0 =
     Application_expression_0 Expression_0 [Expression_0] |
-    Char_expression_0 Char |
     Function_expression_0 Pat Expression_0 |
     Int_expression_0 Integer |
     Let_expression_0 Eqq Expression_0 |
@@ -70,12 +68,10 @@ module Awful.Parser (
   data Kind_0 = Kind_0 Location_0 Kind_branch_0 deriving (Eq, Show)
   data Kind_branch_0 = Application_kind_0 Kind_0 Kind_0 | Name_kind_0 String deriving (Eq, Show)
   data Match_Algebraic_0 = Match_Algebraic_0 Name [Pat] Expression_0 deriving Show
-  data Match_char_0 = Match_char_0 Location_0 Char Expression_0 deriving Show
   data Match_Int_0 = Match_Int_0 Location_0 Integer Expression_0 deriving Show
   data Match_Modular_0 = Match_Modular_0 Location_0 Modular Expression_0 deriving Show
   data Matches_0 =
     Matches_Algebraic_0 [Match_Algebraic_0] (Maybe (Location_0, Expression_0)) |
-    Matches_char_0 [Match_char_0] Expression_0 |
     Matches_Int_0 [Match_Int_0] Expression_0 |
     Matches_Modular_0 [Match_Modular_0] (Maybe (Location_0, Expression_0))
       deriving Show
@@ -92,11 +88,7 @@ module Awful.Parser (
   data Tree_0 = Tree_0 [Data_0] [Class_0] [Opdecl_0] [Def_0] deriving Show
   data Tree_1 = Tree_1 [Name] Tree_0 deriving Show
   data Type_0 =
-    Application_type_0 Type_0 [Type_0] |
-    Char_type_0 Char |
-    Int_type_0 Integer |
-    Name_type_0 Name [Kind_0] |
-    Op_type_0 Type_0 [(Name, Type_0)]
+    Application_type_0 Type_0 [Type_0] | Int_type_0 Integer | Name_type_0 Name [Kind_0] | Op_type_0 Type_0 [(Name, Type_0)]
       deriving Show
   data Type_7 = Type_7 Location_0 Type_0 deriving Show
   class Get_location t where
@@ -258,17 +250,6 @@ module Awful.Parser (
         parse_token Left_round_token <*>
         parse_list 2 parse_brnch <*
         parse_token Right_round_token))
-  parse_char :: Parser Char
-  parse_char =
-    parse_elementary
-      (\a ->
-        case a of
-          Char_token b -> Just b
-          _ -> Nothing)
-  parse_char_expression :: Parser Expression_0
-  parse_char_expression = Char_expression_0 <$> parse_char
-  parse_char_type :: Parser Type_0
-  parse_char_type = Char_type_0 <$ parse_lift <*> parse_char
   parse_class :: Parser Class_0
   parse_class =
     (
@@ -316,14 +297,13 @@ module Awful.Parser (
   parse_elementary_expression :: Parser Expression_0
   parse_elementary_expression =
     (
-      parse_char_expression <|>
       parse_int_expression <|>
       (\x -> Name_expression_0 (Name x "Empty_List") Nothing []) <& parse_name_4 "List" <|>
       parse_name_expression)
   parse_elementary_pat :: Parser Pat
   parse_elementary_pat = parse_blank_pat <|> parse_name_pat
   parse_elementary_type :: Parser Type_0
-  parse_elementary_type = parse_char_type <|> parse_int_type <|> parse_name_type <|> (int_to_nat_type_0 <&> parse_int')
+  parse_elementary_type = parse_int_type <|> parse_name_type <|> (int_to_nat_type_0 <&> parse_int')
   parse_eq :: Parser ()
   parse_eq = parse_operator "="
   parse_eq' :: Parser Eqq
@@ -395,8 +375,6 @@ module Awful.Parser (
   parse_location = Parser (\a -> Right (state_location a, a))
   parse_match_algebraic :: Parser Match_Algebraic_0
   parse_match_algebraic = parse_arrow' (Match_Algebraic_0 <$> parse_name' <*> many parse_brack_pat)
-  parse_match_char :: Parser Match_char_0
-  parse_match_char = parse_arrow' (Match_char_0 <&> parse_char)
   parse_match_expression :: Parser Expression_0
   parse_match_expression =
     (
@@ -411,11 +389,9 @@ module Awful.Parser (
   parse_match_modular :: Parser Match_Modular_0
   parse_match_modular = parse_arrow' (Match_Modular_0 <&> parse_modular)
   parse_matches :: Parser Matches_0
-  parse_matches = parse_matches_modular <|> parse_matches_algebraic <|> parse_matches_char <|> parse_matches_int
+  parse_matches = parse_matches_modular <|> parse_matches_algebraic <|> parse_matches_int
   parse_matches_algebraic :: Parser Matches_0
   parse_matches_algebraic = Matches_Algebraic_0 <$> parse_list 1 parse_match_algebraic <*> parse_default'
-  parse_matches_char :: Parser Matches_0
-  parse_matches_char = Matches_char_0 <$> parse_list 1 parse_match_char <*> parse_default
   parse_matches_int :: Parser Matches_0
   parse_matches_int = Matches_Int_0 <$> parse_list 1 parse_match_int <*> parse_default
   parse_matches_modular :: Parser Matches_0

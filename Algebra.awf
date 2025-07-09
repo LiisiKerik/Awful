@@ -24,9 +24,6 @@ Class Mat{F : !Nat -> Star -> Star}(
   Matrix_by_vector[N : !Nat, T : Star]<Ring T> : F N T -> Array N T -> Array N T,
   Vector_by_matrix[N : !Nat, T : Star]<Ring T> : Array N T -> F N T -> Array N T)
 Class Ord_Array{N : !Nat}(Compare_Array[T : Star]<Ord T> : Array N T -> Array N T -> Comparison)
-Class Writeable_Array{N : !Nat}(Write_Brackets_Array[T : Star]<Writeable T> : Array N T -> List Char * Logical)
-Class Writeable_Square{N : !Nat}(Write_Brackets_Square[T : Star]<Writeable T> : Square N T -> List Char * Logical)
-Class Writeable_Triangle{N : !Nat}(Write_Brackets_Triangle[T : Star]<Writeable T> : Triangle N T -> List Char * Logical)
 Instance Applicative{Complex}(Apply (Complex f g) (Complex x y) = Complex (f x) (g y), Lift x = Complex x x)
 Instance Applicative{Quaternion}(
   Apply (Quaternion f g h i) (Quaternion x y z a) = Quaternion (f x) (g y) (h z) (i a),
@@ -93,49 +90,3 @@ Instance Ring{Quaternion T}<Ring T>(
   Negate = Negate')
 Def Sum[F : Star -> Star, T : Star]<Foldable F, Ring T> : F T -> T = Fold_right Add Zero
 Def Sum_squares[F : Star -> Star, T : Star]<Foldable F, Functor F, Ring T>(x : F T) : T = Sum (Fmap (y -> Pow' y 2) x)
-Instance Writeable{Array N T}<Writeable T, Writeable_Array N>(Write_Brackets = Write_Brackets_Array)
-Instance Writeable{Complex T}<Writeable T>(
-  Write_Brackets (Complex x y) =
-    Pair (Write' (List ("C", "o", "m", "p", "l", "e", "x")) (List (Brackets x, Brackets y))) True)
-Instance Writeable{Fraction}(
-  Write_Brackets (Fraction x y) =
-    Pair (Write' (List ("F", "r", "a", "c", "t", "i", "o", "n")) (List (Brackets x, Brackets y))) True)
-Instance Writeable{Quaternion T}<Writeable T>(
-  Write_Brackets (Quaternion x y z a) =
-    Pair
-      (Write'
-        (List ("Q", "u", "a", "t", "e", "r", "n", "i", "o", "n"))
-        (List (Brackets x, Brackets y, Brackets z, Brackets a)))
-      True)
-Instance Writeable{Square N T}<Writeable T, Writeable_Square N>(Write_Brackets = Write_Brackets_Square)
-Instance Writeable{Toeplitz N T}<Writeable T, Writeable_Array N>(
-  Write_Brackets (Toeplitz x) = Pair (Cat (List ("T", "o", "e", "p", "l", "i", "t", "z", " ")) (Brackets x)) True)
-Instance Writeable{Triangle N T}<Writeable T, Writeable_Triangle N>(Write_Brackets = Write_Brackets_Triangle)
-Instance Writeable{Trivial}(Write_Brackets _ = Pair (List ("T", "r", "i", "v", "i", "a", "l")) False)
-Instance Writeable_Array{!Zr}(
-  Write_Brackets_Array _ = Pair (List ("E", "m", "p", "t", "y", "_", "A", "r", "r", "a", "y")) False)
-Instance Writeable_Array{!Next N}<Writeable_Array N>(
-  Write_Brackets_Array x =
-    Pair
-      (Write'
-        (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "A", "r", "r", "a", "y"))
-        (List (Brackets (Head x), Brackets (Tail x))))
-      True)
-Instance Writeable_Square{!Zr}(
-  Write_Brackets_Square _ = Pair (List ("E", "m", "p", "t", "y", "_", "S", "q", "u", "a", "r", "e")) False)
-Instance Writeable_Square{!Next N}<Writeable_Array N, Writeable_Square N>(
-  Write_Brackets_Square x =
-    Pair
-      (Write'
-        (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "S", "q", "u", "a", "r", "e"))
-        (List (Brackets (Fst_Square x), Brackets (Top_row_Square x), Brackets (Left_column_Square x), Brackets (Square' x))))
-      True)
-Instance Writeable_Triangle{!Zr}(
-  Write_Brackets_Triangle _ = Pair (List ("E", "m", "p", "t", "y", "_", "T", "r", "i", "a", "n", "g", "l", "e")) False)
-Instance Writeable_Triangle{!Next N}<Writeable_Array N, Writeable_Triangle N>(
-  Write_Brackets_Triangle x =
-    Pair
-      (Write'
-        (List ("C", "o", "n", "s", "t", "r", "u", "c", "t", "_", "T", "r", "i", "a", "n", "g", "l", "e"))
-        (List (Brackets (Fst_Triangle x), Brackets (Top_row_Triangle x), Brackets (Triangle' x))))
-      True)

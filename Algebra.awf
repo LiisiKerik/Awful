@@ -40,10 +40,10 @@ Def Div_right[T : Star]<Field T>(x : T, y : T) : Maybe T = Fmap (Multiply x) (In
 Def Div_right'[F : Star -> Star, T : Star]<Functor F, Field T>(x : F T, y : T) : Maybe (F T) =
   Fmap (Multiply_right x) (Inverse y)
 Instance Field{Complex T}<Commutative T, Field T>(
-  Inverse (Complex x y) = Div_right' (Complex x (Negate y)) (Sum_squares (List (x, y))))
+  Inverse (Complex x y) = Div_right' (Complex x (Negate y)) (Sum_squares (Construct_List x (Construct_List y Empty_List))))
 Instance Field{Quaternion T}<Commutative T, Field T>(
   Inverse (Quaternion x y z a) =
-    Div_right' (Quaternion x (Negate y) (Negate z) (Negate a)) (Sum_squares (List (x, y, z, a))))
+    Div_right' (Quaternion x (Negate y) (Negate z) (Negate a)) (Sum_squares (Construct_List x (Construct_List y (Construct_List z (Construct_List a Empty_List))))))
 Instance Field{Trivial}(Inverse = Wrap)
 Instance Finite{Array N T}<Finite T, Finite_Array N>(All = All_Array)
 Instance Finite{Trivial}(All = Lift Trivial)

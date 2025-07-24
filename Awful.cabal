@@ -8,16 +8,16 @@ name: Awful
 synopsis: Awful is a toy functional programming language.
 version: 0.0.0
 executable Awful
-  -- Kawaii-Parser, ghc, transformers
-  build-depends: base, containers, directory, filepath, mtl
+  -- ghc, transformers
+  build-depends: Kawaii-Parser, base, containers, directory, filepath, mtl
   -- eemaldada ebavajalikud extensionid
   default-extensions:
     -- DuplicateRecordFields,
     -- FlexibleContexts,
     -- FlexibleInstances,
-    NamedFieldPuns
+    NamedFieldPuns,
     -- NoFieldSelectors,
-    -- StandaloneDeriving,
+    StandaloneDeriving
     -- TypeSynonymInstances
   ghc-options: -Wall -Wno-x-partial -Werror
   main-is: Awful/Main.hs

@@ -25,6 +25,7 @@ module Awful.Namechecker (
   import Data.Bifunctor
   import Data.Map
   import Data.Set
+  import Parser.Locations
   data Brnch_1 = Brnch_1 Name [Name] String [(String, Type_8)] deriving Show
   data Brnch_2 = Brnch_2 Name [String] String [(String, Type_8)] deriving Show
   data Class_1 = Class_1 String (Name, Kind_0) (Maybe Name) [Method_1] deriving Show
@@ -38,30 +39,30 @@ module Awful.Namechecker (
       deriving Show
   data Data_branch_1 = Algebraic_data_1 [Form_1] | Struct_data_1 [(String, Type_8)] deriving Show
   data Def_2 =
-    Basic_def_2 Location_0 String [(Name, Kind_0)] [Constraint_0] Type_8 Expression_9 |
-    Instance_2 Location_0 Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, Expression_9)]
+    Basic_def_2 Location String [(Name, Kind_0)] [Constraint_0] Type_8 Expression_9 |
+    Instance_2 Location Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, Expression_9)]
       deriving Show
   data Def_3 =
-    Basic_def_3 Location_0 String [(String, Kind_0)] [Constraint_0] Type_8 Expression_1 |
-    Instance_3 Location_0 Name Name [Kind_0] [Pattern_0] [Constraint_0] [(Name, Expression_1)]
+    Basic_def_3 Location String [(String, Kind_0)] [Constraint_0] Type_8 Expression_1 |
+    Instance_3 Location Name Name [Kind_0] [Pattern_0] [Constraint_0] [(Name, Expression_1)]
       deriving Show
   data Expression_1 =
     Application_expression_1 Expression_1 Expression_1 |
     Function_expression_1 Pat Expression_1 |
     Int_expression_1 Integer |
-    Match_expression_1 Location_0 Expression_1 Matches_1 |
+    Match_expression_1 Location Expression_1 Matches_1 |
     Modular_expression_1 Modular |
     Name_expression_1 Name (Maybe Type_8) [Type_8]
       deriving Show
   data Form_1 = Form_1 String [Type_8] deriving Show
   type Locations = Map' Location'
   data Match_Algebraic_1 = Match_Algebraic_1 Name [Pat] Expression_1 deriving Show
-  data Match_Int_1 = Match_Int_1 Location_0 Integer Expression_1 deriving Show
-  data Match_Modular_1 = Match_Modular_1 Location_0 Modular Expression_1 deriving Show
+  data Match_Int_1 = Match_Int_1 Location Integer Expression_1 deriving Show
+  data Match_Modular_1 = Match_Modular_1 Location Modular Expression_1 deriving Show
   data Matches_1 =
-    Matches_Algebraic_1 [Match_Algebraic_1] (Maybe (Location_0, Expression_1)) |
+    Matches_Algebraic_1 [Match_Algebraic_1] (Maybe (Location, Expression_1)) |
     Matches_Int_1 [Match_Int_1] Expression_1 |
-    Matches_Modular_1 [Match_Modular_1] (Maybe (Location_0, Expression_1))
+    Matches_Modular_1 [Match_Modular_1] (Maybe (Location, Expression_1))
       deriving Show
   data Method_1 = Method_1 String [(Name, Kind_0)] [Constraint_0] Type_8 deriving Show
   data Method_2 = Method_2 String [(String, Kind_0)] [Constraint_0] Type_8 deriving Show
@@ -188,8 +189,8 @@ module Awful.Namechecker (
       (String -> u -> (Set String, Locations) -> Err t) ->
       u ->
       String ->
-      (t -> Maybe (Location_0, Expression_1) -> Matches_1) ->
-      Maybe (Location_0, Expression_9) ->
+      (t -> Maybe (Location, Expression_1) -> Matches_1) ->
+      Maybe (Location, Expression_9) ->
       Err Matches_1)
   naming_default b i j a g c =
     (

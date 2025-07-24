@@ -59,16 +59,17 @@ module Awful.Typechecker (
   standard_naming_typing,
   type_expr',
   unsafe_lookup) where
+  import Awful.Namechecker
+  import Awful.Operators
+  import Awful.Parser
+  import Awful.Tokeniser
   import Control.Monad
   import Data.Bifunctor
   import Data.List
   import Data.Map
   import Data.Maybe
   import Data.Set
-  import Awful.Namechecker
-  import Awful.Operators
-  import Awful.Parser
-  import Awful.Tokeniser
+  import Parser.Locations
   data Alg = Alg [(String, Kind_1)] (Map' [Type_1]) Type_1 deriving Show -- TODO: REM STRINGS FROM FST MAP
   type Algebraics = Map' (Alg, Status)
   data Brnch_3 = Brnch_3 String [(String, Kind_1)] String [(String, Type_8)] deriving Show
@@ -82,9 +83,9 @@ module Awful.Typechecker (
     Branching_data_3 String [Kind_1] [(String, Kind_1)] [Brnch_3] | Plain_data_3 [(String, Kind_1)] Data_branch_1
       deriving Show
   data Def_4 =
-    Basic_def_4 Location_0 String [(String, Kind_1)] [Constraint_1] Type_1 Expression_1 [String] |
+    Basic_def_4 Location String [(String, Kind_1)] [Constraint_1] Type_1 Expression_1 [String] |
     Instance_4
-      Location_0
+      Location
       String
       (Maybe String)
       String
@@ -333,7 +334,7 @@ module Awful.Typechecker (
       Left (Polykind c d) -> (c, d)
       Right b -> ([], b)
 -}
-  check_mod :: (Location_0 -> Location_1) -> Modular -> Err Modular'
+  check_mod :: (Location -> Location_1) -> Modular -> Err Modular'
   check_mod a (Modular d b c) =
     if c < b then Right (Modular' b c) else Left ("Invalid Modular " ++ show_mod b c ++ location' (a d))
   classes_0 :: Map' Class_4
@@ -570,13 +571,13 @@ module Awful.Typechecker (
     case b of
       [] -> return c
       d : e -> gather_all_types a e c >>= a d
-  gather_fields :: Set String -> [(String, Type_8)] -> Map' Location_0 -> Maybe (Map' Location_0)
+  gather_fields :: Set String -> [(String, Type_8)] -> Map' Location -> Maybe (Map' Location)
   gather_fields b a = gather_types b (snd <$> a)
-  gather_form :: Set String -> Form_1 -> Map' Location_0 -> Maybe (Map' Location_0)
+  gather_form :: Set String -> Form_1 -> Map' Location -> Maybe (Map' Location)
   gather_form b (Form_1 _ a) = gather_types b a
-  gather_forms :: Set String -> [Form_1] -> Map' Location_0 -> Maybe (Map' Location_0)
+  gather_forms :: Set String -> [Form_1] -> Map' Location -> Maybe (Map' Location)
   gather_forms a = gather_all_types (gather_form a)
-  gather_type :: Set String -> Type_5 -> Map' Location_0 -> Maybe (Map' Location_0)
+  gather_type :: Set String -> Type_5 -> Map' Location -> Maybe (Map' Location)
   gather_type f b c =
     case b of
       Application_type_5 d e -> gather_type f e c >>= gather_type f d
@@ -585,7 +586,7 @@ module Awful.Typechecker (
           [] -> Just (if Data.Set.member d f then c else Data.Map.insert d a c)
           _ -> Nothing
       _ -> Nothing
-  gather_types :: Set String -> [Type_8] -> Map' Location_0 -> Maybe (Map' Location_0)
+  gather_types :: Set String -> [Type_8] -> Map' Location -> Maybe (Map' Location)
   gather_types a b = gather_all_types (gather_type a) ((\(Type_8 _ c) -> c) <$> b)
   getarg :: [t] -> Nat -> t
   getarg a b =
@@ -751,7 +752,7 @@ module Awful.Typechecker (
   logical_kind = Name_kind_1 "!Logical"
   logical_type :: Type_1
   logical_type = ntype "Logical"
-  make_eq :: Data_2 -> Map' (Either Bool (Map' Location_0), Status) -> Map' (Either Bool (Map' Location_0), Status)
+  make_eq :: Data_2 -> Map' (Either Bool (Map' Location), Status) -> Map' (Either Bool (Map' Location), Status)
   make_eq (Data_2 (Name _ a) b') =
     case b' of
       Branching_data_2 _ _ _ _ -> ins_new a (Left False)
@@ -768,7 +769,7 @@ module Awful.Typechecker (
                   Just e -> Right e
                   Nothing -> Left False
             Nothing -> Left False)
-  make_eqs :: [Data_2] -> Map' (Either Bool (Map' Location_0), Status) -> Map' (Either Bool (Map' Location_0), Status)
+  make_eqs :: [Data_2] -> Map' (Either Bool (Map' Location), Status) -> Map' (Either Bool (Map' Location), Status)
   make_eqs a b =
     case a of
       [] -> b
@@ -918,16 +919,16 @@ module Awful.Typechecker (
       [] -> a
       c : d -> solve_diff (Data.Map.delete c a) d
   solve_eq ::
-    (Location_0 -> Location_1) ->
+    (Location -> Location_1) ->
     String ->
-    Map' (Either Bool (Map' Location_0), Status) ->
-    Err (Bool, Map' (Either Bool (Map' Location_0), Status))
+    Map' (Either Bool (Map' Location), Status) ->
+    Err (Bool, Map' (Either Bool (Map' Location), Status))
   solve_eq f a b =
     case fst (unsafe_lookup a b) of
       Left d -> Right (d, b)
       Right d -> (\e -> (e, ins_new a (Left e) b)) <$> solve_eq_help f [a] b d
   solve_eq_help ::
-    (Location_0 -> Location_1) -> [String] -> Map' (Either Bool (Map' Location_0), Status) -> Map' Location_0 -> Err Bool
+    (Location -> Location_1) -> [String] -> Map' (Either Bool (Map' Location), Status) -> Map' Location -> Err Bool
   solve_eq_help h a b c =
     case minViewWithKey c of
       Just ((d, e), f) ->
@@ -1065,11 +1066,11 @@ module Awful.Typechecker (
       Prelude.foldr Function_expression_2 (Algebraic_expression_2 b (Name_expression_2 <$> c)) (Name_pat_1 <$> c)
   type_branching ::
     (
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       String ->
-      Map' (Either Location_0 [Kind_1]) ->
+      Map' (Either Location [Kind_1]) ->
       Brnch_2 ->
-      Err (Map' (Either Location_0 [Kind_1]), Brnch_3))
+      Err (Map' (Either Location [Kind_1]), Brnch_3))
   type_branching e j f (Brnch_2 (Name a g) b c d) =
     case Data.Map.lookup g f of
       Just h ->
@@ -1082,7 +1083,7 @@ module Awful.Typechecker (
       Nothing -> Left ("Undefined constructor for " ++ j ++ " " ++ g ++ location' (e a))
   type_branching_1 ::
     (
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       (Map' Kind, Map' Polykind) ->
       Types ->
       String ->
@@ -1109,21 +1110,14 @@ module Awful.Typechecker (
             h) <$>
         type_types' f (a, Prelude.foldl (\i -> \(j, k) -> Data.Map.insert j (pkind k) i) q c) e)
   type_branchings ::
-    (
-      (Location_0 -> Location_1) ->
-      String ->
-      Location_0 ->
-      String ->
-      Map' (Either Location_0 [Kind_1]) ->
-      [Brnch_2] ->
-      Err [Brnch_3])
+    (Location -> Location_1) -> String -> Location -> String -> Map' (Either Location [Kind_1]) -> [Brnch_2] -> Err [Brnch_3]
   type_branchings e h i j f a =
     case a of
       [] -> if all isLeft f then Right [] else Left ("Incomplete match in branching data type " ++ h ++ location' (e i))
       b : c -> type_branching e j f b >>= \(g, d) -> (:) d <$> type_branchings e h i j g c
   type_branchings_1 ::
     (
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       (Map' Kind, Map' Polykind) ->
       Types ->
       String ->
@@ -1137,7 +1131,7 @@ module Awful.Typechecker (
       c : d -> type_branching_1 g f a i h c k0 >>= \e -> type_branchings_1 g f e i h d k0
   type_case ::
     (
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       Name ->
       Map' Type_1 ->
       [Pat] ->
@@ -1159,7 +1153,7 @@ module Awful.Typechecker (
               type_pat j o e (repl' a g) d p u x >>=
               \(i, n, q, v, y) -> (\(r, s, t, w, z) -> (i : r, s, t, w, z)) <$> type_case j m a f h n o q v y)
   type_class_0 ::
-    (Location_0 -> Location_1) ->
+    (Location -> Location_1) ->
     Map' Kind ->
     Map' Polykind ->
     Class_2 ->
@@ -1289,7 +1283,7 @@ module Awful.Typechecker (
       type_classes_0 (Location_1 a) b c d (f, i, o, o', Data.Map.empty) >>=
       \(r, (j, m, p, p', _)) -> (\(k, n) -> (n, j, k, m, p, p')) <$> type_classes_1 a r (fst <$> p) (fst <$> p') (g, e))
   type_classes_0 ::
-    (Location_0 -> Location_1) ->
+    (Location -> Location_1) ->
     Map' Kind ->
     Map' Polykind ->
     [Class_2] ->
@@ -1328,9 +1322,9 @@ module Awful.Typechecker (
     [Method_4] ->
     Type_1 ->
     [(Name, Expression_1)] ->
-    (Location_0 -> Location_1) ->
+    (Location -> Location_1) ->
     String ->
-    Location_0 ->
+    Location ->
     Err [(Name, Expression_1, [(String, Kind_1)], [Constraint_1], Type_1)]
   type_cls_0 a b c d l m n =
     case d of
@@ -1433,7 +1427,7 @@ module Awful.Typechecker (
       [] -> e
       b : c -> type_constraints_1 c (type_constraint_1 b e d) d
   type_data_1 ::
-    (Location_0 -> Location_1) ->
+    (Location -> Location_1) ->
     (Map' Kind, Map' Prom_alg) ->
     Data_2 ->
     (Map' (Polykind, Status), Constrs, Map' Expression_2, Map' Polykind) ->
@@ -1523,7 +1517,7 @@ module Awful.Typechecker (
             type_kinds_5 q o b)
   type_data_2 ::
     (
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       Data_3 ->
       Map' Polykind ->
       Map' Kind ->
@@ -1559,7 +1553,7 @@ module Awful.Typechecker (
                     ins_new a (Strct b i x) q')) <$>
                 type_fields f h g y)
   type_datas ::
-    (Location_0 -> Location_1) ->
+    (Location -> Location_1) ->
     [Data_2] ->
     (
       Map' (Polykind, Status),
@@ -1599,7 +1593,7 @@ module Awful.Typechecker (
                   type_datas_2 h y (fst <$> u) (fst <$> e) (l, n, b3)))))
   type_datas_1 ::
     (
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       (Map' Kind, Map' Prom_alg) ->
       [Data_2] ->
       (Map' (Polykind, Status), Constrs, Map' Expression_2, Map' Polykind) ->
@@ -1610,7 +1604,7 @@ module Awful.Typechecker (
       d : e -> type_data_1 f a d c >>= \(g, h) -> second ((:) h) <$> type_datas_1 f a e g
   type_datas_2 ::
     (
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       [Data_3] ->
       Map' Polykind ->
       Map' Kind ->
@@ -1706,7 +1700,7 @@ module Awful.Typechecker (
                                               Nothing -> Data.Map.insert m (Data.Map.singleton n (r', New))) t',
                                             adjust (second (Data.Map.insert n o3)) m u3)))))))
   type_def_2 ::
-    (Location_0 -> Location_1) ->
+    (Location -> Location_1) ->
     Def_4 ->
     (Map' Alg, Map' String, Map' Type_2) ->
     Map' Expression_2 ->
@@ -1818,7 +1812,7 @@ module Awful.Typechecker (
           type_def_1 h x d b c y y0 z u v >>=
           \(f, g, t, u', v') -> (\(k, l, m, t', k') -> (f : k, l, m, t', k')) <$> type_defs_1 h x e b g y y0 t u' v')
   type_defs_2 ::
-    (Location_0 -> Location_1) ->
+    (Location -> Location_1) ->
     [Def_4] ->
     (Map' Alg, Map' String, Map' Type_2) ->
     Map' Expression_2 ->
@@ -1836,7 +1830,7 @@ module Awful.Typechecker (
   type_expr ::
     String ->
     Type_1 ->
-    (Location_0 -> Location_1) ->
+    (Location -> Location_1) ->
     (Map' Alg, Map' String, Map' Type_2) ->
     Expression_1 ->
     Map' (Map' [[String]]) ->
@@ -1886,7 +1880,7 @@ module Awful.Typechecker (
   type_expression ::
     Map' Alg ->
     Map' String ->
-    (Location_0 -> Location_1) ->
+    (Location -> Location_1) ->
     Integer ->
     Set String ->
     [(Type_1, Type_1)] ->
@@ -2105,7 +2099,7 @@ module Awful.Typechecker (
   type_exprs ::
     (
       (Name -> String) ->
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       (Map' Alg, Map' String, Map' Type_2) ->
       Map' (Map' [[String]]) ->
       [(Name, Expression_1, [(String, Kind_1)], [Constraint_1], Type_1)] ->
@@ -2137,16 +2131,16 @@ module Awful.Typechecker (
             f5
             Data.Set.empty >>=
           \g -> type_exprs a b c d m (Data.Map.insert (y ++ " " ++ t) (f' g) i) t z w f' t' t0 (x2, t4) f5)
-  type_field :: (Location_0 -> Location_1) -> (String, Type_8) -> Map' Polykind -> Map' Kind -> Err (String, Type_1)
+  type_field :: (Location -> Location_1) -> (String, Type_8) -> Map' Polykind -> Map' Kind -> Err (String, Type_1)
   type_field d (a, b) c e  = (,) a <$> type_typ d b c e star_kind
-  type_fields :: (Location_0 -> Location_1) -> [(String, Type_8)] -> Map' Polykind -> Map' Kind -> Err [(String, Type_1)]
+  type_fields :: (Location -> Location_1) -> [(String, Type_8)] -> Map' Polykind -> Map' Kind -> Err [(String, Type_1)]
   type_fields f a b g =
     case a of
       [] -> Right []
       c : d -> type_field f c b g >>= \e -> (:) e <$> type_fields f d b g
-  type_form :: (Location_0 -> Location_1) -> Form_1 -> Map' Polykind -> Map' Kind -> Err Form_2
+  type_form :: (Location -> Location_1) -> Form_1 -> Map' Polykind -> Map' Kind -> Err Form_2
   type_form d (Form_1 a b) c e = Form_2 a <$> type_types d b c e
-  type_forms :: (Location_0 -> Location_1) -> [Form_1] -> Map' Polykind -> Map' Kind -> Err [Form_2]
+  type_forms :: (Location -> Location_1) -> [Form_1] -> Map' Polykind -> Map' Kind -> Err [Form_2]
   type_forms f a b g =
     case a of
       [] -> Right []
@@ -2163,11 +2157,7 @@ module Awful.Typechecker (
   type_kind (a, b) = Data.Map.insert a (pkind b)
 {-
   type_kind_4 ::
-    (Location_0 -> Location_1) ->
-    Map' Kind ->
-    (String, Kind_0) ->
-    (Map' Kind_1, Map' Kind_1) ->
-    Err (Map' Kind_1, Map' Kind_1)
+    (Location -> Location_1) -> Map' Kind -> (String, Kind_0) -> (Map' Kind_1, Map' Kind_1) -> Err (Map' Kind_1, Map' Kind_1)
   type_kind_4 d e (g, a) b =
     (
       (\h ->
@@ -2177,7 +2167,7 @@ module Awful.Typechecker (
           bimap f f b) <$>
       type_kind_7 d e Star_kind a)
 -}
-  type_kind_6 :: (Location_0 -> Location_1) -> Map' Kind -> Kind_0 -> Err (Kind_1, Kind)
+  type_kind_6 :: (Location -> Location_1) -> Map' Kind -> Kind_0 -> Err (Kind_1, Kind)
   type_kind_6 a b (Kind_0 c d) =
     case d of
       Application_kind_0 e f ->
@@ -2188,7 +2178,7 @@ module Awful.Typechecker (
               Arrow_kind j -> (\k -> (Application_kind_1 g k, j)) <$> type_kind_7 a b Star_kind f
               Star_kind -> kind_err (a c))
       Name_kind_0 e -> und_err e b "kind" (a c) (\f -> Right (Name_kind_1 e, f))
-  type_kind_7 :: (Location_0 -> Location_1) -> Map' Kind -> Kind -> Kind_0 -> Err Kind_1
+  type_kind_7 :: (Location -> Location_1) -> Map' Kind -> Kind -> Kind_0 -> Err Kind_1
   type_kind_7 a b c (Kind_0 d e) =
     case e of
       Application_kind_0 f g ->
@@ -2205,14 +2195,14 @@ module Awful.Typechecker (
       [] -> b
       c : d -> type_kinds d (type_kind c b)
   type_kinds_0 ::
-    (Location_0 -> Location_1) -> Map' Kind -> [(String, Kind_0)] -> Map' Polykind -> Err ([(String, Kind_1)], Map' Polykind)
+    (Location -> Location_1) -> Map' Kind -> [(String, Kind_0)] -> Map' Polykind -> Err ([(String, Kind_1)], Map' Polykind)
   type_kinds_0 a b c d =
     case c of
       [] -> Right ([], d)
       (e, f) : g ->
         type_kind_7 a b Star_kind f >>= \h -> first ((:) (e, h)) <$> type_kinds_0 a b g (Data.Map.insert e (pkind h) d)
   type_kinds_1 ::
-    (Location_0 -> Location_1) ->
+    (Location -> Location_1) ->
     Map' Kind ->
     [(String, Kind_0)] ->
     Map' Polykind ->
@@ -2230,22 +2220,18 @@ module Awful.Typechecker (
               type_kinds_1 a b g (Data.Map.insert e (pkind h) d) (Data.Map.insert e h i)))
 {-
   type_kinds_4 ::
-    (Location_0 -> Location_1) ->
-    Map' Kind ->
-    [(String, Kind_0)] ->
-    (Map' Kind_1, Map' Kind_1) ->
-    Err (Map' Kind_1, Map' Kind_1)
+    (Location -> Location_1) -> Map' Kind -> [(String, Kind_0)] -> (Map' Kind_1, Map' Kind_1) -> Err (Map' Kind_1, Map' Kind_1)
   type_kinds_4 e f a b =
     case a of
       [] -> Right b
       c : d -> type_kind_4 e f c b >>= type_kinds_4 e f d
 -}
-  type_kinds_5 :: (Location_0 -> Location_1) -> Map' Kind -> [(String, Kind_0)] -> Err [(String, Kind_1)]
+  type_kinds_5 :: (Location -> Location_1) -> Map' Kind -> [(String, Kind_0)] -> Err [(String, Kind_1)]
   type_kinds_5 f a b =
     case b of
       [] -> Right []
       (g, c) : d -> type_kind_7 f a Star_kind c >>= \e -> (:) (g, e) <$> type_kinds_5 f a d
-  type_kinds_9 :: (Location_0 -> Location_1) -> Map' Kind -> [String] -> [Kind_0] -> (String -> String) -> Err [Kind_1]
+  type_kinds_9 :: (Location -> Location_1) -> Map' Kind -> [String] -> [Kind_0] -> (String -> String) -> Err [Kind_1]
   type_kinds_9 a b c d i =
     case c of
       [] ->
@@ -2260,7 +2246,7 @@ module Awful.Typechecker (
     (
       Map' Alg ->
       Map' String ->
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       Integer ->
       Set String ->
       [(Type_1, Type_1)] ->
@@ -2268,20 +2254,13 @@ module Awful.Typechecker (
       Map' Tmatch' ->
       Match_Algebraic_1 ->
       Type_1 ->
-      Map' (Either Location_0 [Type_1]) ->
-      (Location_0, String) ->
+      Map' (Either Location [Type_1]) ->
+      (Location, String) ->
       Map' Type_1 ->
       [(String, (Name, Type_1))] ->
       (Map' Polykind, Map' Kind) ->
       Map' Strct ->
-      Err
-        (
-          Map' Tmatch',
-          Set String,
-          [(Type_1, Type_1)],
-          Integer,
-          Map' (Either Location_0 [Type_1]),
-          [(String, (Name, Type_1))]))
+      Err (Map' Tmatch', Set String, [(Type_1, Type_1)], Integer, Map' (Either Location [Type_1]), [(String, (Name, Type_1))]))
   type_match_algebraic a b c d f g h i (Match_Algebraic_1 (Name j k) l m) n o (q1, q) r a' m2 x5 =
     case Data.Map.lookup k o of
       Just p' ->
@@ -2304,7 +2283,7 @@ module Awful.Typechecker (
     (
       Map' Alg ->
       Map' String ->
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       Integer ->
       Set String ->
       [(Type_1, Type_1)] ->
@@ -2312,12 +2291,11 @@ module Awful.Typechecker (
       Map Integer Typedexpr ->
       Match_Int_1 ->
       Type_1 ->
-      Map Integer Location_0 ->
+      Map Integer Location ->
       [(String, (Name, Type_1))] ->
       (Map' Polykind, Map' Kind) ->
       Map' Strct ->
-      Err
-        (Map Integer Typedexpr, Set String, [(Type_1, Type_1)], Integer, Map Integer Location_0, [(String, (Name, Type_1))]))
+      Err (Map Integer Typedexpr, Set String, [(Type_1, Type_1)], Integer, Map Integer Location, [(String, (Name, Type_1))]))
   type_match_int a b c d f g h i (Match_Int_1 y2 j k) l x1 a' x3 t8 =
     case Data.Map.lookup j x1 of
       Just y0 -> Left (location_err' ("cases for " ++ show j) (c y0) (c y2))
@@ -2329,7 +2307,7 @@ module Awful.Typechecker (
     (
       Map' Alg ->
       Map' String ->
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       Integer ->
       Set String ->
       [(Type_1, Type_1)] ->
@@ -2337,9 +2315,9 @@ module Awful.Typechecker (
       Map Integer Typedexpr ->
       Match_Modular_1 ->
       Type_1 ->
-      Map Integer (Maybe Location_0) ->
+      Map Integer (Maybe Location) ->
       [(String, (Name, Type_1))] ->
-      (Location_0, Integer) ->
+      (Location, Integer) ->
       (Map' Polykind, Map' Kind) ->
       Map' Strct ->
       Err
@@ -2348,7 +2326,7 @@ module Awful.Typechecker (
           Set String,
           [(Type_1, Type_1)],
           Integer,
-          Map Integer (Maybe Location_0),
+          Map Integer (Maybe Location),
           [(String, (Name, Type_1))]))
   type_match_modular a b c d f g h i (Match_Modular_1 t r l) m n o (p, s) x4 t8 =
     (
@@ -2376,7 +2354,7 @@ module Awful.Typechecker (
     (
       Map' Alg ->
       Map' String ->
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       Integer ->
       Set String ->
       [(Type_1, Type_1)] ->
@@ -2384,20 +2362,13 @@ module Awful.Typechecker (
       Map' Tmatch' ->
       [Match_Algebraic_1] ->
       Type_1 ->
-      Map' (Either Location_0 [Type_1]) ->
-      (Location_0, String) ->
+      Map' (Either Location [Type_1]) ->
+      (Location, String) ->
       Map' Type_1 ->
       [(String, (Name, Type_1))] ->
       (Map' Polykind, Map' Kind) ->
       Map' Strct ->
-      Err
-        (
-          Map' Tmatch',
-          Set String,
-          [(Type_1, Type_1)],
-          Integer,
-          Map' (Either Location_0 [Type_1]),
-          [(String, (Name, Type_1))]))
+      Err (Map' Tmatch', Set String, [(Type_1, Type_1)], Integer, Map' (Either Location [Type_1]), [(String, (Name, Type_1))]))
   type_matches_algebraic a b c d f g h i j k s u v a' m0 z1 =
     case j of
       [] -> Right (i, f, g, d, s, a')
@@ -2409,7 +2380,7 @@ module Awful.Typechecker (
     (
       Map' Alg ->
       Map' String ->
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       Integer ->
       Set String ->
       [(Type_1, Type_1)] ->
@@ -2417,7 +2388,7 @@ module Awful.Typechecker (
       Map Integer Typedexpr ->
       [Match_Int_1] ->
       Type_1 ->
-      Map Integer Location_0 ->
+      Map Integer Location ->
       [(String, (Name, Type_1))] ->
       (Map' Polykind, Map' Kind) ->
       Map' Strct ->
@@ -2433,7 +2404,7 @@ module Awful.Typechecker (
     (
       Map' Alg ->
       Map' String ->
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       Integer ->
       Set String ->
       [(Type_1, Type_1)] ->
@@ -2441,9 +2412,9 @@ module Awful.Typechecker (
       Map Integer Typedexpr ->
       [Match_Modular_1] ->
       Type_1 ->
-      Map Integer (Maybe Location_0) ->
+      Map Integer (Maybe Location) ->
       [(String, (Name, Type_1))] ->
-      (Location_0, Integer) ->
+      (Location, Integer) ->
       (Map' Polykind, Map' Kind) ->
       Map' Strct ->
       Err
@@ -2452,7 +2423,7 @@ module Awful.Typechecker (
           Set String,
           [(Type_1, Type_1)],
           Integer,
-          Map Integer (Maybe Location_0),
+          Map Integer (Maybe Location),
           [(String, (Name, Type_1))]))
   type_matches_modular a b c d f g h i j k u l w x' w1 =
     case j of
@@ -2461,7 +2432,7 @@ module Awful.Typechecker (
         (
           type_match_modular a b c d f g h i m k u l w x' w1 >>=
           \(o, p, q, r, v, t) -> type_matches_modular a b c r p q h o n k v t w x' w1)
-  type_method :: (Location_0 -> Location_1) -> Method_2 -> Map' Polykind -> Map' Kind -> Err Method_3
+  type_method :: (Location -> Location_1) -> Method_2 -> Map' Polykind -> Map' Kind -> Err Method_3
   type_method a (Method_2 b c i d) e f = type_kinds_0 a f c e >>= \(g, h) -> Method_3 b g i <$> type_typ a d h f star_kind
   type_method_1 :: String -> Map' Class_5 -> Method_3 -> Err Method_4
   type_method_1 e g (Method_3 a b c d) =
@@ -2469,7 +2440,7 @@ module Awful.Typechecker (
       m = Prelude.foldl (\h -> \(i, j) -> Data.Map.insert i j h) Data.Map.empty b
     in
       (\(f, _, _) -> Method_4 a b f d) <$> type_constraints_0 Data.Map.empty c (g, m, (\_ -> Zr) <$> m) e
-  type_methods_0 :: (Location_0 -> Location_1) -> [Method_2] -> Map' Polykind -> Map' Kind -> Err [Method_3]
+  type_methods_0 :: (Location -> Location_1) -> [Method_2] -> Map' Polykind -> Map' Kind -> Err [Method_3]
   type_methods_0 a b c d =
     case b of
       [] -> Right []
@@ -2498,7 +2469,7 @@ module Awful.Typechecker (
               _ -> Left ("Function " ++ e ++ location (Location_1 a d) ++ " takes less than 2 arguments."))
   type_pat ::
     (
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       Map' Strct ->
       Pat ->
       Type_1 ->
@@ -2526,7 +2497,7 @@ module Awful.Typechecker (
       Name_pat e -> Right (Name_pat_1 e, Data.Map.insert e (Basic_type_1 [] Nothing [] c) d, l, n, o)
   type_pats ::
     (
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       Map' Strct ->
       [Pat] ->
       [(String, Type_1)] ->
@@ -2553,14 +2524,14 @@ module Awful.Typechecker (
                 type_pat a b j m f g h i >>=
                 \(c, o, p, q, r) -> (\(s, t, u, v, w) -> ((l, c) : s, t, u, v, w)) <$> type_pats a b k n o p q r (Name x y))
   type_prom_1 ::
-    (Location_0 -> Location_1) ->
+    (Location -> Location_1) ->
     Data_2 ->
     (Map' (Kind, Status), Map' (Polykind, Status), Constrs, Map' Expression_2, Map' Polykind) ->
-    Map' (Either Bool (Map' Location_0), Status) ->
+    Map' (Either Bool (Map' Location), Status) ->
     Err
       (
         Maybe ((Map' (Kind, Status), Map' (Polykind, Status), Constrs, Map' Expression_2, Map' Polykind), Plain_dat),
-        Map' (Either Bool (Map' Location_0), Status))
+        Map' (Either Bool (Map' Location), Status))
   type_prom_1 q (Data_2 (Name _ a) b') (o, i, j, k, x) j' =
     case b' of
       Branching_data_2 _ _ _ _ -> Right (Nothing, j')
@@ -2604,7 +2575,7 @@ module Awful.Typechecker (
                   Plain_dat a (fst <$> b) c) else Nothing) <$> solve_eq q a j'
   type_prom_2 ::
     (
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       Plain_dat ->
       Map' Polykind ->
       Map' Kind ->
@@ -2652,16 +2623,16 @@ module Awful.Typechecker (
                 ins_new a (Strct g0 i x) k7)) <$>
             type_fields f h g y')
   type_proms_1 ::
-    (Location_0 -> Location_1) ->
+    (Location -> Location_1) ->
     [Data_2] ->
     (Map' (Kind, Status), Map' (Polykind, Status), Constrs, Map' Expression_2, Map' Polykind) ->
-    Map' (Either Bool (Map' Location_0), Status) ->
+    Map' (Either Bool (Map' Location), Status) ->
     Err
       (
         (Map' (Kind, Status), Map' (Polykind, Status), Constrs, Map' Expression_2, Map' Polykind),
         [Plain_dat],
         [Data_2],
-        Map' (Either Bool (Map' Location_0), Status))
+        Map' (Either Bool (Map' Location), Status))
   type_proms_1 a b c f =
     case b of
       [] -> Right (c, [], [], f)
@@ -2674,7 +2645,7 @@ module Awful.Typechecker (
             Nothing -> o (\(k, l, m, n) -> (k, l, d : m, n)) c
   type_proms_2 ::
     (
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       [Plain_dat] ->
       Map' Polykind ->
       Map' Kind ->
@@ -2689,9 +2660,9 @@ TODO:
 Do it with 1 function that assembles a system of equations and one function that solves the system
 Make error messages similar to those for type errors ("Kind mismatch between x and y ...")
 -}
-  type_typ :: (Location_0 -> Location_1) -> Type_8 -> Map' Polykind -> Map' Kind -> Kind_1 -> Err Type_1
+  type_typ :: (Location -> Location_1) -> Type_8 -> Map' Polykind -> Map' Kind -> Kind_1 -> Err Type_1
   type_typ a (Type_8 b c) = type_type a b c
-  type_type :: (Location_0 -> Location_1) -> Location_0 -> Type_5 -> Map' Polykind -> Map' Kind -> Kind_1 -> Err Type_1
+  type_type :: (Location -> Location_1) -> Location -> Type_5 -> Map' Polykind -> Map' Kind -> Kind_1 -> Err Type_1
   type_type l a c d y e =
     let
       x = kind_err (l a)
@@ -2714,7 +2685,7 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
             (l a')
             (\(Polykind h g) ->
               ziphelp l y f a' Data.Map.empty h b >>= \(z, w) -> if repkinds w g == e then Right (Name_type_1 f z) else x)
-  type_type' :: (Location_0 -> Location_1) -> Location_0 -> Type_5 -> Map' Polykind -> Map' Kind -> Err (Type_1, Kind_1)
+  type_type' :: (Location -> Location_1) -> Location -> Type_5 -> Map' Polykind -> Map' Kind -> Err (Type_1, Kind_1)
   type_type' l a c d y =
     case c of
       Application_type_5 e f ->
@@ -2733,12 +2704,12 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
           "type"
           (l a')
           (\(Polykind h f) -> bimap (Name_type_1 e) (\w -> repkinds w f) <$> ziphelp l y e a' Data.Map.empty h g)
-  type_types :: (Location_0 -> Location_1) -> [Type_8] -> Map' Polykind -> Map' Kind -> Err [Type_1]
+  type_types :: (Location -> Location_1) -> [Type_8] -> Map' Polykind -> Map' Kind -> Err [Type_1]
   type_types f a b g =
     case a of
       [] -> Right []
       c : d -> type_typ f c b g star_kind >>= \e -> (:) e <$> type_types f d b g
-  type_types' :: (Location_0 -> Location_1) -> (Map' Kind, Map' Polykind) -> [(String, Type_8)] -> Err [(String, Type_1)]
+  type_types' :: (Location -> Location_1) -> (Map' Kind, Map' Polykind) -> [(String, Type_8)] -> Err [(String, Type_1)]
   type_types' a (b, c) d =
     case d of
       [] -> Right []
@@ -2905,7 +2876,7 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
       (c, _) : d -> typevars d (typevar c b)
   typevars' ::
     (
-      (Location_0 -> Location_1) ->
+      (Location -> Location_1) ->
       (Map' Polykind, Map' Kind) ->
       (String -> Err (Map' Type_1)) ->
       [(String, Kind_1)] ->
@@ -2978,10 +2949,10 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
       Just c -> c
       Nothing -> undefined
   ziphelp ::
-    (Location_0 -> Location_1) ->
+    (Location -> Location_1) ->
     Map' Kind ->
     String ->
-    Location_0 ->
+    Location ->
     Map' Kind_1 ->
     [String] ->
     [Kind_0] ->

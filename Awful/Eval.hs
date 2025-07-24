@@ -1,4 +1,5 @@
 module Awful.Eval (tokenise_parse_naming_typing_eval) where
+-- todo: built-in prettyprinting to replace user-specified prettyprinting
   import Awful.Namechecker
   import Awful.Operators
   import Awful.Parser

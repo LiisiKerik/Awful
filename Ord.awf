@@ -1,0 +1,14 @@
+Def Equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> True, Default -> False}
+Def Greater[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> True, Default -> False}
+Def Greater_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> False, Default -> True}
+Def Less[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> True, Default -> False}
+Def Less_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> False, Default -> True}
+Def Max[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> y, Default -> x}
+Def Min[T : Star]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> x, Default -> y}
+Def Not_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> False, Default -> True}
+Instance Ord{Comparison}(
+  Compare x y =
+    Match x {
+      LT -> Match y {LT -> EQ, Default -> LT},
+      EQ -> Match y {LT -> GT, EQ -> EQ, GT -> LT},
+      GT -> Match y {GT -> EQ, Default -> GT}})

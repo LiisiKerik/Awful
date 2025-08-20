@@ -139,7 +139,7 @@ module Main (main) where
   init' =
     (
       Data.Map.empty,
-      (Data.Set.singleton "Pair", locations, Data.Map.fromList ((\x -> (x, Language)) <$> ["#", "->", "="])),
+      (Data.Set.empty, locations, Data.Map.fromList ((\x -> (x, Language)) <$> ["#", "->", "="])),
       defs,
       kinds,
       Data.Map.fromList

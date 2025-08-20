@@ -1,3 +1,10 @@
+Load Either.awf
+Load Finite.awf
+Load Logical.awf
+Load List.awf
+Load Maybe.awf
+Load Ord.awf
+Load Pair.awf
 Load Standard.awf
 Branching Array[!Nat][T : Star](!Zr -> Empty_Array, !Next N -> Construct_Array(Head : T, Tail : Array N T))
 Struct Complex[T : Star](Real : T, Imaginary : T)
@@ -18,16 +25,16 @@ Class Foldable{F : Star -> Star}(Fold_right[T : Star, U : Star] : (T -> U -> U) 
 Class Functor_Array{N : !Nat}(Fmap_Array[T : Star, U : Star] : (T -> U) -> Array N T -> Array N U)
 Class Mat{F : !Nat -> Star -> Star}(
   Adj[N : !Nat, T : Star]<Commutative T> : F N T -> F N T,
-  Adj_Det[N : !Nat, T : Star]<Commutative T> : F N T -> F N T * T,
+  Adj_Det[N : !Nat, T : Star]<Commutative T> : F N T -> Pair (F N T) T,
   Characteristic[N : !Nat, T : Star]<Commutative T> : F N T -> Array (!Next N) T,
   Det[N : !Nat, T : Star]<Commutative T> : F N T -> T,
   Matrix_by_vector[N : !Nat, T : Star]<Ring T> : F N T -> Array N T -> Array N T,
   Vector_by_matrix[N : !Nat, T : Star]<Ring T> : Array N T -> F N T -> Array N T)
 Class Ord_Array{N : !Nat}(Compare_Array[T : Star]<Ord T> : Array N T -> Array N T -> Comparison)
-Instance Applicative{Complex}(Apply (Complex f g) (Complex x y) = Complex (f x) (g y), Lift x = Complex x x)
+Instance Applicative{Complex}(Apply (Complex f g) (Complex x y) = Complex (f x) (g y), Return x = Complex x x)
 Instance Applicative{Quaternion}(
   Apply (Quaternion f g h i) (Quaternion x y z a) = Quaternion (f x) (g y) (h z) (i a),
-  Lift x = Quaternion x x x x)
+  Return x = Quaternion x x x x)
 Instance Commutative{Complex T}<Commutative T>
 Instance Commutative{Int}
 Instance Commutative{Logical}
@@ -46,8 +53,8 @@ Instance Field{Quaternion T}<Commutative T, Field T>(
     Div_right' (Quaternion x (Negate y) (Negate z) (Negate a)) (Sum_squares (Construct_List x (Construct_List y (Construct_List z (Construct_List a Empty_List))))))
 Instance Field{Trivial}(Inverse = Wrap)
 Instance Finite{Array N T}<Finite T, Finite_Array N>(All = All_Array)
-Instance Finite{Trivial}(All = Lift Trivial)
-Instance Finite_Array{!Zr}(All_Array = Lift Empty_Array)
+Instance Finite{Trivial}(All = Return Trivial)
+Instance Finite_Array{!Zr}(All_Array = Return Empty_Array)
 Instance Finite_Array{!Next N}<Finite_Array N>(All_Array = Zip Construct_Array All All)
 Instance Foldable{Either T}(Fold_right f x y = Match y {Left _ -> x, Right z -> f z x})
 Instance Foldable{List}(Fold_right f x y = Match y {Empty_List -> x, Construct_List z a -> f z (Fold_right f x a)})
@@ -73,13 +80,13 @@ Def Pow'[T : Star]<Ring T>(x : T, i : Int) : T =
     0 -> Identity,
     Default -> Let y = Pow' x (Div'{2} i), z = y * y In Match Convert i {0 # 2 -> z, 1 # 2 -> x * z}}
 Instance Ring{Complex T}<Ring T>(
-  Add = Add',
+  Add = Zip Add,
   Convert x = Complex (Convert x) Zero,
   Multiply (Complex x y) (Complex z a) = Complex (Minus (x * z) (y * a)) (x * a + y * z),
   Negate = Negate')
 Instance Ring{Trivial}(Add Trivial = Id, Convert _ = Trivial, Multiply Trivial = Id, Negate = Id)
 Instance Ring{Quaternion T}<Ring T>(
-  Add = Add',
+  Add = Zip Add,
   Convert x = Quaternion (Convert x) Zero Zero Zero,
   Multiply (Quaternion x y z a) (Quaternion b c d e) =
     Quaternion

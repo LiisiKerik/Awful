@@ -24,8 +24,6 @@ võimaldada suvalise arvu konstruktoritega algebralisi andmetüüpe. (LISAKS str
 todo: make a function writing operator/function. For printing stuff like "Complex (Fraction 0 1) (Fraction 1 1)"
 checki abil võiks saada tüübikontrollida korraga mitut moodulit, andes ette nimekirja
 ühildada Standard ja parser? või vastupidi, süntaktiline suhkur (listide sün.suhk.) standard moodulisse?
-operaatorid struktuuride ja algebraliste andmetüüpide patternmatchides
-teha midagi et kõrvaldada parserist aegunud keelelaienduse hoiatus
 semantics of "Pair -> f" should be "Pair x y -> f x y"
 make match expression more flexible (like case in Haskell)?
 mis juhtub kui esimeses moodulis on kusagil tüübimuutuja T ja järgmises moodulis sama nimega globaalne tüüp?
@@ -34,7 +32,7 @@ can Data.Set and Data.Map imports be removed if the file uses both and disambigu
 let expr de-sugaring (and therefore struct name collection) completely to Standard.hs module
 all de-sugaring: remove from Tree.hs, put into Standard.hs
 simplify parsing of match expression and remove duplicate code from de-sugaring, name checking, typechecking & eval
-allow operators in pattern matching?
+allow operators in pattern matching
 What happens with unary minus and binary minus during parsing?
 allow using operators in class method definitions? Instance Ring{Complex T}<Ring T>(..., Complex x y * Complex z w = ...)
 -}
@@ -268,12 +266,6 @@ module Awful.Typechecker (
       [
         ("Comparison", Alg [] (Data.Map.fromList [("EQ", []), ("GT", []), ("LT", [])]) comparison_type),
         (
-          "Either",
-          Alg
-            [("T", star_kind), ("U", star_kind)]
-            (Data.Map.fromList [("Left", [ntype "T"]), ("Right", [ntype "U"])])
-            (either_type (ntype "T") (ntype "U"))),
-        (
           "List",
           Alg
             [("T", star_kind)]
@@ -436,10 +428,8 @@ module Awful.Typechecker (
         ("False", "Logical"),
         ("GT", "Comparison"),
         ("LT", "Comparison"),
-        ("Left", "Either"),
         ("Next", "Nat"),
         ("Nothing", "Maybe"),
-        ("Right", "Either"),
         ("True", "Logical"),
         ("Wrap", "Maybe"),
         ("Zr", "Nat")]
@@ -505,10 +495,8 @@ module Awful.Typechecker (
         ("EQ", Algebraic_expression_2 "EQ" []),
         ("Empty_List", Algebraic_expression_2 "Empty_List" []),
         ("False", Algebraic_expression_2 "False" []),
-        ("First", Field_expression_2 "First"),
         ("GT", Algebraic_expression_2 "GT" []),
         ("LT", Algebraic_expression_2 "LT" []),
-        ("Left", Function_expression_2 (Name_pat_1 "x") (Algebraic_expression_2 "Left" [Name_expression_2 "x"])),
         ("Mod", Mod_0_expression_2),
         ("Multiply Int", Multiply_Int_0_expression_2),
         (
@@ -542,24 +530,9 @@ module Awful.Typechecker (
                       (Function_expression_2 Blank_pat_1 (Name_expression_2 "x")))))))),
         ("Next", Function_expression_2 (Name_pat_1 "x") (Algebraic_expression_2 "Next" [Name_expression_2 "x"])),
         ("Nothing", Algebraic_expression_2 "Nothing" []),
-        (
-          "Pair",
-          Function_expression_2
-            (Name_pat_1 "x")
-            (Function_expression_2
-              (Name_pat_1 "y")
-              (Struct_expression_2
-                "Pair"
-                (Data.Map.fromList [("First", Name_expression_2 "x"), ("Second", Name_expression_2 "y")])))),
-        ("Right", Function_expression_2 (Name_pat_1 "x") (Algebraic_expression_2 "Right" [Name_expression_2 "x"])),
-        ("Second", Field_expression_2 "Second"),
         ("True", Algebraic_expression_2 "True" []),
         ("Wrap", Function_expression_2 (Name_pat_1 "x") (Algebraic_expression_2 "Wrap" [Name_expression_2 "x"])),
         ("Zr", Algebraic_expression_2 "Zr" [])]
-  either_kind :: Kind_1 -> Kind_1 -> Kind_1
-  either_kind x = Application_kind_1 (Application_kind_1 (Name_kind_1 "!Either") x)
-  either_type :: Type_1 -> Type_1 -> Type_1
-  either_type x = Application_type_1 (Application_type_1 (Name_type_1 "Either" []) x)
 {-
   find_and_delete :: Ord t => Map t u -> t -> Maybe (u, Map t u)
   find_and_delete a b = (\c -> (c, Data.Map.delete b a)) <$> Data.Map.lookup b a
@@ -601,36 +574,17 @@ module Awful.Typechecker (
     Data.Map.fromList
       [
         ("!Comparison", Star_kind),
-        ("!Either", Arrow_kind (Arrow_kind Star_kind)),
         ("!Function", Arrow_kind (Arrow_kind Star_kind)),
         ("!Int", Star_kind),
         ("!List", Arrow_kind Star_kind),
         ("!Logical", Star_kind),
         ("!Maybe", Arrow_kind Star_kind),
         ("!Nat", Star_kind),
-        ("!Pair", Arrow_kind (Arrow_kind Star_kind)),
         ("Star", Star_kind)]
   init_type_context :: (File, Map' Op)
   init_type_context =
     (
-      File
-        kinds
-        algebraics
-        constrs
-        types
-        hkinds
-        promotables
-        classes_0
-        classes_1
-        instances
-        classes_2
-        prom_algs
-        (Data.Map.singleton
-          "Pair"
-          (Strct
-            [("T", star_kind), ("U", star_kind)]
-            [("First", ntype "T"), ("Second", ntype "U")]
-            (pair_type (ntype "T") (ntype "U")))),
+      File kinds algebraics constrs types hkinds promotables classes_0 classes_1 instances classes_2 prom_algs Data.Map.empty,
       Data.Map.empty)
   instances :: Map' (Map' [[String]])
   instances =
@@ -670,28 +624,19 @@ module Awful.Typechecker (
         ("!False", Polykind [] logical_kind),
         ("!GT", Polykind [] comparison_kind),
         ("!LT", Polykind [] comparison_kind),
-        ("!Left", Polykind ["K", "L"] (arrow_kind (Name_kind_1 "K") (either_kind (Name_kind_1 "K") (Name_kind_1 "L")))),
         ("!Next", Polykind [] (arrow_kind nat_kind nat_kind)),
         ("!Nothing", Polykind ["K"] (maybe_kind (Name_kind_1 "K"))),
-        (
-          "!Pair",
-          Polykind
-            ["K", "L"]
-            (arrow_kind (Name_kind_1 "K") (arrow_kind (Name_kind_1 "L") (pair_kind (Name_kind_1 "K") (Name_kind_1 "L"))))),
-        ("!Right", Polykind ["K", "L"] (arrow_kind (Name_kind_1 "L") (either_kind (Name_kind_1 "K") (Name_kind_1 "L")))),
         ("!True", Polykind [] logical_kind),
         ("!Wrap", Polykind ["K"] (arrow_kind (Name_kind_1 "K") (maybe_kind (Name_kind_1 "K")))),
         ("!Zr", Polykind [] nat_kind),
         ("Comparison", Polykind [] star_kind),
-        ("Either", Polykind [] (arrow_kind star_kind (arrow_kind star_kind star_kind))),
         ("Function", Polykind [] (arrow_kind star_kind (arrow_kind star_kind star_kind))),
         ("Int", Polykind [] star_kind),
         ("List", Polykind [] (arrow_kind star_kind star_kind)),
         ("Logical", Polykind [] star_kind),
         ("Maybe", Polykind [] (arrow_kind star_kind star_kind)),
         ("Modular", Polykind [] (arrow_kind nat_kind star_kind)),
-        ("Nat", Polykind [] star_kind),
-        ("Pair", Polykind [] (arrow_kind star_kind (arrow_kind star_kind star_kind)))]
+        ("Nat", Polykind [] star_kind)]
   list_kind :: Kind_1 -> Kind_1
   list_kind = Application_kind_1 (Name_kind_1 "!List")
   list_type :: Type_1 -> Type_1
@@ -715,18 +660,15 @@ module Awful.Typechecker (
           "Div",
           "Div'",
           "EQ",
-          "Either",
           "Empty_List",
           "False",
           "Field",
-          "First",
           "Function",
           "GT",
           "Int",
           "Inverse",
           "Inverse_Modular",
           "LT",
-          "Left",
           "List",
           "Logical",
           "Maybe",
@@ -741,10 +683,7 @@ module Awful.Typechecker (
           "Nonzero",
           "Nothing",
           "Ord",
-          "Pair",
-          "Right",
           "Ring",
-          "Second",
           "True",
           "Wrap",
           "Zr"])
@@ -809,10 +748,6 @@ module Awful.Typechecker (
   ntype a = Name_type_1 a []
   old' :: Map' (Map' t) -> Map' (Map' (t, Status))
   old' = (<$>) old
-  pair_type :: Type_1 -> Type_1 -> Type_1
-  pair_type x = Application_type_1 (Application_type_1 (ntype "Pair") x)
-  pair_kind :: Kind_1 -> Kind_1 -> Kind_1
-  pair_kind x = Application_kind_1 (Application_kind_1 (Name_kind_1 "!Pair") x)
   pkind :: Kind_1 -> Polykind
   pkind = Polykind []
   prom_algs :: Map' Prom_alg
@@ -820,7 +755,6 @@ module Awful.Typechecker (
     Data.Map.fromList
       [
         ("!Comparison", Prom_alg [] (Data.Map.fromList [("!EQ", []), ("!GT", []), ("!LT", [])])),
-        ("!Either", Prom_alg ["K", "L"] (Data.Map.fromList [("!Left", [Name_kind_1 "K"]), ("!Right", [Name_kind_1 "L"])])),
         (
           "!List",
           Prom_alg
@@ -853,8 +787,7 @@ module Awful.Typechecker (
   promotable' (Kind_0 _ a) = a == Name_kind_0 "Star"
   promotables :: Map' Bool
   promotables =
-    Data.Map.fromList
-      ((\a -> (a, True)) <$> ["Comparison", "Either", "Function", "Int", "List", "Logical", "Maybe", "Nat", "Pair"])
+    Data.Map.fromList ((\a -> (a, True)) <$> ["Comparison", "Function", "Int", "List", "Logical", "Maybe", "Nat"])
   rem_old' :: Map' (Map' (t, Status)) -> Map' (Map' t)
   rem_old' a = Data.Map.filter (\b -> not (Data.Map.null b)) (rem_old <$> a)
   repkinds :: Map' Kind_1 -> Kind_1 -> Kind_1
@@ -2772,13 +2705,6 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
         ("EQ", Basic_type_1 [] Nothing [] comparison_type),
         ("Empty_List", Basic_type_1 [("T", star_kind)] Nothing [] (list_type (ntype "T"))),
         ("False", Basic_type_1 [] Nothing [] logical_type),
-        (
-          "First",
-          Basic_type_1
-            [("T", star_kind), ("U", star_kind)]
-            Nothing
-            []
-            (function_type (pair_type (ntype "T") (ntype "U")) (ntype "T"))),
         ("GT", Basic_type_1 [] Nothing [] comparison_type),
         (
           "Inverse",
@@ -2794,15 +2720,8 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
             (Just (Constraint_1 "Nonzero" "N"))
             [Constraint_1 "Nonzero" "N"]
             (function_type (mod_type (ntype "N")) (maybe_type (mod_type (ntype "N"))))),
-        (
-          "Left",
-          Basic_type_1
-            [("T", star_kind), ("U", star_kind)]
-            Nothing
-            []
-            (function_type (ntype "T") (either_type (ntype "T") (ntype "U")))),
         ("LT", Basic_type_1 [] Nothing [] comparison_type),
-        ("Mod", Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type (maybe_type int_type)))),
+        ("Mod", Basic_type_1 [] Nothing [] (function_type int_type (function_type int_type int_type))),
         (
           "Multiply",
           Basic_type_1
@@ -2833,27 +2752,6 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
             (function_type (mod_type (ntype "N")) (mod_type (ntype "N")))),
         ("Next", Basic_type_1 [] Nothing [] (function_type nat_type nat_type)),
         ("Nothing", Basic_type_1 [("T", star_kind)] Nothing [] (maybe_type (ntype "T"))),
-        (
-          "Pair",
-          Basic_type_1
-            [("T", star_kind), ("U", star_kind)]
-            Nothing
-            []
-            (function_type (ntype "T") (function_type (ntype "U") (pair_type (ntype "T") (ntype "U"))))),
-        (
-          "Right",
-          Basic_type_1
-            [("T", star_kind), ("U", star_kind)]
-            Nothing
-            []
-            (function_type (ntype "U") (either_type (ntype "T") (ntype "U")))),
-        (
-          "Second",
-          Basic_type_1
-            [("T", star_kind), ("U", star_kind)]
-            Nothing
-            []
-            (function_type (pair_type (ntype "T") (ntype "U")) (ntype "U"))),
         ("True", Basic_type_1 [] Nothing [] logical_type),
         ("Wrap", Basic_type_1 [("T", star_kind)] Nothing [] (function_type (ntype "T") (maybe_type (ntype "T")))),
         ("Zr", Basic_type_1 [] Nothing [] nat_type)]

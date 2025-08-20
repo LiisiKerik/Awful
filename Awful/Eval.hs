@@ -105,10 +105,9 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
                   Mod_1_expression_2 k ->
                     case j of
                       Int_expression_2 l ->
-                        Just
-                          (case l of
-                            0 -> nothing_algebraic
-                            _ -> wrap_algebraic (Int_expression_2 (mod k l)))
+                        case l of
+                          0 -> Nothing
+                          _ -> Just (Int_expression_2 (mod k l))
                       _ -> undefined
                   Multiply_Int_0_expression_2 ->
                     case j of

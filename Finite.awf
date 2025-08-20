@@ -1,0 +1,9 @@
+Load List.awf
+Load Ord.awf
+Load Standard.awf
+Class Finite{T : Star}<Ord>(All : List T)
+Class Finite_Modular{N : !Nat}(All_Modular : List (Modular N))
+Def All_Modular'[N : !Nat]<Nonzero N>(x : Modular N, y : List (Modular N)) : List (Modular N) =
+  Let z = Construct_List x y In Match (Equal Zero) x {False -> All_Modular' (Minus x Identity) z, True -> z}
+Instance Finite{Comparison}(All = Construct_List LT (Construct_List EQ (Construct_List GT Empty_List)))
+Instance Finite_Modular{!Zr}(All_Modular = Empty_List)

@@ -1,0 +1,9 @@
+Load Finite.awf
+Load Ord.awf
+Load Standard.awf
+Instance Field{Logical}(Inverse x = Match x {False -> Nothing, True -> Wrap True})
+Instance Finite{Logical}(All = Construct_List False (Construct_List True Empty_List))
+Def Not(x : Logical) : Logical = Match x {False -> True, True -> False}
+Instance Ord{Logical}(
+  Compare x y = Match x {False -> Match y {False -> EQ, True -> LT}, True -> Match y {False -> GT, True -> EQ}})
+Instance Ring{Logical}(Add = Not_equal, Convert x = Equal (Mod x 2) 1, Multiply = Min, Negate = Id)

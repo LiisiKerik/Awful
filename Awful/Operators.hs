@@ -222,7 +222,7 @@ module Awful.Operators (
         shunting_yard
           e
           (std_type' e, Application_type_5, \f -> Name_type_5 f [])
-          (fromList [("*", Op 0 Rght "Pair"), ("+", Op 1 Rght "Either"), ("->", Op 2 Rght "Function")])
+          (fromList [("->", Op 2 Rght "Function")])
           []
           a
           c

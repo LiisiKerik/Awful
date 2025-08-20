@@ -1,0 +1,15 @@
+Load Standard.awf
+Instance Applicative{List}(
+  Apply x y = Match x {Empty_List -> Empty_List, Construct_List f z -> Cat (Fmap f y) (Apply z y)},
+  Return x = Construct_List x Empty_List)
+Def Cat[T : Star](x : List T, y : List T) : List T = Match x {Empty_List -> y, Construct_List z a -> Construct_List z (Cat a y)}Instance Container{List}(
+  Empty = Empty_List,
+  Filter f x = Match x {Empty_List -> Empty_List, Construct_List y z -> Cat (Match f y {False -> Empty_List, True -> Construct_List y Empty_List}) (Filter f z)})
+Instance Functor{List}(Fmap f x = Match x {Empty_List -> Empty_List, Construct_List y z -> Construct_List (f y) (Fmap f z)})
+Instance Monad{List}(Bind x f = Match x {Empty_List -> Empty_List, Construct_List y z -> Cat (f y) (Bind z f)})
+Instance Ord{List T}<Ord T>(
+  Compare x y =
+    Match x {
+      Empty_List -> Match y {Empty_List -> EQ, Construct_List _ _ -> LT},
+      Construct_List z a ->
+        Match y {Empty_List -> GT, Construct_List b c -> Match Compare z b {LT -> LT, EQ -> Compare a c, GT -> GT}}})

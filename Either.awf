@@ -1,0 +1,17 @@
+Load Finite.awf
+Load List.awf
+Load Standard.awf
+Algebraic Either[T : Star, U : Star](Left T, Right U)
+Instance Applicative{Either _}(Apply x y = Match x {Left z -> Left z, Right f -> Fmap f y}, Return = Right)
+Instance Finite{Either T U}<Finite T, Finite U>(All = Cat (Fmap Left All) (Fmap Right All))
+Instance Functor{Either _}(Fmap = Map_right)
+Instance Monad{Either _}(Bind x f = Match x {Left y -> Left y, Right y -> f y})
+Instance Ord{Either T U}<Ord T, Ord U>(
+  Compare x y =
+    Match x {
+      Left z -> Match y {Left w -> Compare z w, Right -> LT},
+      Right z -> Match y {Left -> GT, Right w -> Compare z w}})
+Instance Symmetric{Either}(
+  Associate x = Match x {Left y -> Match y {Left z -> Left z, Right z -> Right (Left z)}, Right y -> Right (Right y)},
+  Bimap f g x = Match x {Left y -> Left (f y), Right y -> Right (g y)},
+  Commute x = Match x {Left y -> Right y, Right y -> Left y})

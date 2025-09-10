@@ -1,0 +1,15 @@
+Load Complex.awf
+Load Logical.awf
+Load Ord.awf
+Load Standard.awf
+Load Unit.awf
+Class Commutative{_ : Star}<Ring>
+Instance Commutative{Complex T}<Commutative T>
+Instance Commutative{Unit}
+Instance Ring{Complex T}<Ring T>(
+  Add = Zip Add,
+  Convert x = Complex (Convert x) Zero,
+  Multiply (Complex x y) (Complex z a) = Complex (Minus (x * z) (y * a)) (x * a + y * z),
+  Negate = Negate')
+Instance Ring{Logical}(Add = Not_equal, Convert i = Equal 1 (Mod i 2), Multiply = Min, Negate = Id)
+Instance Ring{Unit}(Add Unit = Id, Convert _ = Unit, Multiply Unit = Id, Negate = Id)

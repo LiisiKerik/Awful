@@ -3,14 +3,12 @@ Class Symmetric{F : Star -> Star -> Star}(
   Associate[T : Star, U : Star, V : Star] : F (F T U) V -> F T (F U V),
   Bimap[T : Star, U : Star, V : Star, W : Star] : (T -> U) -> (V -> W) -> F T V -> F U W,
   Commute[T : Star, U : Star] : F T U -> F U T)
-Class Container{F : Star -> Star}(Empty[T : Star] : F T, Filter[T : Star] : (T -> Logical) -> F T -> F T)
 Class Functor{F : Star -> Star}(Fmap[T : Star, U : Star] : (T -> U) -> F T -> F U)
 Class Monad{F : Star -> Star}<Applicative>(Bind[T : Star, U : Star] : F T -> (T -> F U) -> F U)
 Operator * Multiply 0 Left
 Operator + Add 1 Left
 Instance Applicative{Function _}(Apply f g x = f x (g x), Return x _ = x)
 Def Convert'[F : Star -> Star, T : Star]<Applicative F, Ring T>(x : Int) : F T = Return (Convert x)
-Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing})
 Def Flatten[F : Star -> Star, T : Star]<Monad F>(x : F (F T)) : F T = Bind x Id
 Instance Functor{Function _}(Fmap f g x = f (g x))
 Def Id[T : Star](x : T) : T = x
@@ -24,3 +22,6 @@ Def Negate'[F : Star -> Star, T : Star]<Functor F, Ring T> : F T -> F T = Fmap N
 Def Zero[T : Star]<Ring T> : T = Convert 0
 Def Zip[F : Star -> Star, T : Star, U : Star, V : Star]<Applicative F>(f : T -> U -> V, x : F T) : F U -> F V =
   Apply (Fmap f x)
+Instance Applicative{Maybe}(Apply x y = Match x {Nothing -> Nothing, Wrap f -> Fmap f y}, Return = Wrap)
+Instance Functor{Maybe}(Fmap f x = Match x {Nothing -> Nothing, Wrap y -> Wrap (f y)})
+Instance Monad{Maybe}(Bind x f = Match x {Nothing -> Nothing, Wrap y -> f y})

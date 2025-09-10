@@ -1,0 +1,4 @@
+Load Standard.awf
+Struct Complex[T : Star](Real : T, Imaginary : T)
+Instance Applicative{Complex}(Apply (Complex f g) (Complex x y) = Complex (f x) (g y), Return x = Complex x x)
+Instance Functor{Complex}(Fmap f (Complex x y) = Complex (f x) (f y))

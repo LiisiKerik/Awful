@@ -1,13 +1,7 @@
-Load Finite.awf
 Load List.awf
-Load Maybe.awf
 Load Standard.awf
 Struct Pair[T : Star, U : Star](First : T, Second : U)
-Instance Field{Pair T U}<Field T, Field U>(Inverse (Pair x y) = Zip Pair (Inverse x) (Inverse y))
-Instance Finite{Pair T U}<Finite T, Finite U>(All = Zip Pair All All)
 Instance Functor{Pair _}(Fmap = Map_right)
-Instance Ord{Pair T U}<Ord T, Ord U>(
-  Compare (Pair x y) (Pair z a) = Match Compare x z {LT -> LT, EQ -> Compare y a, GT -> GT})
 Instance Ring{Pair T U}<Ring T, Ring U>(
   Add (Pair x y) (Pair z a) = Pair (x + z) (y + a),
   Convert x = Pair (Convert x) (Convert x),

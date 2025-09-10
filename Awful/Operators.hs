@@ -40,8 +40,7 @@ module Awful.Operators (
     Instance_1 Location Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, Expression_9)]
       deriving Show
   data Data_6 = Data_6 Name Data_br_6 deriving Show
-  data Data_br_6 = Branching_data_6 Name [Kind_0] [(Name, Kind_0)] [Brnch_6] | Plain_data_6 [(Name, Kind_0)] Data_branch_6
-    deriving Show
+  data Data_br_6 = Branching_data_6 [(Name, Kind_0)] [Brnch_6] | Plain_data_6 [(Name, Kind_0)] Data_branch_6 deriving Show
   data Data_branch_6 = Algebraic_data_6 [Form_6] | Struct_data_6 [(Name, Type_8)]
     deriving Show
   data Eqq' = Eqq' Name [Pat] Expression_9 deriving Show
@@ -165,9 +164,9 @@ module Awful.Operators (
     (
       Data_6 b <$>
       case c of
-        Branching_data_0 d e f g ->
+        Branching_data_0 f g ->
           (
-            Branching_data_6 d e f <$>
+            Branching_data_6 f <$>
             traverse (\(Brnch_0 h i j k) -> Brnch_6 h i j <$> traverse (\(l, m) -> (,) l <$> std_type a m) k) g)
         Plain_data_0 d e ->
           (

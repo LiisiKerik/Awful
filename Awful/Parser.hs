@@ -48,8 +48,7 @@ module Awful.Parser (
   data Class_0 = Class_0 Name (Name, Kind_0) (Maybe Name) [Method] deriving Show
   data Constraint_0 = Constraint_0 Name Name deriving Show
   data Data_0 = Data_0 Name Data_br_0 deriving Show
-  data Data_br_0 = Branching_data_0 Name [Kind_0] [(Name, Kind_0)] [Brnch_0] | Plain_data_0 [(Name, Kind_0)] Data_branch_0
-    deriving Show
+  data Data_br_0 = Branching_data_0 [(Name, Kind_0)] [Brnch_0] | Plain_data_0 [(Name, Kind_0)] Data_branch_0 deriving Show
   data Data_branch_0 = Algebraic_data_0 [Form_0] | Struct_data_0 [(Name, Type_7)]
     deriving Show
   data Def_0 =
@@ -210,11 +209,7 @@ module Awful.Parser (
       Data_0 <$>
       parse_name'' Branching_token <*>
       (
-        Branching_data_0 <$
-        parse_token Left_square_bracket_token <*>
-        ((\x -> \y -> Name x ('!' : y)) <& parse_lift <*> parse_name) <*>
-        parse_many parse_kind <*
-        parse_token Right_square_bracket_token <*>
+        Branching_data_0 <$>
         parse_kinds <*
         parse_token Left_round_bracket_token <*>
         parse_non_empty_list Comma_token parse_brnch <*

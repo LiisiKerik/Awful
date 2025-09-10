@@ -32,11 +32,8 @@ module Awful.Namechecker (
   data Class_2 = Class_2 String (String, Kind_0) (Maybe Name) [Method_2] deriving Show
   data Data_1 = Data_1 Name Data_br_1 deriving Show
   data Data_2 = Data_2 Name Data_br_2 deriving Show
-  data Data_br_1 = Branching_data_1 Name [Kind_0] [(Name, Kind_0)] [Brnch_1] | Plain_data_1 [(Name, Kind_0)] Data_branch_1
-    deriving Show
-  data Data_br_2 =
-    Branching_data_2 Name [Kind_0] [(String, Kind_0)] [Brnch_2] | Plain_data_2 [(String, Kind_0)] Data_branch_1
-      deriving Show
+  data Data_br_1 = Branching_data_1 [(Name, Kind_0)] [Brnch_1] | Plain_data_1 [(Name, Kind_0)] Data_branch_1 deriving Show
+  data Data_br_2 = Branching_data_2 [(String, Kind_0)] [Brnch_2] | Plain_data_2 [(String, Kind_0)] Data_branch_1 deriving Show
   data Data_branch_1 = Algebraic_data_1 [Form_1] | Struct_data_1 [(String, Type_8)] deriving Show
   data Def_2 =
     Basic_def_2 Location String [(Name, Kind_0)] [Constraint_0] Type_8 Expression_9 |
@@ -150,7 +147,7 @@ module Awful.Namechecker (
         (
           second (Data_1 b) <$>
           case c of
-            Branching_data_6 g h i j -> bimap ((,) x) (Branching_data_1 g h i) <$> naming_branches_0 a e j
+            Branching_data_6 i j -> bimap ((,) x) (Branching_data_1 i) <$> naming_branches_0 a e j
             Plain_data_6 g h ->
               (
                 second (Plain_data_1 g) <$>
@@ -162,8 +159,7 @@ module Awful.Namechecker (
     (
       Data_2 b <$>
       case c of
-        Branching_data_1 e f g h ->
-          naming_arguments naming_name a g d >>= \(i, j) -> Branching_data_2 e f j <$> naming_branches_1 a i h
+        Branching_data_1 g h -> naming_arguments naming_name a g d >>= \(i, j) -> Branching_data_2 j <$> naming_branches_1 a i h
         Plain_data_1 e f -> (\g -> Plain_data_2 g f) <$> naming_arguments' a naming_name e d)
   naming_datas_1 :: String -> [Data_6] -> (Set String, Locations) -> Err ((Set String, Locations), [Data_1])
   naming_datas_1 = naming_list naming_data_1

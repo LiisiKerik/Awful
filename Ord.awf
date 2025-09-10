@@ -1,3 +1,8 @@
+Load Complex.awf
+Load List.awf
+Load Logical.awf
+Load Pair.awf
+Load Unit.awf
 Def Equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> True, Default -> False}
 Def Greater[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> True, Default -> False}
 Def Greater_or_equal[T : Star]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> False, Default -> True}
@@ -12,3 +17,18 @@ Instance Ord{Comparison}(
       LT -> Match y {LT -> EQ, Default -> LT},
       EQ -> Match y {LT -> GT, EQ -> EQ, GT -> LT},
       GT -> Match y {GT -> EQ, Default -> GT}})
+Instance Ord{Complex T}<Ord T>(Compare (Complex x y) (Complex z a) = Compare (Pair x y) (Pair z a))
+Instance Ord{List T}<Ord T>(
+  Compare x y =
+    Match x {
+      Empty_List -> Match y {Empty_List -> EQ, Construct_List _ _ -> LT},
+      Construct_List z a ->
+        Match y {Empty_List -> GT, Construct_List b c -> Match Compare z b {LT -> LT, EQ -> Compare a c, GT -> GT}}})
+Instance Ord{Logical}(
+  Compare x y = Match x {False -> Match y {False -> EQ, True -> LT}, True -> Match y {False -> GT, True -> EQ}})
+Instance Ord{Maybe T}<Ord T>(
+  Compare x y =
+    Match x {Nothing -> Match y {Nothing -> EQ, Wrap -> LT}, Wrap z -> Match y {Nothing -> GT, Wrap w -> Compare z w}})
+Instance Ord{Pair T U}<Ord T, Ord U>(
+  Compare (Pair x y) (Pair z a) = Match Compare x z {LT -> LT, EQ -> Compare y a, GT -> GT})
+Instance Ord{Unit}(Compare _ _ = EQ)

@@ -144,13 +144,11 @@ module Main (main) where
       kinds,
       Data.Map.fromList
         [
-          ("Field", Data.Map.fromList [("Modular", Language)]),
           ("Nonzero", Data.Map.fromList []),
           ("Ord", Data.Map.fromList [("Int", Language), ("Modular", Language)]),
           ("Ring", Data.Map.fromList [("Int", Language), ("Modular", Language)])],
       Data.Map.fromList
         [
-          ("Field", (["Inverse"], Data.Map.fromList [("Modular", [("Nonzero", Zr)])])),
           (
             "Nonzero",
             (

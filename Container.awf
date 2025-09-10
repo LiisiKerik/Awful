@@ -1,0 +1,9 @@
+Load List.awf
+Load Logical.awf
+Class Container{F : Star -> Star}(Empty[T : Star] : F T, Filter[T : Star] : (T -> Logical) -> F T -> F T)
+Instance Container{List}(
+  Empty = Empty_List,
+  Filter f x = Match x {Empty_List -> Empty_List, Construct_List y z -> Cat (Match f y {False -> Empty_List, True -> Construct_List y Empty_List}) (Filter f z)})
+Instance Container{Maybe}(
+  Empty = Nothing,
+  Filter f x = Match x {Nothing -> Nothing, Wrap y -> Match f y {False -> Nothing, True -> x}})

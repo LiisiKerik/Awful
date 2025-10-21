@@ -20,7 +20,7 @@ module Main (main) where
         Files,
         (Set String, Locations, Locations),
         Map' Expression_2,
-        Map' Polykind,
+        Map' Kind_1,
         Map' (Map' Location'),
         Map' ([String], Map' [(String, Nat)])) ->
       Location' ->
@@ -32,7 +32,7 @@ module Main (main) where
               Files,
               (Set String, Locations, Locations),
               Map' Expression_2,
-              Map' Polykind,
+              Map' Kind_1,
               Map' (Map' Location'),
               Map' ([String], Map' [(String, Nat)])),
             (File, Map' Op))))
@@ -94,7 +94,7 @@ module Main (main) where
           Files,
           (Set String, Locations, Locations),
           Map' Expression_2,
-          Map' Polykind,
+          Map' Kind_1,
           Map' (Map' Location'),
           Map' ([String], Map' [(String, Nat)])),
         (File, Map' Op)) ->
@@ -106,7 +106,7 @@ module Main (main) where
               Files,
               (Set String, Locations, Locations),
               Map' Expression_2,
-              Map' Polykind,
+              Map' Kind_1,
               Map' (Map' Location'),
               Map' ([String], Map' [(String, Nat)])),
             (File, Map' Op))))
@@ -133,7 +133,7 @@ module Main (main) where
       Files,
       (Set String, Locations, Locations),
       Map' Expression_2,
-      Map' Polykind,
+      Map' Kind_1,
       Map' (Map' Location'),
       Map' ([String], Map' [(String, Nat)]))
   init' =

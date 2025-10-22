@@ -88,9 +88,7 @@ module Awful.Parser (
   type Parser = Parser' Token ((Location -> Location_1) -> String)
   data Tree_0 = Tree_0 [Data_0] [Class_0] [Opdecl_0] [Def_0] deriving Show
   data Tree_1 = Tree_1 [Name] Tree_0 deriving Show
-  data Type_0 =
-    Application_type_0 Type_0 [Type_0] | Int_type_0 Integer | Name_type_0 Name [Kind_0] | Op_type_0 Type_0 [(Name, Type_0)]
-      deriving Show
+  data Type_0 = Application_type_0 Type_0 [Type_0] | Name_type_0 Name [Kind_0] | Op_type_0 Type_0 [(Name, Type_0)] deriving Show
   data Type_7 = Type_7 Location Type_0 deriving Show
   class Get_location t where
     get_location :: t -> Location
@@ -254,7 +252,7 @@ module Awful.Parser (
   parse_elementary_pat :: Parser Pat
   parse_elementary_pat = parse_blank_pat <+> parse_name_pat
   parse_elementary_type :: Parser Type_0
-  parse_elementary_type = parse_int_type <+> parse_name_type <+> (int_to_nat_type_0 <&> parse_int)
+  parse_elementary_type = parse_name_type <+> (int_to_nat_type_0 <&> parse_int)
   parse_eq :: Parser ()
   parse_eq = parse_operator "="
   parse_eq' :: Parser Eqq
@@ -294,8 +292,6 @@ module Awful.Parser (
           _ -> Nothing)
   parse_int_expression :: Parser Expression_0
   parse_int_expression = Int_expression_0 <$> parse_int
-  parse_int_type :: Parser Type_0
-  parse_int_type = Int_type_0 <$ parse_lift <*> parse_int
   parse_let_expression :: Parser Expression_0
   parse_let_expression =
     (

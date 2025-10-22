@@ -71,8 +71,7 @@ module Awful.Operators (
   data Status = New | Old deriving (Eq, Show)
   data Tree_2 = Tree_2 [Data_6] [Class_7] [Opdecl_1] [Def_1] deriving Show
   data Tree_3 = Tree_3 [Name] Tree_2 deriving Show
-  data Type_5 = Application_type_5 Type_5 Type_5 | Int_type_5 Integer | Name_type_5 Name [Kind_0]
-    deriving Show
+  data Type_5 = Application_type_5 Type_5 Type_5 | Name_type_5 Name [Kind_0] deriving Show
   data Type_8 = Type_8 Location Type_5 deriving Show
   gather_ops :: (Location -> Location_1) -> Map' (Op, Status) -> [Opdecl_0] -> (Map' (Op, Status), [Opdecl_1])
   gather_ops a b c =
@@ -215,7 +214,6 @@ module Awful.Operators (
   std_type' e b =
     case b of
       Application_type_0 c d -> Prelude.foldl Application_type_5 <$> std_type' e c <*> traverse (std_type' e) d
-      Int_type_0 c -> Right (Int_type_5 c)
       Name_type_0 c d -> Right (Name_type_5 c d)
       Op_type_0 a c ->
         shunting_yard

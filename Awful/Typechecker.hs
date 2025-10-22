@@ -159,8 +159,7 @@ module Awful.Typechecker (
   data Plain_dat = Plain_dat String Data_branch_1 deriving Show
   data Prom_alg = Prom_alg (Map' [Kind_1]) deriving Show
   data Strct = Strct [(String, Kind_1)] [(String, Type_1)] Type_1 deriving Show
-  data Type_1 = Application_type_1 Type_1 Type_1 | Int_type_1 Integer | Name_type_1 String [Kind_1]
-    deriving (Eq, Show)
+  data Type_1 = Application_type_1 Type_1 Type_1 | Name_type_1 String [Kind_1] deriving (Eq, Show)
   data Type_2 = Basic_type_1 [(String, Kind_1)] (Maybe Constraint_1) [Constraint_1] Type_1 deriving Show
   data Tmatch' = Tmatch' [Pat_1] Typedexpr deriving Show
   data Typedexpr =
@@ -356,7 +355,7 @@ module Awful.Typechecker (
                   Nothing -> constr_check m t' x' y'
   constr_check' :: Map' (Maybe String) -> String -> [String] -> [String] -> Maybe String
   constr_check' n t x y =
-    case x of 
+    case x of
       [] -> Nothing
       a : x' ->
         case constr_check'' n t a y of
@@ -501,7 +500,6 @@ module Awful.Typechecker (
         case e of
           [] -> Just (if Data.Set.member d f then c else Data.Map.insert d a c)
           _ -> Nothing
-      _ -> Nothing
   gather_types :: Set String -> [Type_8] -> Map' Location -> Maybe (Map' Location)
   gather_types a b = gather_all_types (gather_type a) ((\(Type_8 _ c) -> c) <$> b)
   getarg :: [t] -> Nat -> t
@@ -533,8 +531,6 @@ module Awful.Typechecker (
         ("Nonzero", Data.Map.fromList []),
         ("Ord", Data.Map.fromList [("Int", []), ("Modular", [[]])]),
         ("Ring", Data.Map.fromList [("Int", []), ("Modular", [["Nonzero"]])])]
-  int_kind :: Kind_1
-  int_kind = Name_kind_1 "!Int"
   int_to_nat_type :: Integer -> Type_1
   int_to_nat_type x =
     case x of
@@ -669,7 +665,6 @@ module Awful.Typechecker (
     case a of
       Application_type_1 b c -> Application_kind_1 (prom_type b) (prom_type c)
       Name_type_1 b _ -> Name_kind_1 ('!' : b)
-      _ -> undefined
   promotables :: Map' Bool
   promotables = Data.Map.fromList ((\a -> (a, True)) <$> ["Comparison", "Function", "Int", "Nat"])
   rem_old' :: Map' (Map' (t, Status)) -> Map' (Map' t)
@@ -682,7 +677,6 @@ module Awful.Typechecker (
         case Data.Map.lookup c a of
           Just d -> d
           Nothing -> b
-      _ -> b
   show_mod :: Integer -> Integer -> String
   show_mod a b = show b ++ " # " ++ show a
   slv :: Map' (Map' [[String]]) -> [(String, (Name, Type_1))] -> (Name -> String -> String -> String) -> Err ()
@@ -765,12 +759,6 @@ module Awful.Typechecker (
             case d of
               Application_type_1 h i -> solvesys m ((e, h) : (f, i) : g) (a', t, u)
               Name_type_1 h _ -> solvesys' m h c g (a', t, u)
-              _ -> undefined
-          Int_type_1 e ->
-            case d of
-              Int_type_1 f -> if e == f then solvesys m g (a', t, u) else m ('!' : show e) ('!' : show f)
-              Name_type_1 f _ -> solvesys' m f c g (a', t, u)
-              _ -> undefined
           Name_type_1 e _ ->
             case d of
               Name_type_1 f _ ->
@@ -848,7 +836,6 @@ module Awful.Typechecker (
       case c of
         Application_type_1 d e -> Application_type_1 (f d) (f e)
         Name_type_1 d _ -> if d == a then b else c
-        _ -> c
   sysrep2 :: String -> Type_1 -> Typedexpr -> Typedexpr
   sysrep2 a b c =
     let
@@ -2426,7 +2413,6 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
                 Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") j) k ->
                   if k == e then Application_type_1 h <$> type_type l a g d y j else x
                 _ -> x)
-        Int_type_5 b -> if e == int_kind then Right (Int_type_1 b) else x
         Name_type_5 (Name a' f) b ->
           und_err
             f
@@ -2445,7 +2431,6 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
               Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") i) j ->
                 (\k -> (Application_type_1 g k, j)) <$> type_type l a f d y i
               _ -> kind_err (l a))
-      Int_type_5 e -> Right (Int_type_1 e, int_kind)
       Name_type_5 (Name a' e) g ->
         und_err e d "type" (l a') (\ f -> (\ () -> (Name_type_1 e [], f)) <$> ziphelp l e a' g)
   type_types :: (Location -> Location_1) -> [Type_8] -> Map' Kind_1 -> Map' Kind -> Err [Type_1]
@@ -2553,7 +2538,6 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
   typestring a d =
     case a of
       Application_type_1 b c -> typestring b (c : d)
-      Int_type_1 b -> ('!' : show b, d)
       Name_type_1 b _ -> (b, d)
   typevar :: String -> (Integer, Map' Type_1, Set String) -> (Integer, Map' Type_1, Set String)
   typevar a (c, e, f) =

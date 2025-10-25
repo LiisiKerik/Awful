@@ -134,7 +134,6 @@ module Awful.Typechecker (
       (Map' String)
       (Map' Type_2)
       (Map' Kind)
-      (Map' Bool)
       (Map' Class_4)
       (Map' Class_5)
       (Map' (Map' [[String]]))
@@ -396,7 +395,7 @@ module Awful.Typechecker (
         ("Wrap", "Maybe"),
         ("Zr", "Nat")]
   context_union :: (File, Map' Op) -> (File, Map' Op) -> (File, Map' Op)
-  context_union (File b i j d a x e q t g o d', t0) (File f k l h c y m r u n p m', t2) =
+  context_union (File b i j d a e q t g o d', t0) (File f k l h c m r u n p m', t2) =
     (
       File
         (Data.Map.union b f)
@@ -404,7 +403,6 @@ module Awful.Typechecker (
         (Data.Map.union j l)
         (Data.Map.union d h)
         (Data.Map.union a c)
-        (Data.Map.union x y)
         (Data.Map.union e m)
         (Data.Map.union q r)
         (unionWith Data.Map.union t u)
@@ -491,24 +489,6 @@ module Awful.Typechecker (
 -}
   function_type :: Type_1 -> Type_1 -> Type_1
   function_type a = Application_type_1 (Application_type_1 (Name_type_1 "Function") a)
-  gather_all_types :: (Ord u, Monad f) => (t -> Map u v -> f (Map u v)) -> [t] -> Map u v -> f (Map u v)
-  gather_all_types a b c =
-    case b of
-      [] -> return c
-      d : e -> gather_all_types a e c >>= a d
-  gather_fields :: Set String -> [(String, Type_8)] -> Map' Location -> Maybe (Map' Location)
-  gather_fields b a = gather_types b (snd <$> a)
-  gather_form :: Set String -> Form_1 -> Map' Location -> Maybe (Map' Location)
-  gather_form b (Form_1 _ a) = gather_types b a
-  gather_forms :: Set String -> [Form_1] -> Map' Location -> Maybe (Map' Location)
-  gather_forms a = gather_all_types (gather_form a)
-  gather_type :: Set String -> Type_5 -> Map' Location -> Maybe (Map' Location)
-  gather_type f b c =
-    case b of
-      Application_type_5 d e -> gather_type f e c >>= gather_type f d
-      Name_type_5 (Name a d) -> Just (if Data.Set.member d f then c else Data.Map.insert d a c)
-  gather_types :: Set String -> [Type_8] -> Map' Location -> Maybe (Map' Location)
-  gather_types a b = gather_all_types (gather_type a) ((\(Type_8 _ c) -> c) <$> b)
   getarg :: [t] -> Nat -> t
   getarg a b =
     case a of
@@ -528,7 +508,7 @@ module Awful.Typechecker (
   init_type_context :: (File, Map' Op)
   init_type_context =
     (
-      File kinds algebraics constrs types hkinds promotables classes_0 classes_1 instances classes_2 prom_algs Data.Map.empty,
+      File kinds algebraics constrs types hkinds classes_0 classes_1 instances classes_2 prom_algs Data.Map.empty,
       Data.Map.empty)
   instances :: Map' (Map' [[String]])
   instances =
@@ -604,29 +584,6 @@ module Awful.Typechecker (
           "Ring",
           "Wrap",
           "Zr"])
-  make_eq :: Data_2 -> Map' (Either Bool (Map' Location), Status) -> Map' (Either Bool (Map' Location), Status)
-  make_eq (Data_2 (Name _ a) b') =
-    case b' of
-      Branching_data_2 _ _ -> ins_new a (Left False)
-      Plain_data_2 b c ->
-        ins_new
-          a
-          (case b of
-            [] ->
-              let
-                f23 =
-                  case c of
-                    Algebraic_data_1 e -> gather_forms (Data.Set.fromList [a]) e Data.Map.empty
-                    Struct_data_1 e -> gather_fields (Data.Set.fromList [a]) e Data.Map.empty in
-              case f23 of
-                Just e -> Right e
-                Nothing -> Left False
-            _ -> Left False)
-  make_eqs :: [Data_2] -> Map' (Either Bool (Map' Location), Status) -> Map' (Either Bool (Map' Location), Status)
-  make_eqs a b =
-    case a of
-      [] -> b
-      c : d -> make_eqs d (make_eq c b)
   maybe_type :: Type_1 -> Type_1
   maybe_type = Application_type_1 (Name_type_1 "Maybe")
   mod_type :: Type_1 -> Type_1
@@ -657,15 +614,6 @@ module Awful.Typechecker (
       [
         ("!Comparison", Prom_alg (Data.Map.fromList [("!EQ", []), ("!GT", []), ("!LT", [])])),
         ("!Nat", Prom_alg (Data.Map.fromList [("!Next", [nat_kind]), ("!Zr", [])]))]
-  prom_type :: Type_1 -> Kind_1
-  prom_type a =
-    case a of
-      Application_type_1 b c -> Application_kind_1 (prom_type b) (prom_type c)
-      Name_type_1 b -> Name_kind_1 ('!' : b)
-  promotables :: Map' Bool
-  promotables =
-    Data.Map.fromList
-      [("Comparison", True), ("Function", True), ("Int", False), ("Maybe", False), ("Modular", False), ("Nat", True)]
   rem_old' :: Map' (Map' (t, Status)) -> Map' (Map' t)
   rem_old' a = Data.Map.filter (\b -> not (Data.Map.null b)) (rem_old <$> a)
   repl' :: Map' Type_1 -> Type_1 -> Type_1
@@ -715,35 +663,6 @@ module Awful.Typechecker (
         case e of
           [] -> undefined
           h : i -> slv_constrs a (((\j -> (j, (y, f))) <$> h) ++ b) c g i y
-  solve_diff :: Ord t => Map t u -> [t] -> Map t u
-  solve_diff a b =
-    case b of
-      [] -> a
-      c : d -> solve_diff (Data.Map.delete c a) d
-  solve_eq ::
-    (Location -> Location_1) ->
-    String ->
-    Map' (Either Bool (Map' Location), Status) ->
-    Err (Bool, Map' (Either Bool (Map' Location), Status))
-  solve_eq f a b =
-    case fst (unsafe_lookup a b) of
-      Left d -> Right (d, b)
-      Right d -> (\e -> (e, ins_new a (Left e) b)) <$> solve_eq_help f [a] b d
-  solve_eq_help ::
-    (Location -> Location_1) -> [String] -> Map' (Either Bool (Map' Location), Status) -> Map' Location -> Err Bool
-  solve_eq_help h a b c =
-    case minViewWithKey c of
-      Just ((d, e), f) ->
-        und_err
-          d
-          b
-          "type"
-          (h e)
-          (\g ->
-            case fst g of
-              Left i -> Right i
-              Right i -> solve_eq_help h (d : a) b (Data.Map.union f (solve_diff i a)))
-      Nothing -> Right True
   solvesys ::
     (String -> String -> Err ([(String, (Name, Type_1))], Typedexpr, Set String)) ->
     [(Type_1, Type_1)] ->
@@ -1328,7 +1247,6 @@ module Awful.Typechecker (
       Map' (Kind, Status),
       Map' Expression_2,
       Map' Kind_1,
-      Map' (Bool, Status),
       Map' (Prom_alg, Status),
       Map' (Strct, Status)) ->
     Err
@@ -1340,22 +1258,13 @@ module Awful.Typechecker (
         Map' (Kind, Status),
         Map' Expression_2,
         Map' Kind_1,
-        Map' (Bool, Status),
         Map' (Prom_alg, Status),
         Map' (Strct, Status))
-  type_datas h a (b, i, j, d, o, c, m, x, a0, a7) =
+  type_datas h a (b, i, j, d, o, c, m, a0, a7) =
     (
-      type_proms_1 h a (o, b, j, c, m) (make_eqs a (first Left <$> x)) >>=
-      \((e, p, q, r, s), f, g, k) ->
-        (
-          type_proms_2 h f s (fst <$> o) (p, i, d, a0, a7) >>=
-          \(t, l, n, b0, b3) ->
-            (
-              type_datas_1 h (fst <$> e) g (t, q, r, s) >>=
-              \((u, v, w, a'), y) ->
-                (
-                  (\(b', c', t2) -> (u, b', v, c', e, w, a', first unsafe_left <$> k, b0, t2)) <$>
-                  type_datas_2 h y (fst <$> u) (fst <$> e) (l, n, b3)))))
+      type_datas_1 h (fst <$> o) a (b, j, c, m) >>=
+      \((u, v, w, a'), y) ->
+        (\(b', c', t2) -> (u, b', v, c', o, w, a', a0, t2)) <$> type_datas_2 h y (fst <$> u) (fst <$> o) (i, d, a7))
   type_datas_1 ::
     (
       (Location -> Location_1) ->
@@ -2261,7 +2170,7 @@ module Awful.Typechecker (
     let
       z a' = Left ("Constructor " ++ y ++ location (a x) ++ " has been given too " ++ a' ++ " arguments.")
     in
-      case d of 
+      case d of
         [] ->
           case e of
             [] -> Right ([], f, g, h, i)
@@ -2273,124 +2182,6 @@ module Awful.Typechecker (
               (
                 type_pat a b j m f g h i >>=
                 \(c, o, p, q, r) -> (\(s, t, u, v, w) -> ((l, c) : s, t, u, v, w)) <$> type_pats a b k n o p q r (Name x y))
-  type_prom_1 ::
-    (Location -> Location_1) ->
-    Data_2 ->
-    (Map' (Kind, Status), Map' (Kind_1, Status), Constrs, Map' Expression_2, Map' Kind_1) ->
-    Map' (Either Bool (Map' Location), Status) ->
-    Err
-      (
-        Maybe ((Map' (Kind, Status), Map' (Kind_1, Status), Constrs, Map' Expression_2, Map' Kind_1), Plain_dat),
-        Map' (Either Bool (Map' Location), Status))
-  type_prom_1 q (Data_2 (Name _ a) b') (o, i, j, k, x) j' =
-    case b' of
-      Branching_data_2 _ _ -> Right (Nothing, j')
-      Plain_data_2 b c ->
-        case b of
-          [] ->
-            first (\k' -> if k' then
-              let
-                (l, m) =
-                  case c of
-                    Algebraic_data_1 e ->
-                      (
-                        Prelude.foldl (\d -> \(Form_1 n _) -> ins_new n a d) j e,
-                        Prelude.foldl (\f -> \(Form_1 g h) -> Data.Map.insert g (type_alg h g) f) k e)
-                    Struct_data_1 e ->
-                      let
-                        e' = fst <$> e
-                      in
-                        (
-                          j,
-                          Prelude.foldl
-                            (flip (\g -> Data.Map.insert g (Field_expression_2 g)))
-                            (Data.Map.insert
-                              a
-                              (Prelude.foldr
-                                (\f -> Function_expression_2 (Name_pat_1 ('#' : f)))
-                                (Struct_expression_2 a (Data.Map.fromList ((\f -> (f, Name_expression_2 ('#' : f))) <$> e')))
-                                e')
-                              k)
-                            e')
-              in
-                let
-                  y = Prelude.foldr arrow_kind star_kind (return star_kind <$> b)
-                in
-                  Just
-                    (
-                      (ins_new ('!' : a) Star_kind o, ins_new a y i, l, m, Data.Map.insert a y x),
-                      Plain_dat a c) else Nothing) <$> solve_eq q a j'
-          _ -> Right (Nothing, j')
-  type_prom_2 ::
-    (
-      (Location -> Location_1) ->
-      Plain_dat ->
-      Map' Kind_1 ->
-      Map' Kind ->
-      (Map' (Kind_1, Status), Algebraics, Types, Map' (Prom_alg, Status), Map' (Strct, Status)) ->
-      Err (Map' (Kind_1, Status), Algebraics, Types, Map' (Prom_alg, Status), Map' (Strct, Status)))
-  type_prom_2 f (Plain_dat a c) d y' (d', p, e, a0, k7) =
-    let
-      promhelp p' q' = ins_new ('!' : p') (Prelude.foldr (\x' -> arrow_kind (prom_type x')) (Name_kind_1 ('!' : a)) q')
-      b' = Basic_type_1 [] Nothing []
-    in
-      case c of
-        Algebraic_data_1 h ->
-          (
-            (\q ->
-              (
-                Prelude.foldl (\t -> \(Form_2 u v) -> promhelp u v t) d' q,
-                ins_new a (Alg [] (Data.Map.fromList ((\(Form_2 r s) -> (r, s)) <$> q)) (Name_type_1 a)) p,
-                Prelude.foldl (flip (\(Form_2 l m) -> ins_new l (b' (Prelude.foldr function_type (Name_type_1 a) m)))) e q,
-                ins_new ('!' : a) (Prom_alg (Data.Map.fromList ((\(Form_2 r s) -> ('!' : r, prom_type <$> s)) <$> q))) a0,
-                k7)) <$>
-            type_forms f h d y')
-        Struct_data_1 h ->
-          (
-            (\i ->
-              (
-                promhelp a (snd <$> i) d',
-                p,
-                Prelude.foldl
-                  (flip (\(k, l) -> ins_new k (b' (function_type (Name_type_1 a) l))))
-                  (ins_new a (b' (Prelude.foldr (function_type <$> snd) (Name_type_1 a) i)) e)
-                  i,
-                a0,
-                ins_new a (Strct [] i (Name_type_1 a)) k7)) <$>
-            type_fields f h d y')
-  type_proms_1 ::
-    (Location -> Location_1) ->
-    [Data_2] ->
-    (Map' (Kind, Status), Map' (Kind_1, Status), Constrs, Map' Expression_2, Map' Kind_1) ->
-    Map' (Either Bool (Map' Location), Status) ->
-    Err
-      (
-        (Map' (Kind, Status), Map' (Kind_1, Status), Constrs, Map' Expression_2, Map' Kind_1),
-        [Plain_dat],
-        [Data_2],
-        Map' (Either Bool (Map' Location), Status))
-  type_proms_1 a b c f =
-    case b of
-      [] -> Right (c, [], [], f)
-      d : e -> type_prom_1 a d c f >>= \(h, g) ->
-        let
-          o p q = p <$> type_proms_1 a e q g
-        in
-          case h of
-            Just (i, j) -> o (\(k, l, m, n) -> (k, j : l, m, n)) i
-            Nothing -> o (\(k, l, m, n) -> (k, l, d : m, n)) c
-  type_proms_2 ::
-    (
-      (Location -> Location_1) ->
-      [Plain_dat] ->
-      Map' Kind_1 ->
-      Map' Kind ->
-      (Map' (Kind_1, Status), Algebraics, Types, Map' (Prom_alg, Status), Map' (Strct, Status)) ->
-      Err (Map' (Kind_1, Status), Algebraics, Types, Map' (Prom_alg, Status), Map' (Strct, Status)))
-  type_proms_2 a b c y d =
-    case b of
-      [] -> Right d
-      e : f -> type_prom_2 a e c y d >>= type_proms_2 a f c y
 {-
 TODO:
 Do it with 1 function that assembles a system of equations and one function that solves the system
@@ -2570,10 +2361,10 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
     Tree_5 ->
     (File, Map' Expression_2, Map' Kind_1, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])) ->
     Err (File, Map' Expression_2, Map' Kind_1, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)]))
-  typing k (Tree_5 a a' x7 c) (File d t u v w w0 b' c5 x t2 u0 k7, l, m, m', n4) =
+  typing k (Tree_5 a a' x7 c) (File d t u v w b' c5 x t2 u0 k7, l, m, m', n4) =
     (
-      type_datas (Location_1 k) a (old d, old t, old u, old v, old w, l, m, old w0, old u0, old k7) >>=
-      \(e, b, h, g, o, f, n, w1, u1, k8) ->
+      type_datas (Location_1 k) a (old d, old t, old u, old v, old w, l, m, old u0, old k7) >>=
+      \(e, b, h, g, o, f, n, u1, k8) ->
         (
           type_classes k (fst <$> o) (fst <$> e) a' (old b', m', g, n4, old t2, old c5) >>=
           \(c', m2, g0, x1, x2, t3) ->
@@ -2586,7 +2377,6 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
                     (rem_old h)
                     (rem_old j)
                     (rem_old o)
-                    (rem_old w1)
                     (rem_old c')
                     (rem_old t3)
                     (rem_old' y)
@@ -2610,11 +2400,6 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
                 (old' x)
                 x1
                 (fst <$> k8))))
-  unsafe_left :: Either t u -> t
-  unsafe_left a =
-    case a of
-      Left b -> b
-      Right _ -> undefined
   unsafe_lookup :: Ord t => t -> Map t u -> u
   unsafe_lookup a b =
     case Data.Map.lookup a b of

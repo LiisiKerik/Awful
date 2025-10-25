@@ -71,7 +71,7 @@ module Awful.Operators (
   data Status = New | Old deriving (Eq, Show)
   data Tree_2 = Tree_2 [Data_6] [Class_7] [Opdecl_1] [Def_1] deriving Show
   data Tree_3 = Tree_3 [Name] Tree_2 deriving Show
-  data Type_5 = Application_type_5 Type_5 Type_5 | Name_type_5 Name [Kind_0] deriving Show
+  data Type_5 = Application_type_5 Type_5 Type_5 | Name_type_5 Name deriving Show
   data Type_8 = Type_8 Location Type_5 deriving Show
   gather_ops :: (Location -> Location_1) -> Map' (Op, Status) -> [Opdecl_0] -> (Map' (Op, Status), [Opdecl_1])
   gather_ops a b c =
@@ -145,7 +145,7 @@ module Awful.Operators (
         (
           (\h -> \(Type_8 i j, k) ->
             (
-              Type_8 i (Application_type_5 (Application_type_5 (Name_type_5 (Name l "Function") []) h) j),
+              Type_8 i (Application_type_5 (Application_type_5 (Name_type_5 (Name l "Function")) h) j),
               Function_expression_9 e k)) <$>
           std_type' a f <*>
           standard_arguments a m g c d)
@@ -214,11 +214,11 @@ module Awful.Operators (
   std_type' e b =
     case b of
       Application_type_0 c d -> Prelude.foldl Application_type_5 <$> std_type' e c <*> traverse (std_type' e) d
-      Name_type_0 c d -> Right (Name_type_5 c d)
+      Name_type_0 c -> Right (Name_type_5 c)
       Op_type_0 a c ->
         shunting_yard
           e
-          (std_type' e, Application_type_5, \f -> Name_type_5 f [])
+          (std_type' e, Application_type_5, \f -> Name_type_5 f)
           (fromList [("->", Op 2 Rght "Function")])
           []
           a

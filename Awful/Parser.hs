@@ -88,7 +88,7 @@ module Awful.Parser (
   type Parser = Parser' Token ((Location -> Location_1) -> String)
   data Tree_0 = Tree_0 [Data_0] [Class_0] [Opdecl_0] [Def_0] deriving Show
   data Tree_1 = Tree_1 [Name] Tree_0 deriving Show
-  data Type_0 = Application_type_0 Type_0 [Type_0] | Name_type_0 Name [Kind_0] | Op_type_0 Type_0 [(Name, Type_0)] deriving Show
+  data Type_0 = Application_type_0 Type_0 [Type_0] | Name_type_0 Name | Op_type_0 Type_0 [(Name, Type_0)] deriving Show
   data Type_7 = Type_7 Location Type_0 deriving Show
   class Get_location t where
     get_location :: t -> Location
@@ -107,8 +107,8 @@ module Awful.Parser (
   int_to_nat_type_0 :: Location -> Integer -> Type_0
   int_to_nat_type_0 l x =
     case x of
-      0 -> Name_type_0 (Name l "!Zr") []
-      _ -> Application_type_0 (Name_type_0 (Name l "!Next") []) [int_to_nat_type_0 l (x - 1)]
+      0 -> Name_type_0 (Name l "!Zr")
+      _ -> Application_type_0 (Name_type_0 (Name l "!Next")) [int_to_nat_type_0 l (x - 1)]
 {-
   mk_let :: [Eqq] -> Expression_0 -> Expression_branch_0
   mk_let x y = (\(Expression_0 _ z) -> z) (Prelude.foldr mk_let' y x)
@@ -375,12 +375,7 @@ module Awful.Parser (
   parse_name_pattern :: Parser Pattern_0
   parse_name_pattern = Name_pattern <$> parse_name
   parse_name_type :: Parser Type_0
-  parse_name_type =
-    (
-      Name_type_0 <$>
-      (Name <&> parse_prom) <*>
-      parse_optional'
-        (parse_brackets Left_square_bracket_token Right_square_bracket_token (parse_non_empty_list Comma_token parse_kind)))
+  parse_name_type = Name_type_0 <$> (Name <&> parse_prom)
 {-
   parse_nothing :: Parser ()
   parse_nothing = Parser (\a -> Right ((), a))

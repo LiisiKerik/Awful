@@ -143,7 +143,7 @@ module Awful.Typechecker (
         deriving Show
   data Form_2 = Form_2 String [Type_1] deriving Show
   data Kind = Arrow_kind Kind | Star_kind deriving (Eq, Show)
-  data Kind_1 = Application_kind_1 Kind_1 Kind_1 | Function_kind_1 Kind_1 Kind_1 | Name_kind_1 String deriving (Eq, Show)
+  data Kind_1 = Function_kind_1 Kind_1 Kind_1 | Name_kind_1 String deriving (Eq, Show)
   data Match_Algebraic_2 = Match_Algebraic_2 [Pat_1] Expression_2 deriving Show
   data Matches_2 =
     Matches_Algebraic_2 (Map' Match_Algebraic_2) (Maybe Expression_2) |
@@ -864,7 +864,7 @@ module Awful.Typechecker (
           Map' String))
   type_class_0 a i j (Class_2 b (c, d) g' e) (m, w0, i', j0, x2) =
     (
-      type_kind_7 a i Star_kind d >>=
+      type_kind_7 a i d >>=
       \h ->
         let
           g3 = (\(Name _ t4) -> t4) <$> g'
@@ -1821,49 +1821,11 @@ module Awful.Typechecker (
       Nothing -> Right ()
   type_kind :: (String, Kind_1) -> Map' Kind_1 -> Map' Kind_1
   type_kind (a, b) = Data.Map.insert a b
-{-
-  type_kind_4 ::
-    (Location -> Location_1) -> Map' Kind -> (String, Kind_0) -> (Map' Kind_1, Map' Kind_1) -> Err (Map' Kind_1, Map' Kind_1)
-  type_kind_4 d e (g, a) b =
-    (
-      (\h ->
-        let
-          f = Data.Map.insert g h
-        in
-          bimap f f b) <$>
-      type_kind_7 d e Star_kind a)
--}
-  type_kind_6 :: (Location -> Location_1) -> Map' Kind -> Kind_0 -> Err (Kind_1, Kind)
-  type_kind_6 a b (Kind_0 c d) =
-    case d of
-      Application_kind_0 e f ->
-        (
-          type_kind_6 a b e >>=
-          \(g, h) ->
-            case h of
-              Arrow_kind j -> (\k -> (Application_kind_1 g k, j)) <$> type_kind_7 a b Star_kind f
-              Star_kind -> kind_err (a c))
-      Function_kind_0 e f ->
-        do
-          g <- type_kind_7 a b Star_kind e
-          h <- type_kind_7 a b Star_kind f
-          return (Function_kind_1 g h, Star_kind)
-      Name_kind_0 e -> und_err e b "kind" (a c) (\f -> Right (Name_kind_1 e, f))
-  type_kind_7 :: (Location -> Location_1) -> Map' Kind -> Kind -> Kind_0 -> Err Kind_1
-  type_kind_7 a b c (Kind_0 d e) =
+  type_kind_7 :: (Location -> Location_1) -> Map' Kind -> Kind_0 -> Err Kind_1
+  type_kind_7 a b (Kind_0 d e) =
     case e of
-      Application_kind_0 f g ->
-        (
-          type_kind_6 a b f >>=
-          \(h, i) ->
-            case i of
-              Arrow_kind k -> if k == c then Application_kind_1 h <$> type_kind_7 a b Star_kind g else kind_err (a d)
-              Star_kind -> kind_err (a d))
-      Function_kind_0 f g ->
-        case c of
-          Arrow_kind _ -> kind_err (a d)
-          Star_kind -> Function_kind_1 <$> type_kind_7 a b Star_kind f <*> type_kind_7 a b Star_kind g
-      Name_kind_0 f -> und_err f b "kind" (a d) (\g -> if g == c then Right (Name_kind_1 f) else kind_err (a d))
+      Function_kind_0 f g -> Function_kind_1 <$> type_kind_7 a b f <*> type_kind_7 a b g
+      Name_kind_0 f -> und_err f b "kind" (a d) (\g -> if g == Star_kind then Right (Name_kind_1 f) else kind_err (a d))
   type_kinds :: [(String, Kind_1)] -> Map' Kind_1 -> Map' Kind_1
   type_kinds a b =
     case a of
@@ -1874,7 +1836,7 @@ module Awful.Typechecker (
   type_kinds_0 a b c d =
     case c of
       [] -> Right ([], d)
-      (e, f) : g -> type_kind_7 a b Star_kind f >>= \h -> first ((:) (e, h)) <$> type_kinds_0 a b g (Data.Map.insert e h d)
+      (e, f) : g -> type_kind_7 a b f >>= \h -> first ((:) (e, h)) <$> type_kinds_0 a b g (Data.Map.insert e h d)
   type_kinds_1 ::
     (Location -> Location_1) ->
     Map' Kind ->
@@ -1887,21 +1849,13 @@ module Awful.Typechecker (
       [] -> Right ([], d, i)
       (e, f) : g ->
         (
-          type_kind_7 a b Star_kind f >>=
+          type_kind_7 a b f >>=
           \h -> (\(j, k, l) -> ((e, h) : j, k, l)) <$> type_kinds_1 a b g (Data.Map.insert e h d) (Data.Map.insert e h i))
-{-
-  type_kinds_4 ::
-    (Location -> Location_1) -> Map' Kind -> [(String, Kind_0)] -> (Map' Kind_1, Map' Kind_1) -> Err (Map' Kind_1, Map' Kind_1)
-  type_kinds_4 e f a b =
-    case a of
-      [] -> Right b
-      c : d -> type_kind_4 e f c b >>= type_kinds_4 e f d
--}
   type_kinds_5 :: (Location -> Location_1) -> Map' Kind -> [(String, Kind_0)] -> Err [(String, Kind_1)]
   type_kinds_5 f a b =
     case b of
       [] -> Right []
-      (g, c) : d -> type_kind_7 f a Star_kind c >>= \e -> (:) (g, e) <$> type_kinds_5 f a d
+      (g, c) : d -> type_kind_7 f a c >>= \e -> (:) (g, e) <$> type_kinds_5 f a d
   type_match_algebraic ::
     (
       Map' Alg ->

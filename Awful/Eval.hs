@@ -234,7 +234,7 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
     String ->
     Map' (Map' [[String]]) ->
     Map' ([String], Map' [(String, Nat)]) ->
-    Map' Kind ->
+    Set String ->
     Map' Strct ->
     Map' Op ->
     Err String

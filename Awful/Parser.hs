@@ -68,7 +68,7 @@ module Awful.Parser (
       deriving Show
   data Form_0 = Form_0 Name [Type_7] deriving Show
   data Kind_0 = Kind_0 Location Kind_branch_0 deriving (Eq, Show)
-  data Kind_branch_0 = Application_kind_0 Kind_0 Kind_0 | Name_kind_0 String deriving (Eq, Show)
+  data Kind_branch_0 = Application_kind_0 Kind_0 Kind_0 | Function_kind_0 Kind_0 Kind_0 | Name_kind_0 String deriving (Eq, Show)
   data Match_Algebraic_0 = Match_Algebraic_0 Name [Pat] Expression_0 deriving Show
   data Match_Int_0 = Match_Int_0 Location Integer Expression_0 deriving Show
   data Match_Modular_0 = Match_Modular_0 Location Modular Expression_0 deriving Show
@@ -157,13 +157,11 @@ module Awful.Parser (
   parse_arrow' p = p <* parse_arrow <*> parse_expression'
   parse_arrow_kind :: Parser Kind_branch_0
   parse_arrow_kind =
-    (
-      (\x -> \y -> Application_kind_0 (Kind_0 y (Application_kind_0 (Kind_0 y (Name_kind_0 "!Function")) x))) <$>
-      (Kind_0 <&> (parse_round parse_arrow_kind <+> parse_application_kind <+> parse_name_kind)) <*>
-      parse_arrow_loc <*>
-      parse_kind)
-  parse_arrow_loc :: Parser Location
-  parse_arrow_loc = id <& parse_arrow
+    do
+      x <- Kind_0 <&> (parse_round parse_arrow_kind <+> parse_application_kind <+> parse_name_kind)
+      parse_arrow
+      y <- parse_kind
+      return (Function_kind_0 x y)
   parse_basic :: Parser Def_0
   parse_basic =
     (

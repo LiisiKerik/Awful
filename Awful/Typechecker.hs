@@ -143,7 +143,7 @@ module Awful.Typechecker (
         deriving Show
   data Form_2 = Form_2 String [Type_1] deriving Show
   data Kind = Arrow_kind Kind | Star_kind deriving (Eq, Show)
-  data Kind_1 = Application_kind_1 Kind_1 Kind_1 | Name_kind_1 String deriving (Eq, Show)
+  data Kind_1 = Application_kind_1 Kind_1 Kind_1 | Function_kind_1 Kind_1 Kind_1 | Name_kind_1 String deriving (Eq, Show)
   data Match_Algebraic_2 = Match_Algebraic_2 [Pat_1] Expression_2 deriving Show
   data Matches_2 =
     Matches_Algebraic_2 (Map' Match_Algebraic_2) (Maybe Expression_2) |
@@ -266,8 +266,6 @@ module Awful.Typechecker (
             [("T", star_kind)]
             (Data.Map.fromList [("Nothing", []), ("Wrap", [Name_type_1 "T"])]) (maybe_type (Name_type_1 "T"))),
         ("Nat", Alg [] (Data.Map.fromList [("Next", [Name_type_1 "Nat"]), ("Zr", [])]) (Name_type_1 "Nat"))]
-  arrow_kind :: Kind_1 -> Kind_1 -> Kind_1
-  arrow_kind a = Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") a)
   chain_constraints :: Maybe String -> Map' Class_5 -> Map' (Map' [String]) -> String -> Map' (Map' [String])
   chain_constraints a b c e =
     case a of
@@ -498,13 +496,7 @@ module Awful.Typechecker (
           Nxt e -> getarg d e
           Zr -> c
   hkinds :: Map' Kind
-  hkinds =
-    Data.Map.fromList
-      [
-        ("!Comparison", Star_kind),
-        ("!Function", Arrow_kind (Arrow_kind Star_kind)),
-        ("!Nat", Star_kind),
-        ("Star", Star_kind)]
+  hkinds = Data.Map.fromList [("!Comparison", Star_kind), ("!Nat", Star_kind), ("Star", Star_kind)]
   init_type_context :: (File, Map' Op)
   init_type_context =
     (
@@ -538,13 +530,13 @@ module Awful.Typechecker (
         ("!EQ", comparison_kind),
         ("!GT", comparison_kind),
         ("!LT", comparison_kind),
-        ("!Next", arrow_kind nat_kind nat_kind),
+        ("!Next", Function_kind_1 nat_kind nat_kind),
         ("!Zr", nat_kind),
         ("Comparison", star_kind),
-        ("Function", arrow_kind star_kind (arrow_kind star_kind star_kind)),
+        ("Function", Function_kind_1 star_kind (Function_kind_1 star_kind star_kind)),
         ("Int", star_kind),
-        ("Maybe", arrow_kind star_kind star_kind),
-        ("Modular", arrow_kind nat_kind star_kind),
+        ("Maybe", Function_kind_1 star_kind star_kind),
+        ("Modular", Function_kind_1 nat_kind star_kind),
         ("Nat", star_kind)]
   location_err' :: String -> Location_1 -> Location_1 -> String
   location_err' a b = location_err a (Library b)
@@ -936,7 +928,7 @@ module Awful.Typechecker (
       [] -> if a == g then Right ([], c, x, c0, c') else e
       h : d ->
         case a of
-          Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") l) f ->
+          Function_kind_1 l f ->
             let
               i j k =
                 (
@@ -1137,7 +1129,7 @@ module Awful.Typechecker (
           type_kinds_5 q o e >>=
           \m ->
             let
-              p = Prelude.foldr arrow_kind star_kind (Name_kind_1 "!Nat" : (snd <$> m))
+              p = Prelude.foldr Function_kind_1 star_kind (Name_kind_1 "!Nat" : (snd <$> m))
             in
               (
                 (\n ->
@@ -1195,7 +1187,7 @@ module Awful.Typechecker (
           (
             (\p ->
               let
-                y = Prelude.foldr arrow_kind star_kind (snd <$> p)
+                y = Prelude.foldr Function_kind_1 star_kind (snd <$> p)
               in
                 ((ins_new a y i, l, m, Data.Map.insert a y x), Data_3 a (Plain_data_3 p c))) <$>
             type_kinds_5 q o b)
@@ -1851,6 +1843,11 @@ module Awful.Typechecker (
             case h of
               Arrow_kind j -> (\k -> (Application_kind_1 g k, j)) <$> type_kind_7 a b Star_kind f
               Star_kind -> kind_err (a c))
+      Function_kind_0 e f ->
+        do
+          g <- type_kind_7 a b Star_kind e
+          h <- type_kind_7 a b Star_kind f
+          return (Function_kind_1 g h, Star_kind)
       Name_kind_0 e -> und_err e b "kind" (a c) (\f -> Right (Name_kind_1 e, f))
   type_kind_7 :: (Location -> Location_1) -> Map' Kind -> Kind -> Kind_0 -> Err Kind_1
   type_kind_7 a b c (Kind_0 d e) =
@@ -1862,6 +1859,10 @@ module Awful.Typechecker (
             case i of
               Arrow_kind k -> if k == c then Application_kind_1 h <$> type_kind_7 a b Star_kind g else kind_err (a d)
               Star_kind -> kind_err (a d))
+      Function_kind_0 f g ->
+        case c of
+          Arrow_kind _ -> kind_err (a d)
+          Star_kind -> Function_kind_1 <$> type_kind_7 a b Star_kind f <*> type_kind_7 a b Star_kind g
       Name_kind_0 f -> und_err f b "kind" (a d) (\g -> if g == c then Right (Name_kind_1 f) else kind_err (a d))
   type_kinds :: [(String, Kind_1)] -> Map' Kind_1 -> Map' Kind_1
   type_kinds a b =
@@ -2200,8 +2201,7 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
             type_type' l a f d y >>=
             \(h, i) ->
               case i of
-                Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") j) k ->
-                  if k == e then Application_type_1 h <$> type_type l a g d y j else x
+                Function_kind_1 j k -> if k == e then Application_type_1 h <$> type_type l a g d y j else x
                 _ -> x)
         Name_type_5 (Name a' f) -> und_err f d "type" (l a') (\ g -> if g == e then Right (Name_type_1 f) else x)
   type_type' :: (Location -> Location_1) -> Location -> Type_5 -> Map' Kind_1 -> Map' Kind -> Err (Type_1, Kind_1)
@@ -2212,8 +2212,7 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
           type_type' l a e d y >>=
           \(g, h) ->
             case h of
-              Application_kind_1 (Application_kind_1 (Name_kind_1 "!Function") i) j ->
-                (\k -> (Application_type_1 g k, j)) <$> type_type l a f d y i
+              Function_kind_1 i j -> (\k -> (Application_type_1 g k, j)) <$> type_type l a f d y i
               _ -> kind_err (l a))
       Name_type_5 (Name a' e) -> und_err e d "type" (l a') (\ f -> Right (Name_type_1 e, f))
   type_types :: (Location -> Location_1) -> [Type_8] -> Map' Kind_1 -> Map' Kind -> Err [Type_1]

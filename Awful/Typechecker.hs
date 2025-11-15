@@ -136,7 +136,6 @@ module Awful.Typechecker (
       (Map' Class_5)
       (Map' (Map' [[String]]))
       (Map' Kind_1)
-      (Map' Prom_alg)
       (Map' Strct)
         deriving Show
   data Form_2 = Form_2 String [Type_1] deriving Show
@@ -388,7 +387,7 @@ module Awful.Typechecker (
         ("Wrap", "Maybe"),
         ("Zr", "Nat")]
   context_union :: (File, Map' Op) -> (File, Map' Op) -> (File, Map' Op)
-  context_union (File b i j d e q t g o d', t0) (File f k l h m r u n p m', t2) =
+  context_union (File b i j d e q t g d', t0) (File f k l h m r u n m', t2) =
     (
       File
         (Data.Map.union b f)
@@ -399,7 +398,6 @@ module Awful.Typechecker (
         (Data.Map.union q r)
         (unionWith Data.Map.union t u)
         (Data.Map.union g n)
-        (Data.Map.union o p)
         (Data.Map.union d' m'),
       Data.Map.union t0 t2)
   defs :: Map' Expression_2
@@ -489,7 +487,7 @@ module Awful.Typechecker (
   hkinds = Data.Set.fromList ["!Nat", "Star"]
   init_type_context :: (File, Map' Op)
   init_type_context =
-    (File kinds algebraics constrs types classes_0 classes_1 instances classes_2 prom_algs Data.Map.empty, Data.Map.empty)
+    (File kinds algebraics constrs types classes_0 classes_1 instances classes_2 Data.Map.empty, Data.Map.empty)
   instances :: Map' (Map' [[String]])
   instances =
     Data.Map.fromList
@@ -585,8 +583,6 @@ module Awful.Typechecker (
   next_type = Application_type_1 (Name_type_1 "!Next")
   old' :: Map' (Map' t) -> Map' (Map' (t, Status))
   old' = (<$>) old
-  prom_algs :: Map' Prom_alg
-  prom_algs = Data.Map.fromList [("!Nat", Prom_alg (Data.Map.fromList [("!Next", [nat_kind]), ("!Zr", [])]))]
   rem_old' :: Map' (Map' (t, Status)) -> Map' (Map' t)
   rem_old' a = Data.Map.filter (\b -> not (Data.Map.null b)) (rem_old <$> a)
   repl' :: Map' Type_1 -> Type_1 -> Type_1
@@ -1206,29 +1202,12 @@ module Awful.Typechecker (
   type_datas ::
     (Location -> Location_1) ->
     [Data_2] ->
-    (
-      Map' (Kind_1, Status),
-      Algebraics,
-      Constrs,
-      Types,
-      Map' Expression_2,
-      Map' Kind_1,
-      Map' (Prom_alg, Status),
-      Map' (Strct, Status)) ->
-    Err
-      (
-        Map' (Kind_1, Status),
-        Algebraics,
-        Constrs,
-        Types,
-        Map' Expression_2,
-        Map' Kind_1,
-        Map' (Prom_alg, Status),
-        Map' (Strct, Status))
-  type_datas h a (b, i, j, d, c, m, a0, a7) =
+    (Map' (Kind_1, Status), Algebraics, Constrs, Types, Map' Expression_2, Map' Kind_1, Map' (Strct, Status)) ->
+    Err (Map' (Kind_1, Status), Algebraics, Constrs, Types, Map' Expression_2, Map' Kind_1, Map' (Strct, Status))
+  type_datas h a (b, i, j, d, c, m, a7) =
     (
       type_datas_1 h a (b, j, c, m) >>=
-      \((u, v, w, a'), y) -> (\(b', c', t2) -> (u, b', v, c', w, a', a0, t2)) <$> type_datas_2 h y (fst <$> u) (i, d, a7))
+      \((u, v, w, a'), y) -> (\(b', c', t2) -> (u, b', v, c', w, a', t2)) <$> type_datas_2 h y (fst <$> u) (i, d, a7))
   type_datas_1 ::
     (
       (Location -> Location_1) ->
@@ -2280,10 +2259,10 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
     Tree_5 ->
     (File, Map' Expression_2, Map' Kind_1, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])) ->
     Err (File, Map' Expression_2, Map' Kind_1, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)]))
-  typing k (Tree_5 a a' x7 c) (File d t u v b' c5 x t2 u0 k7, l, m, m', n4) =
+  typing k (Tree_5 a a' x7 c) (File d t u v b' c5 x t2 k7, l, m, m', n4) =
     (
-      type_datas (Location_1 k) a (old d, old t, old u, old v, l, m, old u0, old k7) >>=
-      \(e, b, h, g, f, n, u1, k8) ->
+      type_datas (Location_1 k) a (old d, old t, old u, old v, l, m, old k7) >>=
+      \(e, b, h, g, f, n, k8) ->
         (
           type_classes k (fst <$> e) a' (old b', m', g, n4, old t2, old c5) >>=
           \(c', m2, g0, x1, x2, t3) ->
@@ -2299,7 +2278,6 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
                     (rem_old t3)
                     (rem_old' y)
                     (rem_old x2)
-                    (rem_old u1)
                     (rem_old k8),
                   i,
                   n,

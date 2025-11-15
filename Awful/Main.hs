@@ -126,7 +126,7 @@ module Main (main) where
     return
       (
         c >>=
-        \((_, (e, t, _), f, j, _, y), (File _ g h i _ _ m _ _ z, u)) ->
+        \((_, (e, t, _), f, j, _, y), (File _ g h i _ _ m _ z, u)) ->
           tokenise_parse_naming_typing_eval (e, t) j (g, h, i) f b m y z u)
   init' ::
     (

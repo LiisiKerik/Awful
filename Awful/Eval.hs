@@ -234,17 +234,16 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
     String ->
     Map' (Map' [[String]]) ->
     Map' ([String], Map' [(String, Nat)]) ->
-    Set String ->
     Map' Strct ->
     Map' Op ->
     Err String
-  tokenise_parse_naming_typing_eval c f (g, h, i) l b u v w a q =
+  tokenise_parse_naming_typing_eval c f (g, h, i) l b u v a q =
     (
       parse_expression b >>=
       \e ->
         (
           std_expr (Location_1 "input") q e >>=
-          \e' -> naming_expression "input" e' c >>= \j -> eval l <$> type_expr' (f, g, h, i, w) j u v a))
+          \e' -> naming_expression "input" e' c >>= \j -> eval l <$> type_expr' (f, g, h, i) j u v a))
   tostr :: Expression_2 -> String
   tostr expr =
     case expr of

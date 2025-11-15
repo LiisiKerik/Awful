@@ -3,7 +3,7 @@ Load Logical.awf
 Load Ord.awf
 Load Standard.awf
 Load Unit.awf
-Class Commutative{_ : Star}<Ring>
+Class Commutative{_ : Type}<Ring>
 Instance Commutative{Complex T}<Commutative T>
 Instance Commutative{Unit}
 Instance Ring{Complex T}<Ring T>(

@@ -1,6 +1,6 @@
 Load List.awf
 Load Standard.awf
-Struct Pair[T : Star, U : Star](First : T, Second : U)
+Struct Pair[T : Type, U : Type](First : T, Second : U)
 Instance Functor{Pair _}(Fmap = Map_right)
 Instance Ring{Pair T U}<Ring T, Ring U>(
   Add (Pair x y) (Pair z a) = Pair (x + z) (y + a),

@@ -1,26 +1,26 @@
-Class Applicative{F : Star -> Star}<Functor>(Apply[T : Star, U : Star] : F (T -> U) -> F T -> F U, Return[T : Star] : T -> F T)
-Class Symmetric{F : Star -> Star -> Star}(
-  Associate[T : Star, U : Star, V : Star] : F (F T U) V -> F T (F U V),
-  Bimap[T : Star, U : Star, V : Star, W : Star] : (T -> U) -> (V -> W) -> F T V -> F U W,
-  Commute[T : Star, U : Star] : F T U -> F U T)
-Class Functor{F : Star -> Star}(Fmap[T : Star, U : Star] : (T -> U) -> F T -> F U)
-Class Monad{F : Star -> Star}<Applicative>(Bind[T : Star, U : Star] : F T -> (T -> F U) -> F U)
+Class Applicative{F : Type -> Type}<Functor>(Apply[T : Type, U : Type] : F (T -> U) -> F T -> F U, Return[T : Type] : T -> F T)
+Class Symmetric{F : Type -> Type -> Type}(
+  Associate[T : Type, U : Type, V : Type] : F (F T U) V -> F T (F U V),
+  Bimap[T : Type, U : Type, V : Type, W : Type] : (T -> U) -> (V -> W) -> F T V -> F U W,
+  Commute[T : Type, U : Type] : F T U -> F U T)
+Class Functor{F : Type -> Type}(Fmap[T : Type, U : Type] : (T -> U) -> F T -> F U)
+Class Monad{F : Type -> Type}<Applicative>(Bind[T : Type, U : Type] : F T -> (T -> F U) -> F U)
 Operator * Multiply 0 Left
 Operator + Add 1 Left
 Instance Applicative{Function _}(Apply f g x = f x (g x), Return x _ = x)
-Def Convert'[F : Star -> Star, T : Star]<Applicative F, Ring T>(x : Int) : F T = Return (Convert x)
-Def Flatten[F : Star -> Star, T : Star]<Monad F>(x : F (F T)) : F T = Bind x Id
+Def Convert'[F : Type -> Type, T : Type]<Applicative F, Ring T>(x : Int) : F T = Return (Convert x)
+Def Flatten[F : Type -> Type, T : Type]<Monad F>(x : F (F T)) : F T = Bind x Id
 Instance Functor{Function _}(Fmap f g x = f (g x))
-Def Id[T : Star](x : T) : T = x
-Def Identity[T : Star]<Ring T> : T = Convert 1
-Def Map_left[T : Star, U : Star, F : Star -> Star -> Star, V : Star]<Symmetric F>(f : T -> U) : F T V -> F U V = Bimap f Id
-Def Map_right[T : Star, U : Star, F : Star -> Star -> Star, V : Star]<Symmetric F> : (T -> U) -> F V T -> F V U = Bimap Id
-Def Minus[T : Star]<Ring T>(x : T, y : T) : T = x + Negate y
+Def Id[T : Type](x : T) : T = x
+Def Identity[T : Type]<Ring T> : T = Convert 1
+Def Map_left[T : Type, U : Type, F : Type -> Type -> Type, V : Type]<Symmetric F>(f : T -> U) : F T V -> F U V = Bimap f Id
+Def Map_right[T : Type, U : Type, F : Type -> Type -> Type, V : Type]<Symmetric F> : (T -> U) -> F V T -> F V U = Bimap Id
+Def Minus[T : Type]<Ring T>(x : T, y : T) : T = x + Negate y
 Instance Monad{Function _}(Bind f g x = g (f x) x)
-Def Multiply'[F : Star -> Star, T : Star]<Applicative F, Ring T> : F T -> F T -> F T = Zip Multiply
-Def Negate'[F : Star -> Star, T : Star]<Functor F, Ring T> : F T -> F T = Fmap Negate
-Def Zero[T : Star]<Ring T> : T = Convert 0
-Def Zip[F : Star -> Star, T : Star, U : Star, V : Star]<Applicative F>(f : T -> U -> V, x : F T) : F U -> F V =
+Def Multiply'[F : Type -> Type, T : Type]<Applicative F, Ring T> : F T -> F T -> F T = Zip Multiply
+Def Negate'[F : Type -> Type, T : Type]<Functor F, Ring T> : F T -> F T = Fmap Negate
+Def Zero[T : Type]<Ring T> : T = Convert 0
+Def Zip[F : Type -> Type, T : Type, U : Type, V : Type]<Applicative F>(f : T -> U -> V, x : F T) : F U -> F V =
   Apply (Fmap f x)
 Instance Applicative{Maybe}(Apply x y = Match x {Nothing -> Nothing, Wrap f -> Fmap f y}, Return = Wrap)
 Instance Functor{Maybe}(Fmap f x = Match x {Nothing -> Nothing, Wrap y -> Wrap (f y)})

@@ -228,7 +228,7 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
       (d, e) : f -> subst_pats f b (subst_pat' e (unsafe_lookup d b) c)
   tokenise_parse_naming_typing_eval ::
     (Set String, Locations) ->
-    Map' Kind_1 ->
+    Map' Kind ->
     (Map' Alg, Map' String, Map' Type_2) ->
     Map' Expression_2 ->
     String ->

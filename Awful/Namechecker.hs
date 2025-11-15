@@ -28,20 +28,20 @@ module Awful.Namechecker (
   import Parser.Locations
   data Brnch_1 = Brnch_1 Name [Name] String [(String, Type_8)] deriving Show
   data Brnch_2 = Brnch_2 Name [String] String [(String, Type_8)] deriving Show
-  data Class_1 = Class_1 String (Name, Kind_0) (Maybe Name) [Method_1] deriving Show
-  data Class_2 = Class_2 String (String, Kind_0) (Maybe Name) [Method_2] deriving Show
+  data Class_1 = Class_1 String (Name, Kind) (Maybe Name) [Method_1] deriving Show
+  data Class_2 = Class_2 String (String, Kind) (Maybe Name) [Method_2] deriving Show
   data Data_1 = Data_1 Name Data_br_1 deriving Show
   data Data_2 = Data_2 Name Data_br_2 deriving Show
-  data Data_br_1 = Branching_data_1 [(Name, Kind_0)] [Brnch_1] | Plain_data_1 [(Name, Kind_0)] Data_branch_1 deriving Show
-  data Data_br_2 = Branching_data_2 [(String, Kind_0)] [Brnch_2] | Plain_data_2 [(String, Kind_0)] Data_branch_1 deriving Show
+  data Data_br_1 = Branching_data_1 [(Name, Kind)] [Brnch_1] | Plain_data_1 [(Name, Kind)] Data_branch_1 deriving Show
+  data Data_br_2 = Branching_data_2 [(String, Kind)] [Brnch_2] | Plain_data_2 [(String, Kind)] Data_branch_1 deriving Show
   data Data_branch_1 = Algebraic_data_1 [Form_1] | Struct_data_1 [(String, Type_8)] deriving Show
   data Def_2 =
-    Basic_def_2 Location String [(Name, Kind_0)] [Constraint_0] Type_8 Expression_9 |
-    Instance_2 Location Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, Expression_9)]
+    Basic_def_2 Location String [(Name, Kind)] [Constraint_0] Type_8 Expression_9 |
+    Instance_2 Location Name Name [Kind] [Pattern_1] [Constraint_0] [(Name, Expression_9)]
       deriving Show
   data Def_3 =
-    Basic_def_3 Location String [(String, Kind_0)] [Constraint_0] Type_8 Expression_1 |
-    Instance_3 Location Name Name [Kind_0] [Pattern_0] [Constraint_0] [(Name, Expression_1)]
+    Basic_def_3 Location String [(String, Kind)] [Constraint_0] Type_8 Expression_1 |
+    Instance_3 Location Name Name [Kind] [Pattern_0] [Constraint_0] [(Name, Expression_1)]
       deriving Show
   data Expression_1 =
     Application_expression_1 Expression_1 Expression_1 |
@@ -61,8 +61,8 @@ module Awful.Namechecker (
     Matches_Int_1 [Match_Int_1] Expression_1 |
     Matches_Modular_1 [Match_Modular_1] (Maybe (Location, Expression_1))
       deriving Show
-  data Method_1 = Method_1 String [(Name, Kind_0)] [Constraint_0] Type_8 deriving Show
-  data Method_2 = Method_2 String [(String, Kind_0)] [Constraint_0] Type_8 deriving Show
+  data Method_1 = Method_1 String [(Name, Kind)] [Constraint_0] Type_8 deriving Show
+  data Method_2 = Method_2 String [(String, Kind)] [Constraint_0] Type_8 deriving Show
   data Tree_4 = Tree_4 [Data_1] [Class_1] [Name] [Def_2] deriving Show
   data Tree_5 = Tree_5 [Data_2] [Class_2] [Name] [Def_3] deriving Show
   add :: Ord t => Map t u -> t -> u -> Either u (Map t u)

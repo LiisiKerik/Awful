@@ -4,13 +4,13 @@ Load Ord.awf
 Load Pair.awf
 Load Standard.awf
 Load Unit.awf
-Class Finite{T : Star}<Ord>(All : List T)
-Class Finite_Modular{N : !Nat}(All_Modular : List (Modular N))
-Def All_Modular'[N : !Nat]<Nonzero N>(x : Modular N, y : List (Modular N)) : List (Modular N) =
+Class Finite{T : Type}<Ord>(All : List T)
+Class Finite_Modular{N : Nat}(All_Modular : List (Modular N))
+Def All_Modular'[N : Nat]<Nonzero N>(x : Modular N, y : List (Modular N)) : List (Modular N) =
   Let z = Construct_List x y In Match (Equal Zero) x {False -> All_Modular' (Minus x Identity) z, True -> z}
 Instance Finite{Comparison}(All = Construct_List LT (Construct_List EQ (Construct_List GT Empty_List)))
 Instance Finite{Logical}(All = Construct_List False (Construct_List True Empty_List))
 Instance Finite{Maybe T}<Finite T>(All = Construct_List Nothing (Fmap Wrap All))
 Instance Finite{Pair T U}<Finite T, Finite U>(All = Zip Pair All All)
 Instance Finite{Unit}(All = Return Unit)
-Instance Finite_Modular{!Zr}(All_Modular = Empty_List)
+Instance Finite_Modular{Zr}(All_Modular = Empty_List)

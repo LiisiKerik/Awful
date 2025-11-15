@@ -34,15 +34,14 @@ module Awful.Operators (
   import Data.Map
   import Parser.Locations
   data Brnch_6 = Brnch_6 Name [Name] Name [(Name, Type_8)] deriving Show
-  data Class_7 = Class_7 Name (Name, Kind_0) (Maybe Name) [Method_9] deriving Show
+  data Class_7 = Class_7 Name (Name, Kind) (Maybe Name) [Method_9] deriving Show
   data Def_1 =
-    Basic_def_1 Name [(Name, Kind_0)] [Constraint_0] Type_8 Expression_9 |
-    Instance_1 Location Name Name [Kind_0] [Pattern_1] [Constraint_0] [(Name, Expression_9)]
+    Basic_def_1 Name [(Name, Kind)] [Constraint_0] Type_8 Expression_9 |
+    Instance_1 Location Name Name [Kind] [Pattern_1] [Constraint_0] [(Name, Expression_9)]
       deriving Show
   data Data_6 = Data_6 Name Data_br_6 deriving Show
-  data Data_br_6 = Branching_data_6 [(Name, Kind_0)] [Brnch_6] | Plain_data_6 [(Name, Kind_0)] Data_branch_6 deriving Show
-  data Data_branch_6 = Algebraic_data_6 [Form_6] | Struct_data_6 [(Name, Type_8)]
-    deriving Show
+  data Data_br_6 = Branching_data_6 [(Name, Kind)] [Brnch_6] | Plain_data_6 [(Name, Kind)] Data_branch_6 deriving Show
+  data Data_branch_6 = Algebraic_data_6 [Form_6] | Struct_data_6 [(Name, Type_8)] deriving Show
   data Eqq' = Eqq' Name [Pat] Expression_9 deriving Show
   data Expression_9 =
     Application_expression_9 Expression_9 Expression_9 |
@@ -64,7 +63,7 @@ module Awful.Operators (
     Matches_Int_9 [Match_Int_9] Expression_9 |
     Matches_Modular_9 [Match_Modular_9] (Maybe (Location, Expression_9))
       deriving Show
-  data Method_9 = Method_9 Name [(Name, Kind_0)] [Constraint_0] Type_8 deriving Show
+  data Method_9 = Method_9 Name [(Name, Kind)] [Constraint_0] Type_8 deriving Show
   data Op = Op Integer Assoc String deriving Show
   data Op' = Op' Location Op deriving Show
   data Opdecl_1 = Opdecl_1 Location String Name deriving Show

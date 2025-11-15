@@ -5,14 +5,14 @@ Load Pair.awf
 Load Ring.awf
 Load Standard.awf
 Load Unit.awf
-Class Field{T : Star}<Ring>(Inverse : T -> Maybe T)
+Class Field{T : Type}<Ring>(Inverse : T -> Maybe T)
 Instance Field{Complex T}<Commutative T, Field T>(
   Inverse (Complex x y) = Fmap (z -> Fmap (Multiply z) (Complex x (Negate y))) (Inverse (Pow' 2 x + Pow' 2 y)))
 Instance Field{Int}(Inverse x = Match x {-1 -> Wrap -1, 1 -> Wrap 1, Default -> Nothing})
 Instance Field{Logical}(Inverse x = Match x {False -> Nothing, True -> Wrap True})
 Instance Field{Pair T U}<Field T, Field U>(Inverse (Pair x y) = Zip Pair (Inverse x) (Inverse y))
 Instance Field{Unit}(Inverse = Wrap)
-Def Pow[T : Star]<Field T>(i : Int, x : T) : Maybe T =
+Def Pow[T : Type]<Field T>(i : Int, x : T) : Maybe T =
   Match Less i 0 {False -> Wrap (Pow' i x), True -> Inverse (Pow' (Negate i) x)}
-Def Pow'[T : Star]<Ring T>(i : Int, x : T) : T =
+Def Pow'[T : Type]<Ring T>(i : Int, x : T) : T =
   Match i {0 -> Identity, Default -> Let y = Pow' (Div'{2} i) x, z = y * y In Match Convert i {0 # 2 -> z, 1 # 2 -> x * z}}

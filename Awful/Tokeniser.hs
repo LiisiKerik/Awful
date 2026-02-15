@@ -16,7 +16,6 @@ module Awful.Tokeniser (Err, Location_1 (..), Token (..), classify_char, locatio
   type Err t = Either String t
   data Location_1 = Location_1 String Location deriving Show
   data Token =
-    Algebraic_token |
     Arrow_token |
     Blank_token |
     Branching_token |
@@ -35,12 +34,13 @@ module Awful.Tokeniser (Err, Location_1 (..), Token (..), classify_char, locatio
     Load_token |
     Match_token |
     Name_token String |
+    Named_struct_token |
     Opdecl_token |
     Operator_token String |
     Right_curly_bracket_token |
     Right_round_bracket_token |
     Right_square_bracket_token |
-    Struct_token
+    Unnamed_algebraic_token
   type Tokeniser = Tokeniser' Char_class Token ((Location -> Location_1) -> String)
   deriving instance Eq Char_class
   deriving instance Eq Token
@@ -144,7 +144,6 @@ module Awful.Tokeniser (Err, Location_1 (..), Token (..), classify_char, locatio
   word_token a =
     case a of
       "_" -> Blank_token
-      "Algebraic" -> Algebraic_token
       "Branching" -> Branching_token
       "Case" -> Case_token
       "Class" -> Class_token
@@ -155,6 +154,7 @@ module Awful.Tokeniser (Err, Location_1 (..), Token (..), classify_char, locatio
       "Let" -> Let_token
       "Load" -> Load_token
       "Match" -> Match_token
+      "Named_struct" -> Named_struct_token
       "Operator" -> Opdecl_token
-      "Struct" -> Struct_token
+      "Unnamed_algebraic" -> Unnamed_algebraic_token
       _ -> Name_token a

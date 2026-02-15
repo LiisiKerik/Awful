@@ -1,7 +1,7 @@
 Load Finite.awf
 Load List.awf
 Load Standard.awf
-Algebraic Either[T : Type, U : Type](Left T, Right U)
+Unnamed_algebraic Either[T : Type, U : Type](Left T, Right U)
 Instance Applicative{Either _}(Apply x y = Match x {Left z -> Left z, Right f -> Fmap f y}, Return = Right)
 Instance Finite{Either T U}<Finite T, Finite U>(All = Cat (Fmap Left All) (Fmap Right All))
 Instance Functor{Either _}(Fmap = Map_right)

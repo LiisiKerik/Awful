@@ -54,7 +54,7 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
                       _ -> undefined
                   Compare_Int_1_expression_2 k ->
                     case j of
-                      Int_expression_2 l -> Just (Algebraic_expression_2 (show (compare k l)) [])
+                      Int_expression_2 l -> Just (Unnamed_algebraic_expression_2 (show (compare k l)) [])
                       _ -> undefined
                   Compare_Modular_0_expression_2 ->
                     case j of
@@ -62,7 +62,7 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
                       _ -> undefined
                   Compare_Modular_1_expression_2 k ->
                     case j of
-                      Modular_expression_2 l -> Just (Algebraic_expression_2 (show (compare k l)) [])
+                      Modular_expression_2 l -> Just (Unnamed_algebraic_expression_2 (show (compare k l)) [])
                       _ -> undefined
                   Convert_Int_expression_2 -> Just j
                   Convert_Modular_expression_2 k ->
@@ -87,7 +87,7 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
                       _ -> undefined
                   Field_expression_2 k ->
                     case j of
-                      Struct_expression_2 _ l -> Just (unsafe_lookup k l)
+                      Named_struct_expression_2 _ l -> Just (unsafe_lookup k l)
                       _ -> undefined
                   Function_expression_2 k l -> eval' a (subst_pat' k j l)
                   Inverse_Modular_expression_2 k ->
@@ -141,11 +141,11 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
             eval'
               a
               (case e of
-                Matches_Algebraic_2 i j ->
+                Matches_unnamed_algebraic_2 i j ->
                   case h of
-                    Algebraic_expression_2 k l ->
+                    Unnamed_algebraic_expression_2 k l ->
                       case Data.Map.lookup k i of
-                        Just (Match_Algebraic_2 o p) -> eval_match o l p
+                        Just (Match_unnamed_algebraic_2 o p) -> eval_match o l p
                         Nothing ->
                           case j of
                             Just o -> o
@@ -182,27 +182,25 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
           [] -> undefined
           f : g -> eval_match e g (subst_pat' d f c)
   nothing_algebraic :: Expression_2
-  nothing_algebraic = Algebraic_expression_2 "Nothing" []
-  subst_algebraic :: String -> Expression_2 -> Match_Algebraic_2 -> Match_Algebraic_2
-  subst_algebraic a b (Match_Algebraic_2 c d) = Match_Algebraic_2 c (if subst_help a c then d else subst_expr a d b)
+  nothing_algebraic = Unnamed_algebraic_expression_2 "Nothing" []
   subst_expr :: String -> Expression_2 -> Expression_2 -> Expression_2
   subst_expr a b c =
     let
       f x = subst_expr a x c
     in
       case b of
-        Algebraic_expression_2 d e -> Algebraic_expression_2 d (f <$> e)
         Application_expression_2 d e -> Application_expression_2 (f d) (f e)
         Function_expression_2 d e -> Function_expression_2 d (if subst_pat a d then e else f e)
         Match_expression_2 d e ->
           Match_expression_2
             (f d)
             (case e of
-              Matches_Algebraic_2 g h -> Matches_Algebraic_2 (subst_algebraic a c <$> g) (f <$> h)
+              Matches_unnamed_algebraic_2 g h -> Matches_unnamed_algebraic_2 (subst_unnamed_algebraic a c <$> g) (f <$> h)
               Matches_Int_2 g h -> Matches_Int_2 (f <$> g) (f h)
               Matches_Modular_2 g h -> Matches_Modular_2 (f <$> g) (f <$> h))
         Name_expression_2 d -> if d == a then c else b
-        Struct_expression_2 s5 d -> Struct_expression_2 s5 (f <$> d)
+        Named_struct_expression_2 s5 d -> Named_struct_expression_2 s5 (f <$> d)
+        Unnamed_algebraic_expression_2 d e -> Unnamed_algebraic_expression_2 d (f <$> e)
         _ -> b
   subst_help :: String -> [Pat_1] -> Bool
   subst_help a b = or (subst_pat a <$> b)
@@ -217,7 +215,7 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
     case a of
       Application_pat_1 d ->
         case b of
-          Struct_expression_2 _ e -> subst_pats d e c
+          Named_struct_expression_2 _ e -> subst_pats d e c
           _ -> undefined
       Blank_pat_1 -> c
       Name_pat_1 d -> subst_expr d c b
@@ -226,15 +224,18 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
     case a of
       [] -> c
       (d, e) : f -> subst_pats f b (subst_pat' e (unsafe_lookup d b) c)
+  subst_unnamed_algebraic :: String -> Expression_2 -> Match_unnamed_algebraic_2 -> Match_unnamed_algebraic_2
+  subst_unnamed_algebraic a b (Match_unnamed_algebraic_2 c d) =
+    Match_unnamed_algebraic_2 c (if subst_help a c then d else subst_expr a d b)
   tokenise_parse_naming_typing_eval ::
     (Set String, Locations) ->
     Map' Kind ->
-    (Map' Alg, Map' String, Map' Type_2) ->
+    (Map' Unnamed_alg, Map' String, Map' Type_2) ->
     Map' Expression_2 ->
     String ->
     Map' (Map' [[String]]) ->
     Map' ([String], Map' [(String, Nat)]) ->
-    Map' Strct ->
+    Map' Named_strct ->
     Map' Op ->
     Err String
   tokenise_parse_naming_typing_eval c f (g, h, i) l b u v a q =
@@ -247,14 +248,14 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
   tostr :: Expression_2 -> String
   tostr expr =
     case expr of
-      Algebraic_expression_2 name exprs -> intercalate " " (name : (tostr_brackets <$> exprs))
       Int_expression_2 i -> show i
       Modular_expression_2 i -> show i
-      Struct_expression_2 name fields -> name <> " {" <> intercalate ", " (tostr_brackets' <$> assocs fields) <> "}"
+      Named_struct_expression_2 name fields -> name <> " {" <> intercalate ", " (tostr_brackets' <$> assocs fields) <> "}"
+      Unnamed_algebraic_expression_2 name exprs -> intercalate " " (name : (tostr_brackets <$> exprs))
       _ -> "The result is an expression that can't be displayed."
   tostr_brackets :: Expression_2 -> String
   tostr_brackets expr = "(" <> tostr expr <> ")"
   tostr_brackets' :: (String, Expression_2) -> String
   tostr_brackets' (name, expr) = name <> " = " <> tostr expr
   wrap_algebraic :: Expression_2 -> Expression_2
-  wrap_algebraic x = Algebraic_expression_2 "Wrap" [x]
+  wrap_algebraic x = Unnamed_algebraic_expression_2 "Wrap" [x]

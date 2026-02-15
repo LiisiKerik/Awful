@@ -7,12 +7,11 @@ module Awful.Operators (
   Def_1 (..),
   Eqq' (..),
   Expression_9 (..),
-  Form_6 (..),
   Location' (..),
   Map',
-  Match_Algebraic_9 (..),
   Match_Int_9 (..),
   Match_Modular_9 (..),
+  Match_unnamed_algebraic_9 (..),
   Matches_9 (..),
   Method_9 (..),
   Op,
@@ -22,6 +21,7 @@ module Awful.Operators (
   Tree_3 (..),
   Type_5 (..),
   Type_8 (..),
+  Unnamed_form_6 (..),
   ins_new,
   old,
   rem_old,
@@ -41,7 +41,7 @@ module Awful.Operators (
       deriving Show
   data Data_6 = Data_6 Name Data_br_6 deriving Show
   data Data_br_6 = Branching_data_6 [(Name, Kind)] [Brnch_6] | Plain_data_6 [(Name, Kind)] Data_branch_6 deriving Show
-  data Data_branch_6 = Algebraic_data_6 [Form_6] | Struct_data_6 [(Name, Type_8)] deriving Show
+  data Data_branch_6 = Named_struct_data_6 [(Name, Type_8)] | Unnamed_algebraic_data_6 [Unnamed_form_6] deriving Show
   data Eqq' = Eqq' Name [Pat] Expression_9 deriving Show
   data Expression_9 =
     Application_expression_9 Expression_9 Expression_9 |
@@ -52,16 +52,15 @@ module Awful.Operators (
     Modular_expression_9 Modular |
     Name_expression_9 Name (Maybe Type_8) [Type_8]
       deriving Show
-  data Form_6 = Form_6 Name [Type_8] deriving Show
   data Location' = Language | Library Location_1 deriving Show
   type Map' t = Map String t
-  data Match_Algebraic_9 = Match_Algebraic_9 Name [Pat] Expression_9 deriving Show
   data Match_Int_9 = Match_Int_9 Location Integer Expression_9 deriving Show
   data Match_Modular_9 = Match_Modular_9 Location Modular Expression_9 deriving Show
+  data Match_unnamed_algebraic_9 = Match_unnamed_algebraic_9 Name [Pat] Expression_9 deriving Show
   data Matches_9 =
-    Matches_Algebraic_9 [Match_Algebraic_9] (Maybe (Location, Expression_9)) |
     Matches_Int_9 [Match_Int_9] Expression_9 |
-    Matches_Modular_9 [Match_Modular_9] (Maybe (Location, Expression_9))
+    Matches_Modular_9 [Match_Modular_9] (Maybe (Location, Expression_9)) |
+    Matches_unnamed_algebraic_9 [Match_unnamed_algebraic_9] (Maybe (Location, Expression_9))
       deriving Show
   data Method_9 = Method_9 Name [(Name, Kind)] [Constraint_0] Type_8 deriving Show
   data Op = Op Integer Assoc String deriving Show
@@ -72,6 +71,7 @@ module Awful.Operators (
   data Tree_3 = Tree_3 [Name] Tree_2 deriving Show
   data Type_5 = Application_type_5 Type_5 Type_5 | Name_type_5 Name deriving Show
   data Type_8 = Type_8 Location Type_5 deriving Show
+  data Unnamed_form_6 = Unnamed_form_6 Name [Type_8] deriving Show
   gather_ops :: (Location -> Location_1) -> Map' (Op, Status) -> [Opdecl_0] -> (Map' (Op, Status), [Opdecl_1])
   gather_ops a b c =
     case c of
@@ -170,8 +170,11 @@ module Awful.Operators (
           (
             Plain_data_6 d <$>
             case e of
-              Algebraic_data_0 f -> Algebraic_data_6 <$> traverse (\(Form_0 g h) -> Form_6 g <$> traverse (std_type a) h) f
-              Struct_data_0 f -> Struct_data_6 <$> traverse (\(g, h) -> (,) g <$> std_type a h) f))
+              Named_struct_data_0 f -> Named_struct_data_6 <$> traverse (\(g, h) -> (,) g <$> std_type a h) f
+              Unnamed_algebraic_data_0 f ->
+                (
+                  Unnamed_algebraic_data_6 <$>
+                  traverse (\(Unnamed_form_0 g h) -> Unnamed_form_6 g <$> traverse (std_type a) h) f)))
   std_default :: (Location -> Location_1) -> Map' Op -> Maybe (Location, Expression_0)  -> Err (Maybe (Location, Expression_9))
   std_default a f b =
     case b of
@@ -193,18 +196,19 @@ module Awful.Operators (
         shunting_yard a (std_expr a f, Application_expression_9, \e -> Name_expression_9 e Nothing []) f [] c d
   std_inst :: (Location -> Location_1) -> Map' Op -> (Name, ([Pat], Expression_0)) -> Err (Name, Expression_9)
   std_inst a f (b, (c, d)) = (\e -> (b, Prelude.foldr Function_expression_9 e c)) <$> std_expr a f d
-  std_match_alg :: (Location -> Location_1) -> Map' Op -> Match_Algebraic_0 -> Err Match_Algebraic_9
-  std_match_alg a e (Match_Algebraic_0 b c d) = Match_Algebraic_9 b c <$> std_expr a e d
   std_match_int :: (Location -> Location_1) -> Map' Op -> Match_Int_0 -> Err Match_Int_9
   std_match_int a e (Match_Int_0 b c d) = Match_Int_9 b c <$> std_expr a e d
   std_match_modular :: (Location -> Location_1) -> Map' Op -> Match_Modular_0 -> Err Match_Modular_9
   std_match_modular a e (Match_Modular_0 b d c) = Match_Modular_9 b d <$> std_expr a e c
+  std_match_unnamed_alg :: (Location -> Location_1) -> Map' Op -> Match_unnamed_algebraic_0 -> Err Match_unnamed_algebraic_9
+  std_match_unnamed_alg a e (Match_unnamed_algebraic_0 b c d) = Match_unnamed_algebraic_9 b c <$> std_expr a e d
   std_matches :: (Location -> Location_1) -> Map' Op -> Matches_0 -> Err Matches_9
   std_matches a e b =
     case b of
-      Matches_Algebraic_0 c d -> Matches_Algebraic_9 <$> traverse (std_match_alg a e) c <*> std_default a e d
       Matches_Int_0 c d -> Matches_Int_9 <$> traverse (std_match_int a e) c <*> std_expr a e d
       Matches_Modular_0 c d -> Matches_Modular_9 <$> traverse (std_match_modular a e) c <*> std_default a e d
+      Matches_unnamed_algebraic_0 c d ->
+        Matches_unnamed_algebraic_9 <$> traverse (std_match_unnamed_alg a e) c <*> std_default a e d
   std_mthd :: (Location -> Location_1) -> Method -> Err Method_9
   std_mthd a (Method b c d e) = Method_9 b c d <$> std_type a e
   std_type :: (Location -> Location_1) -> Type_7 -> Err Type_8

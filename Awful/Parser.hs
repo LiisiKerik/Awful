@@ -15,11 +15,10 @@ module Awful.Parser (
   Def_0 (..),
   Eqq (..),
   Expression_0 (..),
-  Form_0 (..),
   Kind (..),
-  Match_Algebraic_0 (..),
   Match_Int_0 (..),
   Match_Modular_0 (..),
+  Match_unnamed_algebraic_0 (..),
   Matches_0 (..),
   Method (..),
   Modular (..),
@@ -33,13 +32,14 @@ module Awful.Parser (
   Tree_1 (..),
   Type_0 (..),
   Type_7 (..),
+  Unnamed_form_0 (..),
   Get_location (..),
   parse_expression,
   parse_tree) where
   import Awful.Tokeniser
   import Control.Applicative
   import Data.Bifunctor
-  import Data.Either
+  import Data.Maybe
   import Parser.Locations
   import Parser.Parser
   data Assoc = Lft | Rght deriving (Eq, Show)
@@ -48,7 +48,7 @@ module Awful.Parser (
   data Constraint_0 = Constraint_0 Name Name deriving Show
   data Data_0 = Data_0 Name Data_br_0 deriving Show
   data Data_br_0 = Branching_data_0 [(Name, Kind)] [Brnch_0] | Plain_data_0 [(Name, Kind)] Data_branch_0 deriving Show
-  data Data_branch_0 = Algebraic_data_0 [Form_0] | Struct_data_0 [(Name, Type_7)] deriving Show
+  data Data_branch_0 = Named_struct_data_0 [(Name, Type_7)] | Unnamed_algebraic_data_0 [Unnamed_form_0] deriving Show
   data Def_0 =
     Basic_def_0 Name [(Name, Kind)] [Constraint_0] [(Pat, Type_7)] Type_7 Expression_0 |
     Instance_def_0 Location Name Name [Kind] [Pattern_1] [Constraint_0] [(Name, ([Pat], Expression_0))]
@@ -64,15 +64,15 @@ module Awful.Parser (
     Name_expression_0 Name (Maybe Type_7) [Type_7] |
     Op_expression_0 Expression_0 [(Name, Expression_0)]
       deriving Show
-  data Form_0 = Form_0 Name [Type_7] deriving Show
+  data Unnamed_form_0 = Unnamed_form_0 Name [Type_7] deriving Show
   data Kind = Function_kind Kind Kind | Nat_kind | Type_kind deriving (Eq, Show)
-  data Match_Algebraic_0 = Match_Algebraic_0 Name [Pat] Expression_0 deriving Show
   data Match_Int_0 = Match_Int_0 Location Integer Expression_0 deriving Show
   data Match_Modular_0 = Match_Modular_0 Location Modular Expression_0 deriving Show
+  data Match_unnamed_algebraic_0 = Match_unnamed_algebraic_0 Name [Pat] Expression_0 deriving Show
   data Matches_0 =
-    Matches_Algebraic_0 [Match_Algebraic_0] (Maybe (Location, Expression_0)) |
     Matches_Int_0 [Match_Int_0] Expression_0 |
-    Matches_Modular_0 [Match_Modular_0] (Maybe (Location, Expression_0))
+    Matches_Modular_0 [Match_Modular_0] (Maybe (Location, Expression_0)) |
+    Matches_unnamed_algebraic_0 [Match_unnamed_algebraic_0] (Maybe (Location, Expression_0))
       deriving Show
   data Method = Method Name [(Name, Kind)] [Constraint_0] Type_7 deriving Show
   data Modular = Modular Location Integer Integer deriving Show
@@ -116,9 +116,7 @@ module Awful.Parser (
         (Prelude.foldr (\(Pat m a) -> \b -> Expression_0 m (Function_expression_0 (Pat m a) b)) z y))
 -}
   parse :: Show t => Parser t -> (Location -> Location_1) -> String -> Either String t
-  parse a b c = first (\ f -> f b) (fromRight undefined (parse' classify_char next_location tokenise a (flip parse_error) c))
-  parse_algebraic :: Parser Data_0
-  parse_algebraic = parse_data' Algebraic_data_0 Algebraic_token (parse_round (parse_non_empty_list Comma_token parse_form))
+  parse a b c = first (\ f -> f b) (fromJust (parse' classify_char next_location tokenise a (flip parse_error) c))
   parse_ap_expr :: Parser Expression_0
   parse_ap_expr = Application_expression_0 <$> parse_br_expr <*> parse_some parse_br_expr
   parse_ap_type :: Parser Type_0
@@ -215,7 +213,7 @@ module Awful.Parser (
   parse_constraints =
     parse_optional' (parse_operator "<" *> parse_non_empty_list Comma_token parse_constraint <* parse_operator ">")
   parse_data :: Parser Data_0
-  parse_data = parse_algebraic <+> parse_brnchs <+> parse_struct
+  parse_data = parse_brnchs <+> parse_named_struct <+> parse_unnamed_algebraic
   parse_data' :: (t -> Data_branch_0) -> Token -> Parser t -> Parser Data_0
   parse_data' f a b = (\x -> \y -> \z -> Data_0 x (Plain_data_0 y (f z))) <$> parse_name'' a <*> parse_kinds <*> b
   parse_def :: Parser Def_0
@@ -244,8 +242,6 @@ module Awful.Parser (
   parse_expression = parse parse_expression' (Location_1 "input")
   parse_expression' :: Parser Expression_0
   parse_expression' = parse_comp_expr <+> parse_mid_expr <+> parse_elementary_expression
-  parse_form :: Parser Form_0
-  parse_form = Form_0 <$> parse_name' <*> parse_many (Type_7 <&> parse_br_type)
   parse_function :: Parser Expression_0
   parse_function = parse_arrow' (Function_expression_0 <$> parse_pat)
   parse_instance :: Parser Def_0
@@ -292,8 +288,6 @@ module Awful.Parser (
       parse_operator "."
       parse_name_4 "awf"
       return name
-  parse_match_algebraic :: Parser Match_Algebraic_0
-  parse_match_algebraic = parse_arrow' (Match_Algebraic_0 <$> parse_name' <*> parse_many parse_brack_pat)
   parse_match_expression :: Parser Expression_0
   parse_match_expression =
     (
@@ -307,15 +301,17 @@ module Awful.Parser (
   parse_match_int = parse_arrow' (Match_Int_0 <&> parse_int)
   parse_match_modular :: Parser Match_Modular_0
   parse_match_modular = parse_arrow' (Match_Modular_0 <&> parse_modular)
+  parse_match_unnamed_algebraic :: Parser Match_unnamed_algebraic_0
+  parse_match_unnamed_algebraic = parse_arrow' (Match_unnamed_algebraic_0 <$> parse_name' <*> parse_many parse_brack_pat)
   parse_matches :: Parser Matches_0
-  parse_matches = parse_matches_modular <+> parse_matches_algebraic <+> parse_matches_int
-  parse_matches_algebraic :: Parser Matches_0
-  parse_matches_algebraic =
-    Matches_Algebraic_0 <$> parse_non_empty_list Comma_token parse_match_algebraic <*> parse_default_pat'
+  parse_matches = parse_matches_int <+> parse_matches_modular <+> parse_matches_unnamed_algebraic
   parse_matches_int :: Parser Matches_0
   parse_matches_int = Matches_Int_0 <$> parse_non_empty_list Comma_token parse_match_int <*> parse_default_pat
   parse_matches_modular :: Parser Matches_0
   parse_matches_modular = Matches_Modular_0 <$> parse_non_empty_list Comma_token parse_match_modular <*> parse_default_pat'
+  parse_matches_unnamed_algebraic :: Parser Matches_0
+  parse_matches_unnamed_algebraic =
+    Matches_unnamed_algebraic_0 <$> parse_non_empty_list Comma_token parse_match_unnamed_algebraic <*> parse_default_pat'
   parse_method :: Parser Method
   parse_method = Method <$> parse_name' <*> parse_kinds <*> parse_constraints <* parse_colon <*> parse_type
   parse_mid_expr :: Parser Expression_0
@@ -353,6 +349,8 @@ module Awful.Parser (
   parse_name_pattern = Name_pattern <$> parse_name
   parse_name_type :: Parser Type_0
   parse_name_type = Name_type_0 <$> (Name <&> parse_name)
+  parse_named_struct :: Parser Data_0
+  parse_named_struct = parse_data' Named_struct_data_0 Named_struct_token (parse_arguments' parse_name')
   parse_nat_kind :: Parser Kind
   parse_nat_kind =
     do
@@ -417,8 +415,6 @@ module Awful.Parser (
   parse_pattern' = Name <&> ("_" <$ parse_token Blank_token <+> parse_name)
   parse_round :: Parser t -> Parser t
   parse_round = parse_brackets Left_round_bracket_token Right_round_bracket_token
-  parse_struct :: Parser Data_0
-  parse_struct = parse_data' Struct_data_0 Struct_token (parse_arguments' parse_name')
   parse_tree :: (Location -> Location_1) -> String -> Err Tree_1
   parse_tree = parse parse_tree'
   parse_tree' :: Parser Tree_1
@@ -434,3 +430,11 @@ module Awful.Parser (
     do
       parse_name_4 "Type"
       return Type_kind
+  parse_unnamed_algebraic :: Parser Data_0
+  parse_unnamed_algebraic =
+    parse_data'
+      Unnamed_algebraic_data_0
+      Unnamed_algebraic_token
+      (parse_round (parse_non_empty_list Comma_token parse_unnamed_form))
+  parse_unnamed_form :: Parser Unnamed_form_0
+  parse_unnamed_form = Unnamed_form_0 <$> parse_name' <*> parse_many (Type_7 <&> parse_br_type)

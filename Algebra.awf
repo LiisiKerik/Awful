@@ -7,11 +7,11 @@ Load Pair.awf
 Load Ring.awf
 Load Standard.awf
 Branching Array[T : Type](Zr -> Empty_Array, Next N -> Construct_Array(Head : T, Tail : Array N T))
-Struct Fraction(Num : Int, Den : Int)
+Named_struct Fraction(Num : Int, Den : Int)
 Branching Square[T : Type](
   Zr -> Empty_Square,
   Next N -> Construct_Square(Fst_Square : T, Top_row_Square : Array N T, Left_column_Square : Array N T, Square' : Square N T))
-Struct Toeplitz[N : Nat, T : Type](Toeplitz' : Array N T)
+Named_struct Toeplitz[N : Nat, T : Type](Toeplitz' : Array N T)
 Branching Triangle[T : Type](
   Zr -> Empty_Triangle,
   Next N -> Construct_Triangle(Fst_Triangle : T, Top_row_Triangle : Array N T, Triangle' : Triangle N T))

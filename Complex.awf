@@ -1,4 +1,4 @@
 Load Standard.awf
-Struct Complex[T : Type](Real : T, Imaginary : T)
+Named_struct Complex[T : Type](Real : T, Imaginary : T)
 Instance Applicative{Complex}(Apply (Complex f g) (Complex x y) = Complex (f x) (g y), Return x = Complex x x)
 Instance Functor{Complex}(Fmap f (Complex x y) = Complex (f x) (f y))

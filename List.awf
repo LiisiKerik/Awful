@@ -1,5 +1,5 @@
 Load Standard.awf
-Algebraic List[T : Type](Empty_List, Construct_List T (List T))
+Unnamed_algebraic List[T : Type](Empty_List, Construct_List T (List T))
 Instance Applicative{List}(
   Apply x y = Match x {Empty_List -> Empty_List, Construct_List f z -> Cat (Fmap f y) (Apply z y)},
   Return x = Construct_List x Empty_List)

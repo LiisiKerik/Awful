@@ -6,16 +6,16 @@ module Awful.Namechecker (
   Data_branch_1 (..),
   Def_3 (..),
   Expression_1 (..),
-  Form_1 (..),
   Location' (..),
   Locations,
   Map',
-  Match_Algebraic_1 (..),
   Match_Int_1 (..),
   Match_Modular_1 (..),
+  Match_unnamed_algebraic_1 (..),
   Matches_1 (..),
   Method_2 (..),
   Tree_5 (..),
+  Unnamed_form_1 (..),
   location_err,
   naming,
   naming_expression) where
@@ -34,7 +34,7 @@ module Awful.Namechecker (
   data Data_2 = Data_2 Name Data_br_2 deriving Show
   data Data_br_1 = Branching_data_1 [(Name, Kind)] [Brnch_1] | Plain_data_1 [(Name, Kind)] Data_branch_1 deriving Show
   data Data_br_2 = Branching_data_2 [(String, Kind)] [Brnch_2] | Plain_data_2 [(String, Kind)] Data_branch_1 deriving Show
-  data Data_branch_1 = Algebraic_data_1 [Form_1] | Struct_data_1 [(String, Type_8)] deriving Show
+  data Data_branch_1 = Named_struct_data_1 [(String, Type_8)] | Unnamed_algebraic_data_1 [Unnamed_form_1] deriving Show
   data Def_2 =
     Basic_def_2 Location String [(Name, Kind)] [Constraint_0] Type_8 Expression_9 |
     Instance_2 Location Name Name [Kind] [Pattern_1] [Constraint_0] [(Name, Expression_9)]
@@ -51,20 +51,20 @@ module Awful.Namechecker (
     Modular_expression_1 Modular |
     Name_expression_1 Name (Maybe Type_8) [Type_8]
       deriving Show
-  data Form_1 = Form_1 String [Type_8] deriving Show
   type Locations = Map' Location'
-  data Match_Algebraic_1 = Match_Algebraic_1 Name [Pat] Expression_1 deriving Show
   data Match_Int_1 = Match_Int_1 Location Integer Expression_1 deriving Show
   data Match_Modular_1 = Match_Modular_1 Location Modular Expression_1 deriving Show
+  data Match_unnamed_algebraic_1 = Match_unnamed_algebraic_1 Name [Pat] Expression_1 deriving Show
   data Matches_1 =
-    Matches_Algebraic_1 [Match_Algebraic_1] (Maybe (Location, Expression_1)) |
     Matches_Int_1 [Match_Int_1] Expression_1 |
-    Matches_Modular_1 [Match_Modular_1] (Maybe (Location, Expression_1))
+    Matches_Modular_1 [Match_Modular_1] (Maybe (Location, Expression_1)) |
+    Matches_unnamed_algebraic_1 [Match_unnamed_algebraic_1] (Maybe (Location, Expression_1))
       deriving Show
   data Method_1 = Method_1 String [(Name, Kind)] [Constraint_0] Type_8 deriving Show
   data Method_2 = Method_2 String [(String, Kind)] [Constraint_0] Type_8 deriving Show
   data Tree_4 = Tree_4 [Data_1] [Class_1] [Name] [Def_2] deriving Show
   data Tree_5 = Tree_5 [Data_2] [Class_2] [Name] [Def_3] deriving Show
+  data Unnamed_form_1 = Unnamed_form_1 String [Type_8] deriving Show
   add :: Ord t => Map t u -> t -> u -> Either u (Map t u)
   add x y z =
     let
@@ -152,8 +152,8 @@ module Awful.Namechecker (
               (
                 second (Plain_data_1 g) <$>
                 case h of
-                  Algebraic_data_6 i -> bimap ((,) x) Algebraic_data_1 <$> naming_forms a i e
-                  Struct_data_6 i -> bimap ((,) (Data.Set.insert t x)) Struct_data_1 <$> naming_fields a i e)))
+                  Named_struct_data_6 i -> bimap ((,) (Data.Set.insert t x)) Named_struct_data_1 <$> naming_fields a i e
+                  Unnamed_algebraic_data_6 i -> bimap ((,) x) Unnamed_algebraic_data_1 <$> naming_unnamed_forms a i e)))
   naming_data_2 :: String -> Data_1 -> Locations -> Err Data_2
   naming_data_2 a (Data_1 b c) d =
     (
@@ -222,10 +222,6 @@ module Awful.Namechecker (
       Name_expression_9 c d e -> Right (Name_expression_1 c d e)
   naming_fields :: String -> [(Name, Type_8)] -> Locations -> Err (Locations, [(String, Type_8)])
   naming_fields = naming_arguments naming_name
-  naming_form :: String -> Form_6 -> Locations -> Err (Locations, Form_1)
-  naming_form d (Form_6 a b) c = second (flip Form_1 b) <$> naming_name d a c
-  naming_forms :: String -> [Form_6] -> Locations -> Err (Locations, [Form_1])
-  naming_forms = naming_list naming_form
   naming_fun :: String -> (Set String, Locations) -> Pat -> Expression_9 -> Err Expression_1
   naming_fun x (y, b) z w = naming_pat x z (y, b) >>= \(a, c) -> Function_expression_1 c <$> naming_expression x w (y, a)
   naming_list :: (String -> t -> u -> Err (u, v)) -> String -> [t] -> u -> Err (u, [v])
@@ -238,27 +234,23 @@ module Awful.Namechecker (
     case b of
       [] -> Right []
       d : e -> a g d c >>= \f -> (:) f <$> naming_list' a g e c
-  naming_match_algebraic :: String -> Match_Algebraic_9 -> (Set String, Locations) -> Err Match_Algebraic_1
-  naming_match_algebraic a (Match_Algebraic_9 b c d) (g, e) =
-    naming_pats a c (g, e) >>= \(f, h) -> Match_Algebraic_1 b h <$> naming_expression a d (g, f)
   naming_match_int :: String -> Match_Int_9 -> (Set String, Locations) -> Err Match_Int_1
   naming_match_int a (Match_Int_9 e b c) d = Match_Int_1 e b <$> naming_expression a c d
   naming_match_modular :: String -> Match_Modular_9 -> (Set String, Locations) -> Err Match_Modular_1
   naming_match_modular a (Match_Modular_9 e b c) d = Match_Modular_1 e b <$> naming_expression a c d
+  naming_match_unnamed_algebraic ::
+    String -> Match_unnamed_algebraic_9 -> (Set String, Locations) -> Err Match_unnamed_algebraic_1
+  naming_match_unnamed_algebraic a (Match_unnamed_algebraic_9 b c d) (g, e) =
+    naming_pats a c (g, e) >>= \(f, h) -> Match_unnamed_algebraic_1 b h <$> naming_expression a d (g, f)
   naming_matches :: String -> Matches_9 -> (Set String, Locations) -> Err Matches_1
   naming_matches a b c =
     let
       j k = naming_expression a k c
     in
       case b of
-        Matches_Algebraic_9 d e -> naming_default c naming_matches_algebraic d a Matches_Algebraic_1 e
         Matches_Int_9 d e -> naming_matches_int a d c >>= \f -> Matches_Int_1 f <$> j e
         Matches_Modular_9 d e -> naming_default c naming_matches_modular d a Matches_Modular_1 e
-  naming_matches_algebraic :: String -> [Match_Algebraic_9] -> (Set String, Locations) -> Err [Match_Algebraic_1]
-  naming_matches_algebraic a b c =
-    case b of
-      [] -> Right []
-      d : e -> naming_match_algebraic a d c >>= \f -> (:) f <$> naming_matches_algebraic a e c
+        Matches_unnamed_algebraic_9 d e -> naming_default c naming_matches_unnamed_algebraic d a Matches_unnamed_algebraic_1 e
   naming_matches_int :: String -> [Match_Int_9] -> (Set String, Locations) -> Err [Match_Int_1]
   naming_matches_int a b c =
     case b of
@@ -269,6 +261,12 @@ module Awful.Namechecker (
     case b of
       [] -> Right []
       d : e -> naming_match_modular a d c >>= \f -> (:) f <$> naming_matches_modular a e c
+  naming_matches_unnamed_algebraic ::
+    String -> [Match_unnamed_algebraic_9] -> (Set String, Locations) -> Err [Match_unnamed_algebraic_1]
+  naming_matches_unnamed_algebraic a b c =
+    case b of
+      [] -> Right []
+      d : e -> naming_match_unnamed_algebraic a d c >>= \f -> (:) f <$> naming_matches_unnamed_algebraic a e c
   naming_method_0 :: String -> Method_9 -> Locations -> Err (Locations, Method_1)
   naming_method_0 a (Method_9 b c g d) e = second (\f -> Method_1 f c g d) <$> naming_name a b e
   naming_method_1 :: String -> Method_1 -> Locations -> Err Method_2
@@ -333,3 +331,7 @@ module Awful.Namechecker (
       Name_pattern e -> second Name_pattern <$> naming_name f (Name a e) d
   naming_patterns :: String -> [Pattern_1] -> Locations -> Err (Locations, [Pattern_0])
   naming_patterns = naming_list naming_pattern
+  naming_unnamed_form :: String -> Unnamed_form_6 -> Locations -> Err (Locations, Unnamed_form_1)
+  naming_unnamed_form d (Unnamed_form_6 a b) c = second (flip Unnamed_form_1 b) <$> naming_name d a c
+  naming_unnamed_forms :: String -> [Unnamed_form_6] -> Locations -> Err (Locations, [Unnamed_form_1])
+  naming_unnamed_forms = naming_list naming_unnamed_form

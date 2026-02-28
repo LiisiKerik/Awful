@@ -48,7 +48,9 @@ module Awful.Parser (
   data Constraint_0 = Constraint_0 Name Name deriving Show
   data Data_0 = Data_0 Name Data_br_0 deriving Show
   data Data_br_0 = Branching_data_0 [(Name, Kind)] [Brnch_0] | Plain_data_0 [(Name, Kind)] Data_branch_0 deriving Show
-  data Data_branch_0 = Named_struct_data_0 [(Name, Type_7)] | Unnamed_algebraic_data_0 [Unnamed_form_0] deriving Show
+  data Data_branch_0 =
+    Named_struct_data_0 [(Name, Type_7)] | Unnamed_algebraic_data_0 [Unnamed_form_0] | Unnamed_struct_data_0 [Type_7]
+      deriving Show
   data Def_0 =
     Basic_def_0 Name [(Name, Kind)] [Constraint_0] [(Pat, Type_7)] Type_7 Expression_0 |
     Instance_def_0 Location Name Name [Kind] [Pattern_1] [Constraint_0] [(Name, ([Pat], Expression_0))]
@@ -64,7 +66,6 @@ module Awful.Parser (
     Name_expression_0 Name (Maybe Type_7) [Type_7] |
     Op_expression_0 Expression_0 [(Name, Expression_0)]
       deriving Show
-  data Unnamed_form_0 = Unnamed_form_0 Name [Type_7] deriving Show
   data Kind = Function_kind Kind Kind | Nat_kind | Type_kind deriving (Eq, Show)
   data Match_Int_0 = Match_Int_0 Location Integer Expression_0 deriving Show
   data Match_Modular_0 = Match_Modular_0 Location Modular Expression_0 deriving Show
@@ -87,6 +88,7 @@ module Awful.Parser (
   data Tree_1 = Tree_1 [Name] Tree_0 deriving Show
   data Type_0 = Application_type_0 Type_0 [Type_0] | Name_type_0 Name | Op_type_0 Type_0 [(Name, Type_0)] deriving Show
   data Type_7 = Type_7 Location Type_0 deriving Show
+  data Unnamed_form_0 = Unnamed_form_0 Name [Type_7] deriving Show
   class Get_location t where
     get_location :: t -> Location
   infixl 4 <&
@@ -213,7 +215,7 @@ module Awful.Parser (
   parse_constraints =
     parse_optional' (parse_operator "<" *> parse_non_empty_list Comma_token parse_constraint <* parse_operator ">")
   parse_data :: Parser Data_0
-  parse_data = parse_brnchs <+> parse_named_struct <+> parse_unnamed_algebraic
+  parse_data = parse_brnchs <+> parse_named_struct <+> parse_unnamed_algebraic <+> parse_unnamed_struct
   parse_data' :: (t -> Data_branch_0) -> Token -> Parser t -> Parser Data_0
   parse_data' f a b = (\x -> \y -> \z -> Data_0 x (Plain_data_0 y (f z))) <$> parse_name'' a <*> parse_kinds <*> b
   parse_def :: Parser Def_0
@@ -436,5 +438,7 @@ module Awful.Parser (
       Unnamed_algebraic_data_0
       Unnamed_algebraic_token
       (parse_round (parse_non_empty_list Comma_token parse_unnamed_form))
+  parse_unnamed_struct :: Parser Data_0
+  parse_unnamed_struct = parse_data' Unnamed_struct_data_0 Unnamed_struct_token (parse_many (Type_7 <&> parse_br_type))
   parse_unnamed_form :: Parser Unnamed_form_0
   parse_unnamed_form = Unnamed_form_0 <$> parse_name' <*> parse_many (Type_7 <&> parse_br_type)

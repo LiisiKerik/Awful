@@ -41,7 +41,9 @@ module Awful.Operators (
       deriving Show
   data Data_6 = Data_6 Name Data_br_6 deriving Show
   data Data_br_6 = Branching_data_6 [(Name, Kind)] [Brnch_6] | Plain_data_6 [(Name, Kind)] Data_branch_6 deriving Show
-  data Data_branch_6 = Named_struct_data_6 [(Name, Type_8)] | Unnamed_algebraic_data_6 [Unnamed_form_6] deriving Show
+  data Data_branch_6 =
+    Named_struct_data_6 [(Name, Type_8)] | Unnamed_algebraic_data_6 [Unnamed_form_6] | Unnamed_struct_data_6 [Type_8]
+      deriving Show
   data Eqq' = Eqq' Name [Pat] Expression_9 deriving Show
   data Expression_9 =
     Application_expression_9 Expression_9 Expression_9 |
@@ -174,7 +176,8 @@ module Awful.Operators (
               Unnamed_algebraic_data_0 f ->
                 (
                   Unnamed_algebraic_data_6 <$>
-                  traverse (\(Unnamed_form_0 g h) -> Unnamed_form_6 g <$> traverse (std_type a) h) f)))
+                  traverse (\(Unnamed_form_0 g h) -> Unnamed_form_6 g <$> traverse (std_type a) h) f)
+              Unnamed_struct_data_0 f -> Unnamed_struct_data_6 <$> traverse (std_type a) f))
   std_default :: (Location -> Location_1) -> Map' Op -> Maybe (Location, Expression_0)  -> Err (Maybe (Location, Expression_9))
   std_default a f b =
     case b of

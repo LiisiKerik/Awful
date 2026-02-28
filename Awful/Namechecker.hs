@@ -34,7 +34,9 @@ module Awful.Namechecker (
   data Data_2 = Data_2 Name Data_br_2 deriving Show
   data Data_br_1 = Branching_data_1 [(Name, Kind)] [Brnch_1] | Plain_data_1 [(Name, Kind)] Data_branch_1 deriving Show
   data Data_br_2 = Branching_data_2 [(String, Kind)] [Brnch_2] | Plain_data_2 [(String, Kind)] Data_branch_1 deriving Show
-  data Data_branch_1 = Named_struct_data_1 [(String, Type_8)] | Unnamed_algebraic_data_1 [Unnamed_form_1] deriving Show
+  data Data_branch_1 =
+    Named_struct_data_1 [(String, Type_8)] | Unnamed_algebraic_data_1 [Unnamed_form_1] | Unnamed_struct_data_1 [Type_8]
+      deriving Show
   data Def_2 =
     Basic_def_2 Location String [(Name, Kind)] [Constraint_0] Type_8 Expression_9 |
     Instance_2 Location Name Name [Kind] [Pattern_1] [Constraint_0] [(Name, Expression_9)]
@@ -153,7 +155,8 @@ module Awful.Namechecker (
                 second (Plain_data_1 g) <$>
                 case h of
                   Named_struct_data_6 i -> bimap ((,) (Data.Set.insert t x)) Named_struct_data_1 <$> naming_fields a i e
-                  Unnamed_algebraic_data_6 i -> bimap ((,) x) Unnamed_algebraic_data_1 <$> naming_unnamed_forms a i e)))
+                  Unnamed_algebraic_data_6 i -> bimap ((,) x) Unnamed_algebraic_data_1 <$> naming_unnamed_forms a i e
+                  Unnamed_struct_data_6 i -> Right ((Data.Set.insert t x, e), Unnamed_struct_data_1 i))))
   naming_data_2 :: String -> Data_1 -> Locations -> Err Data_2
   naming_data_2 a (Data_1 b c) d =
     (

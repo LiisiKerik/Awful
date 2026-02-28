@@ -207,23 +207,34 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
   subst_pat :: String -> Pat_1 -> Bool
   subst_pat a b =
     case b of
-      Application_pat_1 c -> subst_help a (snd <$> c)
       Blank_pat_1 -> False
       Name_pat_1 c -> c == a
+      Named_application_pat_1 c -> subst_help a (snd <$> c)
+      Unnamed_application_pat_1 c -> subst_help a c
   subst_pat' :: Pat_1 -> Expression_2 -> Expression_2 -> Expression_2
   subst_pat' a b c =
     case a of
-      Application_pat_1 d ->
+      Blank_pat_1 -> c
+      Name_pat_1 d -> subst_expr d c b
+      Named_application_pat_1 d ->
         case b of
           Named_struct_expression_2 _ e -> subst_pats d e c
           _ -> undefined
-      Blank_pat_1 -> c
-      Name_pat_1 d -> subst_expr d c b
+      Unnamed_application_pat_1 d ->
+        case b of
+          Unnamed_struct_expression_2 _ e -> subst_pats' d e c
+          _ -> undefined
   subst_pats :: [(String, Pat_1)] -> Map' Expression_2 -> Expression_2 -> Expression_2
   subst_pats a b c =
     case a of
       [] -> c
       (d, e) : f -> subst_pats f b (subst_pat' e (unsafe_lookup d b) c)
+  subst_pats' :: [Pat_1] -> [Expression_2] -> Expression_2 -> Expression_2
+  subst_pats' a b c =
+    case (a, b) of
+      ([], []) -> c
+      (e : f, x : y) -> subst_pats' f y (subst_pat' e x c)
+      _ -> undefined
   subst_unnamed_algebraic :: String -> Expression_2 -> Match_unnamed_algebraic_2 -> Match_unnamed_algebraic_2
   subst_unnamed_algebraic a b (Match_unnamed_algebraic_2 c d) =
     Match_unnamed_algebraic_2 c (if subst_help a c then d else subst_expr a d b)
@@ -235,7 +246,7 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
     String ->
     Map' (Map' [[String]]) ->
     Map' ([String], Map' [(String, Nat)]) ->
-    Map' Named_strct ->
+    Map' Strct ->
     Map' Op ->
     Err String
   tokenise_parse_naming_typing_eval c f (g, h, i) l b u v a q =

@@ -8,7 +8,6 @@ internal: do something with old/new status tags. check where exactly they're nec
 change semantics of missing pattern-match variables from blank to lambda? (Left -> e is not Left _ -> e but Left x -> e x)
 internal: make the system of specifying built-in algebraic data types and things better and safer
 Allow hiding things to functions outside module - so that helper functions are not exported from the module?
-normalising constructors for some data types (polynomial, fraction) which assume a certain normal form of fields?
 allow to hide (prevent exporting) constructors and field accessors which can potentially have bad behavior
 switch expression that is less strict and more flexible than match?
 some limited pattern matching in function arguments (and maybe also variables introduced through algebraic matching?)
@@ -18,7 +17,6 @@ implement map and set (AVL trees?)
 different ways of folding lists, vectors, sets, maps etc
 module system related functions into a separate file?
 make command line arguments nicer
-remove promotion of primitives? it seems that without GADT-s they are pointless?
 liigirakendamise eemaldamine liigituletuse kasuks (igal pool? teatud piiratud juhtudel?)
 võimaldada suvalise arvu konstruktoritega algebralisi andmetüüpe. (LISAKS struktide allesjätmisele?)
 todo: make a function writing operator/function. For printing stuff like "Complex (Fraction 0 1) (Fraction 1 1)"
@@ -41,9 +39,9 @@ module Awful.Typechecker (
   File (..),
   Match_unnamed_algebraic_2 (..),
   Matches_2 (..),
-  Named_strct,
   Nat (..),
   Pat_1 (..),
+  Strct,
   Type_2,
   Unnamed_alg,
   context_union,
@@ -121,7 +119,8 @@ module Awful.Typechecker (
     Named_struct_expression_2 String (Map' Expression_2) |
     Negate_Int_expression_2 |
     Negate_Modular_expression_2 Integer |
-    Unnamed_algebraic_expression_2 String [Expression_2]
+    Unnamed_algebraic_expression_2 String [Expression_2] |
+    Unnamed_struct_expression_2 String [Expression_2]
       deriving Show
   data File =
     File
@@ -133,7 +132,7 @@ module Awful.Typechecker (
       (Map' Class_5)
       (Map' (Map' [[String]]))
       (Map' Kind)
-      (Map' Named_strct)
+      (Map' Strct)
         deriving Show
   data Match_unnamed_algebraic_2 = Match_unnamed_algebraic_2 [Pat_1] Expression_2 deriving Show
   data Matches_2 =
@@ -145,10 +144,11 @@ module Awful.Typechecker (
   data Method_4 = Method_4 String [(String, Kind)] [Constraint_1] Type_1 deriving Show
   data Modular' = Modular' Integer Integer deriving Show
   data Nat = Nxt Nat | Zr deriving (Eq, Ord, Show)
-  data Pat_1 = Application_pat_1 [(String, Pat_1)] | Blank_pat_1 | Name_pat_1 String deriving Show
+  data Pat_1 = Blank_pat_1 | Name_pat_1 String | Named_application_pat_1 [(String, Pat_1)] | Unnamed_application_pat_1 [Pat_1]
+    deriving Show
   data Plain_dat = Plain_dat String Data_branch_1 deriving Show
-  data Prom_alg = Prom_alg (Map' [Kind]) deriving Show
-  data Named_strct = Named_strct [(String, Kind)] [(String, Type_1)] Type_1 deriving Show
+  data Strct = Named_strct [(String, Kind)] [(String, Type_1)] Type_1 | Unnamed_strct [(String, Kind)] [Type_1] Type_1
+    deriving Show
   data Type_1 = Application_type_1 Type_1 Type_1 | Name_type_1 String deriving (Eq, Show)
   data Type_2 = Basic_type_1 [(String, Kind)] (Maybe Constraint_1) [Constraint_1] Type_1 deriving Show
   data Tmatch' = Tmatch' [Pat_1] Typedexpr deriving Show
@@ -782,7 +782,7 @@ module Awful.Typechecker (
       [Pat] ->
       [Type_1] ->
       Map' Type_2 ->
-      Map' Named_strct ->
+      Map' Strct ->
       Integer ->
       Set String ->
       [(Type_1, Type_1)] ->
@@ -1113,6 +1113,18 @@ module Awful.Typechecker (
                 (
                   Prelude.foldl (\d -> \(Unnamed_form_1 n _) -> ins_new n a d) j e,
                   Prelude.foldl (\f -> \(Unnamed_form_1 g h) -> Data.Map.insert g (type_alg h g) f) k e)
+              Unnamed_struct_data_1 e ->
+                let
+                  e' = show <$> [0 .. length e - 1] in
+                  (
+                    j,
+                    Data.Map.insert
+                      a
+                      (Prelude.foldr
+                        (\ f -> Function_expression_2 (Name_pat_1 f))
+                        (Unnamed_struct_expression_2 a (Name_expression_2 <$> e'))
+                        e')
+                      k)
           y = Prelude.foldr Function_kind Type_kind (snd <$> b)
         in
           Right ((ins_new a y i, l, m, Data.Map.insert a y x), Data_3 a (Plain_data_3 b c))
@@ -1120,8 +1132,8 @@ module Awful.Typechecker (
     (Location -> Location_1) ->
     Data_3 ->
     Map' Kind ->
-    (Unnamed_algebraics, Types, Map' (Named_strct, Status)) ->
-    Err (Unnamed_algebraics, Types, Map' (Named_strct, Status))
+    (Unnamed_algebraics, Types, Map' (Strct, Status)) ->
+    Err (Unnamed_algebraics, Types, Map' (Strct, Status))
   type_data_2 f (Data_3 a b') d (p, e, q') =
     case b' of
       Branching_data_3 g h -> (\t -> (p, t, q')) <$> type_branchings_1 f (type_kinds g d) e a g h
@@ -1151,11 +1163,15 @@ module Awful.Typechecker (
                     Prelude.foldl (flip (\(Unnamed_form_2 l m) -> ins_new l (t' (Prelude.foldr function_type x m)))) e q,
                     q')) <$>
                 type_unnamed_forms f h g)
+            Unnamed_struct_data_1 h ->
+              (
+                (\ j -> (p, ins_new a (t' (Prelude.foldr function_type x j)) e, ins_new a (Unnamed_strct b j x) q')) <$>
+                type_types f h g)
   type_datas ::
     (Location -> Location_1) ->
     [Data_2] ->
-    (Map' (Kind, Status), Unnamed_algebraics, Constrs, Types, Map' Expression_2, Map' Kind, Map' (Named_strct, Status)) ->
-    Err (Map' (Kind, Status), Unnamed_algebraics, Constrs, Types, Map' Expression_2, Map' Kind, Map' (Named_strct, Status))
+    (Map' (Kind, Status), Unnamed_algebraics, Constrs, Types, Map' Expression_2, Map' Kind, Map' (Strct, Status)) ->
+    Err (Map' (Kind, Status), Unnamed_algebraics, Constrs, Types, Map' Expression_2, Map' Kind, Map' (Strct, Status))
   type_datas h a (b, i, j, d, c, m, a7) =
     (
       type_datas_1 h a (b, j, c, m) >>=
@@ -1175,8 +1191,8 @@ module Awful.Typechecker (
       (Location -> Location_1) ->
       [Data_3] ->
       Map' Kind ->
-      (Unnamed_algebraics, Types, Map' (Named_strct, Status)) ->
-      Err (Unnamed_algebraics, Types, Map' (Named_strct, Status)))
+      (Unnamed_algebraics, Types, Map' (Strct, Status)) ->
+      Err (Unnamed_algebraics, Types, Map' (Strct, Status)))
   type_datas_2 f a b c =
     case a of
       [] -> Right c
@@ -1274,7 +1290,7 @@ module Awful.Typechecker (
     Map' Kind ->
     Map' ([String], Map' [(String, Nat)]) ->
     Map' Class_4 ->
-    Map' Named_strct ->
+    Map' Strct ->
     Err (Map' Expression_2)
   type_def_2 j a (d, l, k) c m n t' u0 w3 =
     case a of
@@ -1340,7 +1356,7 @@ module Awful.Typechecker (
     Map' (Map' Location') ->
     Map' (Map' ([[String]], Status)) ->
     Map' ([String], Map' [(String, Nat)]) ->
-    Map' Named_strct ->
+    Map' Strct ->
     Err
       (
         Map' Expression_2,
@@ -1383,7 +1399,7 @@ module Awful.Typechecker (
     Map' Kind ->
     Map' ([String], Map' [(String, Nat)]) ->
     Map' Class_4 ->
-    Map' Named_strct ->
+    Map' Strct ->
     Err (Map' Expression_2)
   type_defs_2 f a b c g i j u w =
     case a of
@@ -1399,7 +1415,7 @@ module Awful.Typechecker (
     Integer ->
     Map' ([String], Map' [(String, Nat)]) ->
     Map' Kind ->
-    Map' Named_strct ->
+    Map' Strct ->
     Set String ->
     Err Expression_2
   type_expr k h a (c, d, e) f m w w' b t3 x8 =
@@ -1435,7 +1451,7 @@ module Awful.Typechecker (
     Expression_1 ->
     Map' (Map' [[String]]) ->
     Map' ([String], Map' [(String, Nat)]) ->
-    Map' Named_strct ->
+    Map' Strct ->
     Err Expression_2
   type_expr' (b, c, d, e) f g h t6 =
     type_expr "input." (Name_type_1 "0") (Location_1 "input") (c, d, e) f g 1 h b t6 (Data.Set.singleton "0")
@@ -1451,7 +1467,7 @@ module Awful.Typechecker (
     Type_1 ->
     [(String, (Name, Type_1))] ->
     Map' Kind ->
-    Map' Named_strct ->
+    Map' Strct ->
     Err (Typedexpr, Set String, [(Type_1, Type_1)], Integer, [(String, (Name, Type_1))])
   type_expression v w r o f h d b e c' r7 z8 =
     let
@@ -1673,7 +1689,7 @@ module Awful.Typechecker (
       Map' ([String], Map' [(String, Nat)]) ->
       Map' Class_4 ->
       Map' Kind ->
-      Map' Named_strct ->
+      Map' Strct ->
       Err (Map' Expression_2))
   type_exprs a b c d h i t z w f' t' t0 x2 f5 =
     case h of
@@ -1734,7 +1750,7 @@ module Awful.Typechecker (
       Map Integer Location ->
       [(String, (Name, Type_1))] ->
       Map' Kind ->
-      Map' Named_strct ->
+      Map' Strct ->
       Err (Map Integer Typedexpr, Set String, [(Type_1, Type_1)], Integer, Map Integer Location, [(String, (Name, Type_1))]))
   type_match_int a b c d f g h i (Match_Int_1 y2 j k) l x1 a' x3 t8 =
     case Data.Map.lookup j x1 of
@@ -1759,7 +1775,7 @@ module Awful.Typechecker (
       [(String, (Name, Type_1))] ->
       (Location, Integer) ->
       Map' Kind ->
-      Map' Named_strct ->
+      Map' Strct ->
       Err
         (
           Map Integer Typedexpr,
@@ -1807,7 +1823,7 @@ module Awful.Typechecker (
       Map' Type_1 ->
       [(String, (Name, Type_1))] ->
       Map' Kind ->
-      Map' Named_strct ->
+      Map' Strct ->
       Err (Map' Tmatch', Set String, [(Type_1, Type_1)], Integer, Map' (Either Location [Type_1]), [(String, (Name, Type_1))]))
   type_match_unnamed_algebraic a b c d f g h i (Match_unnamed_algebraic_1 (Name j k) l m) n o (q1, q) r a' m2 x5 =
     case Data.Map.lookup k o of
@@ -1842,7 +1858,7 @@ module Awful.Typechecker (
       Map Integer Location ->
       [(String, (Name, Type_1))] ->
       Map' Kind ->
-      Map' Named_strct ->
+      Map' Strct ->
       Err (Map Integer Typedexpr, Set String, [(Type_1, Type_1)], Integer, [(String, (Name, Type_1))]))
   type_matches_int a b c d f g h i j k x1 a' m' w2 =
     case j of
@@ -1867,7 +1883,7 @@ module Awful.Typechecker (
       [(String, (Name, Type_1))] ->
       (Location, Integer) ->
       Map' Kind ->
-      Map' Named_strct ->
+      Map' Strct ->
       Err
         (
           Map Integer Typedexpr,
@@ -1900,7 +1916,7 @@ module Awful.Typechecker (
       Map' Type_1 ->
       [(String, (Name, Type_1))] ->
       Map' Kind ->
-      Map' Named_strct ->
+      Map' Strct ->
       Err (Map' Tmatch', Set String, [(Type_1, Type_1)], Integer, Map' (Either Location [Type_1]), [(String, (Name, Type_1))]))
   type_matches_unnamed_algebraic a b c d f g h i j k s u v a' m0 z1 =
     case j of
@@ -1934,6 +1950,35 @@ module Awful.Typechecker (
     case a of
       [] -> Right []
       c : d -> type_named_field f c b >>= \e -> (:) e <$> type_named_fields f d b
+  type_named_pats ::
+    (
+      (Location -> Location_1) ->
+      Map' Strct ->
+      [Pat] ->
+      [(String, Type_1)] ->
+      Map' Type_2 ->
+      Integer ->
+      Set String ->
+      [(Type_1, Type_1)] ->
+      Name ->
+      Err ([(String, Pat_1)], Map' Type_2, Integer, Set String, [(Type_1, Type_1)]))
+  type_named_pats a b d e f g h i (Name x y) =
+    let
+      z a' = Left ("Constructor " ++ y ++ location (a x) ++ " has been given too " ++ a' ++ " arguments.")
+    in
+      case d of
+        [] ->
+          case e of
+            [] -> Right ([], f, g, h, i)
+            _ -> z "few"
+        j : k ->
+          case e of
+            [] -> z "many"
+            (l, m) : n ->
+              (
+                type_pat a b j m f g h i >>=
+                \(c, o, p, q, r) ->
+                  (\(s, t, u, v, w) -> ((l, c) : s, t, u, v, w)) <$> type_named_pats a b k n o p q r (Name x y))
   type_ops :: String -> Map' Type_2 -> [Name] -> Err ()
   type_ops a b c =
     case c of
@@ -1954,7 +1999,7 @@ module Awful.Typechecker (
   type_pat ::
     (
       (Location -> Location_1) ->
-      Map' Named_strct ->
+      Map' Strct ->
       Pat ->
       Type_1 ->
       Map' Type_2 ->
@@ -1970,43 +2015,22 @@ module Awful.Typechecker (
         h
         "struct constructor"
         (k g)
-        (\(Named_strct i j m) ->
-          let
-            (p, q, r) = typevars i (l, Data.Map.empty, n)
-          in
-            (
-              (\(s, t, u, v, w) -> (Application_pat_1 s, t, u, v, w)) <$>
-              type_pats k h f (second (repl' q) <$> j) d p r ((c, repl' q m) : o) (Name g e)))
+        (\ x3 ->
+          case x3 of
+            Named_strct i j m ->
+              let
+                (p, q, r) = typevars i (l, Data.Map.empty, n) in
+                (
+                  (\ (s, t, u, v, w) -> (Named_application_pat_1 s, t, u, v, w)) <$>
+                  type_named_pats k h f (second (repl' q) <$> j) d p r ((c, repl' q m) : o) (Name g e))
+            Unnamed_strct i j m ->
+              let
+                (p, q, r) = typevars i (l, Data.Map.empty, n) in
+                (
+                  (\ (s, t, u, v, w) -> (Unnamed_application_pat_1 s, t, u, v, w)) <$>
+                  type_unnamed_pats k h f (repl' q <$> j) d p r ((c, repl' q m) : o) (Name g e)))
       Blank_pat -> Right (Blank_pat_1, d, l, n, o)
       Name_pat e -> Right (Name_pat_1 e, Data.Map.insert e (Basic_type_1 [] Nothing [] c) d, l, n, o)
-  type_pats ::
-    (
-      (Location -> Location_1) ->
-      Map' Named_strct ->
-      [Pat] ->
-      [(String, Type_1)] ->
-      Map' Type_2 ->
-      Integer ->
-      Set String ->
-      [(Type_1, Type_1)] ->
-      Name ->
-      Err ([(String, Pat_1)], Map' Type_2, Integer, Set String, [(Type_1, Type_1)]))
-  type_pats a b d e f g h i (Name x y) =
-    let
-      z a' = Left ("Constructor " ++ y ++ location (a x) ++ " has been given too " ++ a' ++ " arguments.")
-    in
-      case d of
-        [] ->
-          case e of
-            [] -> Right ([], f, g, h, i)
-            _ -> z "few"
-        j : k ->
-          case e of
-            [] -> z "many"
-            (l, m) : n ->
-              (
-                type_pat a b j m f g h i >>=
-                \(c, o, p, q, r) -> (\(s, t, u, v, w) -> ((l, c) : s, t, u, v, w)) <$> type_pats a b k n o p q r (Name x y))
 {-
 TODO:
 Do it with 1 function that assembles a system of equations and one function that solves the system
@@ -2056,6 +2080,34 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
     case a of
       [] -> Right []
       c : d -> type_unnamed_form f c b >>= \e -> (:) e <$> type_unnamed_forms f d b
+  type_unnamed_pats ::
+    (
+      (Location -> Location_1) ->
+      Map' Strct ->
+      [Pat] ->
+      [Type_1] ->
+      Map' Type_2 ->
+      Integer ->
+      Set String ->
+      [(Type_1, Type_1)] ->
+      Name ->
+      Err ([Pat_1], Map' Type_2, Integer, Set String, [(Type_1, Type_1)]))
+  type_unnamed_pats a b d e f g h i (Name x y) =
+    let
+      z a' = Left ("Constructor " ++ y ++ location (a x) ++ " has been given too " ++ a' ++ " arguments.")
+    in
+      case d of
+        [] ->
+          case e of
+            [] -> Right ([], f, g, h, i)
+            _ -> z "few"
+        j : k ->
+          case e of
+            [] -> z "many"
+            m : n ->
+              (
+                type_pat a b j m f g h i >>=
+                \(c, o, p, q, r) -> (\(s, t, u, v, w) -> (c : s, t, u, v, w)) <$> type_unnamed_pats a b k n o p q r (Name x y))
   types :: Map' Type_2
   types =
     Data.Map.fromList

@@ -40,7 +40,8 @@ module Awful.Tokeniser (Err, Location_1 (..), Token (..), classify_char, locatio
     Right_curly_bracket_token |
     Right_round_bracket_token |
     Right_square_bracket_token |
-    Unnamed_algebraic_token
+    Unnamed_algebraic_token |
+    Unnamed_struct_token
   type Tokeniser = Tokeniser' Char_class Token ((Location -> Location_1) -> String)
   deriving instance Eq Char_class
   deriving instance Eq Token
@@ -157,4 +158,5 @@ module Awful.Tokeniser (Err, Location_1 (..), Token (..), classify_char, locatio
       "Named_struct" -> Named_struct_token
       "Operator" -> Opdecl_token
       "Unnamed_algebraic" -> Unnamed_algebraic_token
+      "Unnamed_struct" -> Unnamed_struct_token
       _ -> Name_token a

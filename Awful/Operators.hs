@@ -44,12 +44,12 @@ module Awful.Operators (
   data Data_branch_6 =
     Named_struct_data_6 [(Name, Type_8)] | Unnamed_algebraic_data_6 [Unnamed_form_6] | Unnamed_struct_data_6 [Type_8]
       deriving Show
-  data Eqq' = Eqq' Name [Pat] Expression_9 deriving Show
+  data Eqq' = Eqq' New_pat_0 Expression_9 deriving Show
   data Expression_9 =
     Application_expression_9 Expression_9 Expression_9 |
-    Function_expression_9 Pat Expression_9 |
+    Function_expression_9 New_pat_0 Expression_9 |
     Int_expression_9 Integer |
-    Let_expression_9 Eqq' Expression_9 |
+    Let_expression_9 [Eqq'] Expression_9 |
     Match_expression_9 Location Expression_9 Matches_9 |
     Modular_expression_9 Modular |
     Name_expression_9 Name (Maybe Type_8) [Type_8]
@@ -138,7 +138,7 @@ module Awful.Operators (
           traverse (std_cls d) b <*>
           standard_defs d (fst <$> i) c)
   standard_arguments ::
-    (Location -> Location_1) -> Map' Op -> [(Pat, Type_7)] -> Type_7 -> Expression_0 -> Err (Type_8, Expression_9)
+    (Location -> Location_1) -> Map' Op -> [(New_pat_0, Type_7)] -> Type_7 -> Expression_0 -> Err (Type_8, Expression_9)
   standard_arguments a m b c d =
     case b of
       [] -> (,) <$> std_type a c <*> std_expr a m d
@@ -184,20 +184,20 @@ module Awful.Operators (
       Just (c, d) -> (\e -> Just (c, e)) <$> std_expr a f d
       Nothing -> Right Nothing
   std_eqq :: (Location -> Location_1) -> Map' Op -> Eqq -> Err Eqq'
-  std_eqq a e (Eqq b c d) = Eqq' b c <$> std_expr a e d
+  std_eqq a e (Eqq c d) = Eqq' c <$> std_expr a e d
   std_expr :: (Location -> Location_1) -> Map' Op -> Expression_0 -> Err Expression_9
   std_expr a f b =
     case b of
       Application_expression_0 c d -> Prelude.foldl Application_expression_9 <$> std_expr a f c <*> traverse (std_expr a f) d
       Function_expression_0 c d -> Function_expression_9 c <$> std_expr a f d
       Int_expression_0 c -> Right (Int_expression_9 c)
-      Let_expression_0 c d -> Let_expression_9 <$> std_eqq a f c <*> std_expr a f d
+      Let_expression_0 c d -> Let_expression_9 <$> traverse (std_eqq a f) c <*> std_expr a f d
       Match_expression_0 c d e -> Match_expression_9 c <$> std_expr a f d <*> std_matches a f e
       Modular_expression_0 c -> Right (Modular_expression_9 c)
       Name_expression_0 c d e -> Name_expression_9 c <$> traverse (std_type a) d <*> traverse (std_type a) e
       Op_expression_0 c d ->
         shunting_yard a (std_expr a f, Application_expression_9, \e -> Name_expression_9 e Nothing []) f [] c d
-  std_inst :: (Location -> Location_1) -> Map' Op -> (Name, ([Pat], Expression_0)) -> Err (Name, Expression_9)
+  std_inst :: (Location -> Location_1) -> Map' Op -> (Name, ([New_pat_0], Expression_0)) -> Err (Name, Expression_9)
   std_inst a f (b, (c, d)) = (\e -> (b, Prelude.foldr Function_expression_9 e c)) <$> std_expr a f d
   std_match_int :: (Location -> Location_1) -> Map' Op -> Match_Int_0 -> Err Match_Int_9
   std_match_int a e (Match_Int_0 b c d) = Match_Int_9 b c <$> std_expr a e d

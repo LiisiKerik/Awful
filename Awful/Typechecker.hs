@@ -35,11 +35,14 @@ What happens with unary minus and binary minus during parsing?
 allow using operators in class method definitions? Instance Ring{Complex T}<Ring T>(..., Complex x y * Complex z w = ...)
 -}
 module Awful.Typechecker (
+  Anyconstr (..),
   Expression_2 (..),
   File (..),
   Match_unnamed_algebraic_2 (..),
   Matches_2 (..),
+  Modular' (..),
   Nat (..),
+  New_pat_1 (..),
   Pat_1 (..),
   Strct,
   Type_2,
@@ -64,6 +67,7 @@ module Awful.Typechecker (
   import Data.Maybe
   import Data.Set
   import Parser.Locations
+  data Anyconstr = Anyconstr [(String, Kind)] [Type_1] Type_1 deriving Show
   data Brnch_3 = Brnch_3 String [(String, Kind)] String [(String, Type_8)] deriving Show
   data Class_3 = Class_3 String (String, Kind) (Maybe Name) [Method_3] deriving Show
   data Class_4 = Class_4 (String, Kind) (Maybe String) [Method_4] deriving Show
@@ -103,8 +107,8 @@ module Awful.Typechecker (
     Div_0_expression_2 |
     Div_1_expression_2 Integer |
     Div'_expression_2 Integer |
-    Field_expression_2 String |
-    Function_expression_2 Pat_1 Expression_2 |
+    Field_expression_2 String Int |
+    Function_expression_2 New_pat_1 Expression_2 |
     Int_expression_2 Integer |
     Inverse_Modular_expression_2 Integer |
     Match_expression_2 Expression_2 Matches_2 |
@@ -116,11 +120,9 @@ module Awful.Typechecker (
     Multiply_Modular_0_expression_2 Integer |
     Multiply_Modular_1_expression_2 Integer Integer |
     Name_expression_2 String |
-    Named_struct_expression_2 String (Map' Expression_2) |
     Negate_Int_expression_2 |
     Negate_Modular_expression_2 Integer |
-    Unnamed_algebraic_expression_2 String [Expression_2] |
-    Unnamed_struct_expression_2 String [Expression_2]
+    Struct_expression_2 String [Expression_2]
       deriving Show
   data File =
     File
@@ -133,6 +135,7 @@ module Awful.Typechecker (
       (Map' (Map' [[String]]))
       (Map' Kind)
       (Map' Strct)
+      (Map' Anyconstr)
         deriving Show
   data Match_unnamed_algebraic_2 = Match_unnamed_algebraic_2 [Pat_1] Expression_2 deriving Show
   data Matches_2 =
@@ -144,8 +147,14 @@ module Awful.Typechecker (
   data Method_4 = Method_4 String [(String, Kind)] [Constraint_1] Type_1 deriving Show
   data Modular' = Modular' Integer Integer deriving Show
   data Nat = Nxt Nat | Zr deriving (Eq, Ord, Show)
-  data Pat_1 = Blank_pat_1 | Name_pat_1 String | Named_application_pat_1 [(String, Pat_1)] | Unnamed_application_pat_1 [Pat_1]
-    deriving Show
+  data New_pat_1 =
+    New_application_pat_1 String [New_pat_1] |
+    New_blank_pat_1 |
+    New_int_pat_1 Integer |
+    New_modular_pat_1 Modular' |
+    New_name_pat_1 String
+      deriving Show
+  data Pat_1 = Blank_pat_1 | Name_pat_1 String | Application_pat_1 [Pat_1] deriving Show
   data Plain_dat = Plain_dat String Data_branch_1 deriving Show
   data Strct = Named_strct [(String, Kind)] [(String, Type_1)] Type_1 | Unnamed_strct [(String, Kind)] [Type_1] Type_1
     deriving Show
@@ -154,7 +163,7 @@ module Awful.Typechecker (
   data Tmatch' = Tmatch' [Pat_1] Typedexpr deriving Show
   data Typedexpr =
     Application_texpr Typedexpr Typedexpr |
-    Function_texpr Pat_1 Typedexpr |
+    Function_texpr New_pat_1 Typedexpr |
     Int_texpr Integer |
     Match_texpr Typedexpr Typedmatches |
     Modular_texpr Integer |
@@ -250,6 +259,17 @@ module Awful.Typechecker (
           (c, i) = typestring g []
         in
           addargs_2 b h (addargs_1 b f c i e)
+  init_anyconstrs :: Map' Anyconstr
+  init_anyconstrs =
+    Data.Map.fromList
+      [
+        ("EQ", Anyconstr [] [] comparison_type),
+        ("GT", Anyconstr [] [] comparison_type),
+        ("LT", Anyconstr [] [] comparison_type),
+        ("Next", Anyconstr [] [Name_type_1 "Nat"] (Name_type_1 "Nat")),
+        ("Nothing", Anyconstr [("T", Type_kind)] [] (maybe_type (Name_type_1 "T"))),
+        ("Wrap", Anyconstr [("T", Type_kind)] [Name_type_1 "T"] (maybe_type (Name_type_1 "T"))),
+        ("Zr", Anyconstr [] [] (Name_type_1 "Nat"))]
   chain_constraints :: Maybe String -> Map' Class_5 -> Map' (Map' [String]) -> String -> Map' (Map' [String])
   chain_constraints a b c e =
     case a of
@@ -375,7 +395,7 @@ module Awful.Typechecker (
         ("Wrap", "Maybe"),
         ("Zr", "Nat")]
   context_union :: (File, Map' Op) -> (File, Map' Op) -> (File, Map' Op)
-  context_union (File b i j d e q t g d', t0) (File f k l h m r u n m', t2) =
+  context_union (File b i j d e q t g d' anyconstrs_0, t0) (File f k l h m r u n m' anyconstrs_1, t2) =
     (
       File
         (Data.Map.union b f)
@@ -386,7 +406,8 @@ module Awful.Typechecker (
         (Data.Map.union q r)
         (unionWith Data.Map.union t u)
         (Data.Map.union g n)
-        (Data.Map.union d' m'),
+        (Data.Map.union d' m')
+        (Data.Map.union anyconstrs_0 anyconstrs_1),
       Data.Map.union t0 t2)
   defs :: Map' Expression_2
   defs =
@@ -396,71 +417,77 @@ module Awful.Typechecker (
         (
           "Add Modular",
           Function_expression_2
-            (Name_pat_1 "x")
+            (New_name_pat_1 "x")
             (Function_expression_2
-              Blank_pat_1
+              New_blank_pat_1
               (Function_expression_2
-                Blank_pat_1
+                New_blank_pat_1
                 (Function_expression_2
-                  Blank_pat_1
+                  New_blank_pat_1
                   (Function_expression_2
-                    Blank_pat_1
-                    (Function_expression_2 Blank_pat_1 (Function_expression_2 Blank_pat_1 (Name_expression_2 "x")))))))),
+                    New_blank_pat_1
+                    (Function_expression_2
+                      New_blank_pat_1
+                      (Function_expression_2 New_blank_pat_1 (Name_expression_2 "x")))))))),
         ("Compare Int", Compare_Int_0_expression_2),
         ("Compare Modular", Compare_Modular_0_expression_2),
         ("Convert Int", Convert_Int_expression_2),
         (
           "Convert Modular",
           Function_expression_2
-            Blank_pat_1
+            New_blank_pat_1
             (Function_expression_2
-              (Name_pat_1 "x")
+              (New_name_pat_1 "x")
               (Function_expression_2
-                Blank_pat_1
+                New_blank_pat_1
                 (Function_expression_2
-                  Blank_pat_1
+                  New_blank_pat_1
                   (Function_expression_2
-                    Blank_pat_1
-                    (Function_expression_2 Blank_pat_1 (Function_expression_2 Blank_pat_1 (Name_expression_2 "x")))))))),
+                    New_blank_pat_1
+                    (Function_expression_2
+                      New_blank_pat_1
+                      (Function_expression_2 New_blank_pat_1 (Name_expression_2 "x")))))))),
         ("Div", Div_0_expression_2),
-        ("EQ", Unnamed_algebraic_expression_2 "EQ" []),
-        ("GT", Unnamed_algebraic_expression_2 "GT" []),
-        ("LT", Unnamed_algebraic_expression_2 "LT" []),
+        ("EQ", Struct_expression_2 "EQ" []),
+        ("GT", Struct_expression_2 "GT" []),
+        ("LT", Struct_expression_2 "LT" []),
         ("Mod", Mod_0_expression_2),
         ("Multiply Int", Multiply_Int_0_expression_2),
         (
           "Multiply Modular",
           Function_expression_2
-            Blank_pat_1
+            New_blank_pat_1
             (Function_expression_2
-              Blank_pat_1
+              New_blank_pat_1
               (Function_expression_2
-                Blank_pat_1
+                New_blank_pat_1
                 (Function_expression_2
-                  Blank_pat_1
+                  New_blank_pat_1
                   (Function_expression_2
-                    (Name_pat_1 "x")
-                    (Function_expression_2 Blank_pat_1 (Function_expression_2 Blank_pat_1 (Name_expression_2 "x")))))))),
+                    (New_name_pat_1 "x")
+                    (Function_expression_2
+                      New_blank_pat_1
+                      (Function_expression_2 New_blank_pat_1 (Name_expression_2 "x")))))))),
         ("Negate Int", Negate_Int_expression_2),
         (
           "Negate Modular",
           Function_expression_2
-            Blank_pat_1
+            New_blank_pat_1
             (Function_expression_2
-              Blank_pat_1
+              New_blank_pat_1
               (Function_expression_2
-                Blank_pat_1
+                New_blank_pat_1
                 (Function_expression_2
-                  Blank_pat_1
+                  New_blank_pat_1
                   (Function_expression_2
-                    Blank_pat_1
+                    New_blank_pat_1
                     (Function_expression_2
-                      (Name_pat_1 "x")
-                      (Function_expression_2 Blank_pat_1 (Name_expression_2 "x")))))))),
-        ("Next", Function_expression_2 (Name_pat_1 "x") (Unnamed_algebraic_expression_2 "Next" [Name_expression_2 "x"])),
-        ("Nothing", Unnamed_algebraic_expression_2 "Nothing" []),
-        ("Wrap", Function_expression_2 (Name_pat_1 "x") (Unnamed_algebraic_expression_2 "Wrap" [Name_expression_2 "x"])),
-        ("Zr", Unnamed_algebraic_expression_2 "Zr" [])]
+                      (New_name_pat_1 "x")
+                      (Function_expression_2 New_blank_pat_1 (Name_expression_2 "x")))))))),
+        ("Next", Function_expression_2 (New_name_pat_1 "x") (Struct_expression_2 "Next" [Name_expression_2 "x"])),
+        ("Nothing", Struct_expression_2 "Nothing" []),
+        ("Wrap", Function_expression_2 (New_name_pat_1 "x") (Struct_expression_2 "Wrap" [Name_expression_2 "x"])),
+        ("Zr", Struct_expression_2 "Zr" [])]
   function_type :: Type_1 -> Type_1 -> Type_1
   function_type a = Application_type_1 (Application_type_1 (Name_type_1 "Function") a)
   getarg :: [t] -> Nat -> t
@@ -473,7 +500,9 @@ module Awful.Typechecker (
           Zr -> c
   init_type_context :: (File, Map' Op)
   init_type_context =
-    (File kinds unnamed_algebraics constrs types classes_0 classes_1 instances classes_2 Data.Map.empty, Data.Map.empty)
+    (
+      File kinds unnamed_algebraics constrs types classes_0 classes_1 instances classes_2 Data.Map.empty init_anyconstrs,
+      Data.Map.empty)
   instances :: Map' (Map' [[String]])
   instances =
     Data.Map.fromList
@@ -724,9 +753,8 @@ module Awful.Typechecker (
   type_alg :: [t] -> String -> Expression_2
   type_alg a b =
     let
-      c = show <$> [0 .. length a - 1]
-    in
-      Prelude.foldr Function_expression_2 (Unnamed_algebraic_expression_2 b (Name_expression_2 <$> c)) (Name_pat_1 <$> c)
+      c = show <$> [0 .. length a - 1] in
+      Prelude.foldr Function_expression_2 (Struct_expression_2 b (Name_expression_2 <$> c)) (New_name_pat_1 <$> c)
   type_branching ::
     (
       (Location -> Location_1) ->
@@ -744,8 +772,17 @@ module Awful.Typechecker (
               then Right (Data.Map.insert g (Left a) f, Brnch_3 g (zip b i) c d)
               else Left ("Kind constructor " ++ g ++ location (e a) ++ " has a wrong number of arguments.")
       Nothing -> Left ("Undefined constructor for " ++ j ++ " " ++ g ++ location' (e a))
-  type_branching_1 :: (Location -> Location_1) -> Map' Kind -> Types -> String -> [(String, Kind)] -> Brnch_3 -> Err Types
-  type_branching_1 f q g n o (Brnch_3 b c d e) =
+  type_branching_1 ::
+    (
+      (Location -> Location_1) ->
+      Map' Kind ->
+      Types ->
+      String ->
+      [(String, Kind)] ->
+      Brnch_3 ->
+      Map' (Anyconstr, Status) ->
+      Err (Types,  Map' (Anyconstr, Status)))
+  type_branching_1 f q g n o (Brnch_3 b c d e) anyconstrs =
     let
       m = Basic_type_1 (o ++ c) Nothing []
       l =
@@ -758,10 +795,12 @@ module Awful.Typechecker (
     in
       (
         (\h ->
-          Prelude.foldl
-            (\i -> \(j, k) -> ins_new j (m (function_type l k)) i)
-            (ins_new d (m (Prelude.foldr (\(_, i) -> function_type i) l h)) g)
-            h) <$>
+          (
+            Prelude.foldl
+              (\i -> \(j, k) -> ins_new j (m (function_type l k)) i)
+              (ins_new d (m (Prelude.foldr (\(_, i) -> function_type i) l h)) g)
+              h,
+            ins_new d (Anyconstr (o <> c) (snd <$> h) l) anyconstrs)) <$>
         type_types' f (Prelude.foldl (\i -> \(j, k) -> Data.Map.insert j k i) q c) e)
   type_branchings ::
     (Location -> Location_1) -> String -> Location -> String -> Map' (Either Location [Kind]) -> [Brnch_2] -> Err [Brnch_3]
@@ -769,11 +808,20 @@ module Awful.Typechecker (
     case a of
       [] -> if all isLeft f then Right [] else Left ("Incomplete match in branching data type " ++ h ++ location' (e i))
       b : c -> type_branching e j f b >>= \(g, d) -> (:) d <$> type_branchings e h i j g c
-  type_branchings_1 :: (Location -> Location_1) -> Map' Kind -> Types -> String -> [(String, Kind)] -> [Brnch_3] -> Err Types
-  type_branchings_1 g f a i h b =
+  type_branchings_1 ::
+    (
+      (Location -> Location_1) ->
+      Map' Kind ->
+      Types ->
+      String ->
+      [(String, Kind)] ->
+      [Brnch_3] ->
+      Map' (Anyconstr, Status) ->
+      Err (Types, Map' (Anyconstr, Status)))
+  type_branchings_1 g f a i h b anyconstrs =
     case b of
-      [] -> Right a
-      c : d -> type_branching_1 g f a i h c >>= \e -> type_branchings_1 g f e i h d
+      [] -> Right (a, anyconstrs)
+      c : d -> type_branching_1 g f a i h c anyconstrs >>= \ (e, anyconstrs') -> type_branchings_1 g f e i h d anyconstrs'
   type_case ::
     (
       (Location -> Location_1) ->
@@ -1073,17 +1121,15 @@ module Awful.Typechecker (
                         w = fst <$> s
                       in
                         Prelude.foldl
-                          (\t -> \v -> Data.Map.insert v (Field_expression_2 v) t)
+                          (\t -> \ (idx, v) -> Data.Map.insert v (Field_expression_2 u idx) t)
                           (Data.Map.insert
                             u
                             (Prelude.foldr
-                              (\t -> Function_expression_2 (Name_pat_1 ('#' : t)))
-                              (Named_struct_expression_2
-                                f9
-                                (Data.Map.fromList ((\t -> (t, Name_expression_2 ('#' : t))) <$> w)))
+                              (\t -> Function_expression_2 (New_name_pat_1 ('#' : t)))
+                              (Struct_expression_2 f9 (Name_expression_2 <$> ((:) '#') <$> w))
                               w)
                             o1)
-                          w)
+                          (zip [0 ..] w))
                     k
                     n,
                   Data.Map.insert a p x),
@@ -1100,15 +1146,15 @@ module Awful.Typechecker (
                   (
                     j,
                     Prelude.foldl
-                      (flip (\g -> Data.Map.insert g (Field_expression_2 g)))
+                      (flip (\ (idx, g) -> Data.Map.insert g (Field_expression_2 a idx)))
                       (Data.Map.insert
                         a
                         (Prelude.foldr
-                          (\f -> Function_expression_2 (Name_pat_1 ('#' : f)))
-                          (Named_struct_expression_2 a (Data.Map.fromList ((\f -> (f, Name_expression_2 ('#' : f))) <$> e')))
+                          (\f -> Function_expression_2 (New_name_pat_1 ('#' : f)))
+                          (Struct_expression_2 a (Name_expression_2 <$> ((:) '#') <$> e'))
                           e')
                         k)
-                      e')
+                      (zip [0 ..] e'))
               Unnamed_algebraic_data_1 e ->
                 (
                   Prelude.foldl (\d -> \(Unnamed_form_1 n _) -> ins_new n a d) j e,
@@ -1121,8 +1167,8 @@ module Awful.Typechecker (
                     Data.Map.insert
                       a
                       (Prelude.foldr
-                        (\ f -> Function_expression_2 (Name_pat_1 f))
-                        (Unnamed_struct_expression_2 a (Name_expression_2 <$> e'))
+                        (\ f -> Function_expression_2 (New_name_pat_1 ('#' : f)))
+                        (Struct_expression_2 a (Name_expression_2 <$> ((:) '#') <$> e'))
                         e')
                       k)
           y = Prelude.foldr Function_kind Type_kind (snd <$> b)
@@ -1132,11 +1178,12 @@ module Awful.Typechecker (
     (Location -> Location_1) ->
     Data_3 ->
     Map' Kind ->
-    (Unnamed_algebraics, Types, Map' (Strct, Status)) ->
-    Err (Unnamed_algebraics, Types, Map' (Strct, Status))
-  type_data_2 f (Data_3 a b') d (p, e, q') =
+    (Unnamed_algebraics, Types, Map' (Strct, Status), Map' (Anyconstr, Status)) ->
+    Err (Unnamed_algebraics, Types, Map' (Strct, Status), Map' (Anyconstr, Status))
+  type_data_2 f (Data_3 a b') d (p, e, q', anyconstrs) =
     case b' of
-      Branching_data_3 g h -> (\t -> (p, t, q')) <$> type_branchings_1 f (type_kinds g d) e a g h
+      Branching_data_3 g h ->
+        (\ (t, anyconstrs') -> (p, t, q', anyconstrs')) <$> type_branchings_1 f (type_kinds g d) e a g h anyconstrs
       Plain_data_3 b c ->
         let
           g = type_kinds b d
@@ -1153,7 +1200,8 @@ module Awful.Typechecker (
                       (flip (\(k, l) -> ins_new k (t' (function_type x l))))
                       (ins_new a (t' (Prelude.foldr (function_type <$> snd) x i)) e)
                       i,
-                    ins_new a (Named_strct b i x) q')) <$>
+                    ins_new a (Named_strct b i x) q',
+                    ins_new a (Anyconstr b (snd <$> i) x) anyconstrs)) <$>
                 type_named_fields f h g)
             Unnamed_algebraic_data_1 h ->
               (
@@ -1161,21 +1209,47 @@ module Awful.Typechecker (
                   (
                     ins_new a (Unnamed_alg b (Data.Map.fromList ((\(Unnamed_form_2 r s) -> (r, s)) <$> q)) x) p,
                     Prelude.foldl (flip (\(Unnamed_form_2 l m) -> ins_new l (t' (Prelude.foldr function_type x m)))) e q,
-                    q')) <$>
+                    q',
+                    Prelude.foldl (flip (\ (Unnamed_form_2 l m) -> ins_new l (Anyconstr b m x))) anyconstrs q)) <$>
                 type_unnamed_forms f h g)
             Unnamed_struct_data_1 h ->
               (
-                (\ j -> (p, ins_new a (t' (Prelude.foldr function_type x j)) e, ins_new a (Unnamed_strct b j x) q')) <$>
+                (\ j ->
+                  (
+                    p,
+                    ins_new a (t' (Prelude.foldr function_type x j)) e,
+                    ins_new a (Unnamed_strct b j x) q',
+                    ins_new a (Anyconstr b j x) anyconstrs)) <$>
                 type_types f h g)
   type_datas ::
     (Location -> Location_1) ->
     [Data_2] ->
-    (Map' (Kind, Status), Unnamed_algebraics, Constrs, Types, Map' Expression_2, Map' Kind, Map' (Strct, Status)) ->
-    Err (Map' (Kind, Status), Unnamed_algebraics, Constrs, Types, Map' Expression_2, Map' Kind, Map' (Strct, Status))
-  type_datas h a (b, i, j, d, c, m, a7) =
+    (
+      Map' (Kind, Status),
+      Unnamed_algebraics,
+      Constrs,
+      Types,
+      Map' Expression_2,
+      Map' Kind,
+      Map' (Strct, Status),
+      Map' (Anyconstr, Status)) ->
+    Err (
+      Map' (Kind, Status),
+      Unnamed_algebraics,
+      Constrs,
+      Types,
+      Map' Expression_2,
+      Map' Kind,
+      Map' (Strct, Status),
+      Map' (Anyconstr, Status))
+  type_datas h a (b, i, j, d, c, m, a7, anyconstrs) =
     (
       type_datas_1 h a (b, j, c, m) >>=
-      \((u, v, w, a'), y) -> (\(b', c', t2) -> (u, b', v, c', w, a', t2)) <$> type_datas_2 h y (fst <$> u) (i, d, a7))
+      (
+        \((u, v, w, a'), y) ->
+          (
+            (\(b', c', t2, anyconstrs') -> (u, b', v, c', w, a', t2, anyconstrs')) <$>
+            type_datas_2 h y (fst <$> u) (i, d, a7, anyconstrs))))
   type_datas_1 ::
     (
       (Location -> Location_1) ->
@@ -1191,8 +1265,8 @@ module Awful.Typechecker (
       (Location -> Location_1) ->
       [Data_3] ->
       Map' Kind ->
-      (Unnamed_algebraics, Types, Map' (Strct, Status)) ->
-      Err (Unnamed_algebraics, Types, Map' (Strct, Status)))
+      (Unnamed_algebraics, Types, Map' (Strct, Status), Map' (Anyconstr, Status)) ->
+      Err (Unnamed_algebraics, Types, Map' (Strct, Status), Map' (Anyconstr, Status)))
   type_datas_2 f a b c =
     case a of
       [] -> Right c
@@ -1291,12 +1365,13 @@ module Awful.Typechecker (
     Map' ([String], Map' [(String, Nat)]) ->
     Map' Class_4 ->
     Map' Strct ->
+    Map' Anyconstr ->
     Err (Map' Expression_2)
-  type_def_2 j a (d, l, k) c m n t' u0 w3 =
+  type_def_2 j a (d, l, k) c m n t' u0 w3 anyconstrs =
     case a of
       Basic_def_4 r e b x h i y' ->
         (
-          (\t -> Data.Map.insert e (Prelude.foldr (\x' -> Function_expression_2 (Name_pat_1 x')) t y') c) <$>
+          (\t -> Data.Map.insert e (Prelude.foldr (\x' -> Function_expression_2 (New_name_pat_1 x')) t y') c) <$>
           type_expr
             ("definition " ++ e ++ location' (j r))
             h
@@ -1308,7 +1383,8 @@ module Awful.Typechecker (
             t'
             (Prelude.foldl (\y -> \(z, w) -> Data.Map.insert z w y) n b)
             w3
-            Data.Set.empty)
+            Data.Set.empty
+            anyconstrs)
       Instance_4 l' e' w0 w e e0 e1 f f' g' c2 r' ->
         let
           f4 = Prelude.foldl (\x -> \(y, g) -> Data.Map.insert y g x) n e0
@@ -1323,11 +1399,12 @@ module Awful.Typechecker (
               e
               (sysrep' w f')
               e1
-              (\g -> Prelude.foldr (\b -> Function_expression_2 (Name_pat_1 b)) g c2)
+              (\g -> Prelude.foldr (\b -> Function_expression_2 (New_name_pat_1 b)) g c2)
               t'
               u0
               f4
               w3
+              anyconstrs
           s' w1 = Left (e' ++ " " ++ e ++ " at" ++ location (j l') ++ " is an illegal instance because " ++ w1 ++ ".")
         in
           case w0 of
@@ -1357,6 +1434,7 @@ module Awful.Typechecker (
     Map' (Map' ([[String]], Status)) ->
     Map' ([String], Map' [(String, Nat)]) ->
     Map' Strct ->
+    Map' Anyconstr ->
     Err
       (
         Map' Expression_2,
@@ -1364,14 +1442,14 @@ module Awful.Typechecker (
         Map' (Map' Location'),
         Map' (Map' ([[String]], Status)),
         Map' ([String], Map' [(String, Nat)]))
-  type_defs h a a2 (b, i, j) (c, d) y y0 z t u' k' =
+  type_defs h a a2 (b, i, j) (c, d) y y0 z t u' k' anyconstrs =
     (
       type_defs_1 h a b d y y0 z t u' >>=
       \(g, e, k, u, f') ->
         (
           (\f -> (f, e, k, u, f')) <$
           type_ops h (fst <$> e) a2 <*>
-          type_defs_2 (Location_1 h) g (i, j, fst <$> e) c ((<$>) fst <$> u) b f' y k'))
+          type_defs_2 (Location_1 h) g (i, j, fst <$> e) c ((<$>) fst <$> u) b f' y k' anyconstrs))
   type_defs_1 ::
     String ->
     [Def_3] ->
@@ -1400,11 +1478,12 @@ module Awful.Typechecker (
     Map' ([String], Map' [(String, Nat)]) ->
     Map' Class_4 ->
     Map' Strct ->
+    Map' Anyconstr ->
     Err (Map' Expression_2)
-  type_defs_2 f a b c g i j u w =
+  type_defs_2 f a b c g i j u w anyconstrs =
     case a of
       [] -> Right c
-      d : e -> type_def_2 f d b c g i j u w >>= \h -> type_defs_2 f e b h g i j u w
+      d : e -> type_def_2 f d b c g i j u w anyconstrs >>= \h -> type_defs_2 f e b h g i j u w anyconstrs
   type_expr ::
     String ->
     Type_1 ->
@@ -1417,13 +1496,14 @@ module Awful.Typechecker (
     Map' Kind ->
     Map' Strct ->
     Set String ->
+    Map' Anyconstr ->
     Err Expression_2
-  type_expr k h a (c, d, e) f m w w' b t3 x8 =
+  type_expr k h a (c, d, e) f m w w' b t3 x8 anyconstrs =
     let
       n = " in " ++ k
     in
       (
-        type_expression c d a w x8 [] e f h [] b t3 >>=
+        type_expression c d a w x8 [] e f h [] b t3 anyconstrs >>=
         \(g, i, j, _, x) ->
           (
             solvesys (\y -> \p -> Left ("Type mismatch between " ++ min y p ++ " and " ++ max y p ++ n)) j (x, g, i) >>=
@@ -1452,9 +1532,10 @@ module Awful.Typechecker (
     Map' (Map' [[String]]) ->
     Map' ([String], Map' [(String, Nat)]) ->
     Map' Strct ->
+    Map' Anyconstr ->
     Err Expression_2
-  type_expr' (b, c, d, e) f g h t6 =
-    type_expr "input." (Name_type_1 "0") (Location_1 "input") (c, d, e) f g 1 h b t6 (Data.Set.singleton "0")
+  type_expr' (b, c, d, e) f g h t6 anyconstrs =
+    type_expr "input." (Name_type_1 "0") (Location_1 "input") (c, d, e) f g 1 h b t6 (Data.Set.singleton "0") anyconstrs
   type_expression ::
     Map' Unnamed_alg ->
     Map' String ->
@@ -1468,8 +1549,9 @@ module Awful.Typechecker (
     [(String, (Name, Type_1))] ->
     Map' Kind ->
     Map' Strct ->
+    Map' Anyconstr ->
     Err (Typedexpr, Set String, [(Type_1, Type_1)], Integer, [(String, (Name, Type_1))])
-  type_expression v w r o f h d b e c' r7 z8 =
+  type_expression v w r o f h d b e c' r7 z8 anyconstrs =
     let
       x' a = location' (r a)
     in
@@ -1488,14 +1570,15 @@ module Awful.Typechecker (
               (function_type (Name_type_1 (show o)) e)
               c'
               r7
-              z8 >>=
+              z8
+              anyconstrs >>=
             \(i, j, k, p, d') ->
               (
                 (\(l, m, n, q, e') -> (Application_texpr i l, m, n, q, e')) <$>
-                type_expression v w r p j k d g (Name_type_1 (show o)) d' r7 z8))
+                type_expression v w r p j k d g (Name_type_1 (show o)) d' r7 z8 anyconstrs))
         Function_expression_1 c g ->
           (
-            type_pat r z8 c (Name_type_1 (show o)) d (o + 1) (Data.Set.insert (show o) f) h >>=
+            type_pat_new r anyconstrs c (Name_type_1 (show o)) d (o + 1) (Data.Set.insert (show o) f) h >>=
             \(a6, b6, c6, d6, f6) ->
               (
                 (\(a', b', c3, d', f') -> (Function_texpr a6 a', b', c3, d', f')) <$>
@@ -1511,20 +1594,21 @@ module Awful.Typechecker (
                   (Name_type_1 (show c6))
                   c'
                   r7
-                  z8))
+                  z8
+                  anyconstrs))
         Int_expression_1 c -> Right (Int_texpr c, f, (e, int_type) : h, o, c')
         Match_expression_1 a7 c g ->
           case g of
             Matches_Int_1 i j ->
               (
-                type_expression v w r o f h d c int_type c' r7 z8 >>=
+                type_expression v w r o f h d c int_type c' r7 z8 anyconstrs >>=
                 \(k, l, m, n, d') ->
                   (
-                    type_matches_int v w r n l m d Data.Map.empty i e Data.Map.empty d' r7 z8 >>=
+                    type_matches_int v w r n l m d Data.Map.empty i e Data.Map.empty d' r7 z8 anyconstrs >>=
                     \(q, t, u, x, e') ->
                       (
                         (\(a0, b0, c0, d0, a2) -> (Match_texpr k (Tmatch_int q a0), b0, c0, d0, a2)) <$>
-                        type_expression v w r x t u d j e e' r7 z8)))
+                        type_expression v w r x t u d j e e' r7 z8 anyconstrs)))
             Matches_Modular_1 i j ->
               case i of
                 [] -> undefined
@@ -1533,7 +1617,7 @@ module Awful.Typechecker (
                     then Left ("Match expression over Modular " ++ show m2 ++ location (r a7))
                     else
                       (
-                        type_expression v w r o f h d c (mod_type (int_to_nat_type m2)) c' r7 z8 >>=
+                        type_expression v w r o f h d c (mod_type (int_to_nat_type m2)) c' r7 z8 anyconstrs >>=
                         \(k, l, m, n, d') ->
                           (
                             type_matches_modular
@@ -1551,7 +1635,8 @@ module Awful.Typechecker (
                               d'
                               (q3, m2)
                               r7
-                              z8 >>=
+                              z8
+                              anyconstrs >>=
                             \(d0, e0, f0, g0, i0, a3) ->
                                 let
                                   k0 k1 = Match_texpr k (Tmatch_Modular d0 k1)
@@ -1566,7 +1651,7 @@ module Awful.Typechecker (
                                         Just (_, j0) ->
                                           (
                                             (\(a', b', c2, d7, a4) -> (k0 (Just a'), b', c2, d7, a4)) <$>
-                                            type_expression v w r g0 e0 f0 d j0 e a3 r7 z8)
+                                            type_expression v w r g0 e0 f0 d j0 e a3 r7 z8 anyconstrs)
                                         Nothing -> Left ("Incomplete match" ++ x' a7)))
             Matches_unnamed_algebraic_1 i j ->
               case i of
@@ -1579,7 +1664,7 @@ module Awful.Typechecker (
                         (o', t, u) = typevars n (o, Data.Map.empty, f)
                       in
                         (
-                          type_expression v w r o' u h d c (repl' t q) c' r7 z8 >>=
+                          type_expression v w r o' u h d c (repl' t q) c' r7 z8 anyconstrs >>=
                           \(x, y, a0, b0, a2) ->
                             (
                               type_matches_unnamed_algebraic
@@ -1598,7 +1683,8 @@ module Awful.Typechecker (
                                 t
                                 a2
                                 r7
-                                z8 >>=
+                                z8
+                                anyconstrs >>=
                               \(d0, e0, f0, g0, i0, a3) ->
                                 let
                                   k0 k1 = Match_texpr x (Tmatch_unnamed_algebraic d0 k1)
@@ -1613,7 +1699,7 @@ module Awful.Typechecker (
                                         Just (_, j0) ->
                                           (
                                             (\(a', b', c2, d', a4) -> (k0 (Just a'), b', c2, d', a4)) <$>
-                                            type_expression v w r g0 e0 f0 d j0 e a3 r7 z8)
+                                            type_expression v w r g0 e0 f0 d j0 e a3 r7 z8 anyconstrs)
                                         Nothing -> Left ("Incomplete match" ++ x' a7)))
                     Nothing -> Left ("Undefined algebraic constructor " ++ l ++ x' l2)
         Modular_expression_1 c ->
@@ -1690,8 +1776,9 @@ module Awful.Typechecker (
       Map' Class_4 ->
       Map' Kind ->
       Map' Strct ->
+      Map' Anyconstr ->
       Err (Map' Expression_2))
-  type_exprs a b c d h i t z w f' t' t0 x2 f5 =
+  type_exprs a b c d h i t z w f' t' t0 x2 f5 anyconstrs =
     case h of
       [] -> Right i
       (j@(Name _ y), k, s, t5, l) : m ->
@@ -1707,8 +1794,9 @@ module Awful.Typechecker (
             t'
             (Prelude.foldl (\k' -> \(l', m0) -> Data.Map.insert l' m0 k') x2 s)
             f5
-            Data.Set.empty >>=
-          \g -> type_exprs a b c d m (Data.Map.insert (y ++ " " ++ t) (f' g) i) t z w f' t' t0 x2 f5)
+            Data.Set.empty
+            anyconstrs >>=
+          \g -> type_exprs a b c d m (Data.Map.insert (y ++ " " ++ t) (f' g) i) t z w f' t' t0 x2 f5 anyconstrs)
   type_inh :: String -> [String] -> Maybe String -> Map' String -> Either String ()
   type_inh a b c d =
     case c of
@@ -1751,14 +1839,15 @@ module Awful.Typechecker (
       [(String, (Name, Type_1))] ->
       Map' Kind ->
       Map' Strct ->
+      Map' Anyconstr ->
       Err (Map Integer Typedexpr, Set String, [(Type_1, Type_1)], Integer, Map Integer Location, [(String, (Name, Type_1))]))
-  type_match_int a b c d f g h i (Match_Int_1 y2 j k) l x1 a' x3 t8 =
+  type_match_int a b c d f g h i (Match_Int_1 y2 j k) l x1 a' x3 t8 anyconstrs =
     case Data.Map.lookup j x1 of
       Just y0 -> Left (location_err' ("cases for " ++ show j) (c y0) (c y2))
       Nothing ->
         (
           (\(m, n, o, p, b') -> (Data.Map.insert j m i, n, o, p, Data.Map.insert j y2 x1, b')) <$>
-          type_expression a b c d f g h k l a' x3 t8)
+          type_expression a b c d f g h k l a' x3 t8 anyconstrs)
   type_match_modular ::
     (
       Map' Unnamed_alg ->
@@ -1776,6 +1865,7 @@ module Awful.Typechecker (
       (Location, Integer) ->
       Map' Kind ->
       Map' Strct ->
+      Map' Anyconstr ->
       Err
         (
           Map Integer Typedexpr,
@@ -1784,7 +1874,7 @@ module Awful.Typechecker (
           Integer,
           Map Integer (Maybe Location),
           [(String, (Name, Type_1))]))
-  type_match_modular a b c d f g h i (Match_Modular_1 t r l) m n o (p, s) x4 t8 =
+  type_match_modular a b c d f g h i (Match_Modular_1 t r l) m n o (p, s) x4 t8 anyconstrs =
     (
       check_mod c r >>=
       \(Modular' j k) ->
@@ -1795,7 +1885,7 @@ module Awful.Typechecker (
               Nothing ->
                 (
                   (\(u, v, w, x, z) -> (Data.Map.insert k u i, v, w, x, Data.Map.insert k (Just t) n, z)) <$>
-                  type_expression a b c d f g h l m o x4 t8)
+                  type_expression a b c d f g h l m o x4 t8 anyconstrs)
           else
             Left
               (
@@ -1824,8 +1914,9 @@ module Awful.Typechecker (
       [(String, (Name, Type_1))] ->
       Map' Kind ->
       Map' Strct ->
+      Map' Anyconstr ->
       Err (Map' Tmatch', Set String, [(Type_1, Type_1)], Integer, Map' (Either Location [Type_1]), [(String, (Name, Type_1))]))
-  type_match_unnamed_algebraic a b c d f g h i (Match_unnamed_algebraic_1 (Name j k) l m) n o (q1, q) r a' m2 x5 =
+  type_match_unnamed_algebraic a b c d f g h i (Match_unnamed_algebraic_1 (Name j k) l m) n o (q1, q) r a' m2 x5 anyconstrs =
     case Data.Map.lookup k o of
       Just p' ->
         case p' of
@@ -1836,7 +1927,7 @@ module Awful.Typechecker (
               \(s0, s, w2, f4, g2) ->
                 (
                   (\(t, u, v, w, b') -> (Data.Map.insert k (Tmatch' s0 t) i, u, v, w, Data.Map.insert k (Left j) o, b')) <$>
-                  type_expression a b c w2 f4 g2 s m n a' m2 x5))
+                  type_expression a b c w2 f4 g2 s m n a' m2 x5 anyconstrs))
       Nothing ->
         Left
           (
@@ -1859,14 +1950,15 @@ module Awful.Typechecker (
       [(String, (Name, Type_1))] ->
       Map' Kind ->
       Map' Strct ->
+      Map' Anyconstr ->
       Err (Map Integer Typedexpr, Set String, [(Type_1, Type_1)], Integer, [(String, (Name, Type_1))]))
-  type_matches_int a b c d f g h i j k x1 a' m' w2 =
+  type_matches_int a b c d f g h i j k x1 a' m' w2 anyconstrs =
     case j of
       [] -> Right (i, f, g, d, a')
       l : m ->
         (
-          type_match_int a b c d f g h i l k x1 a' m' w2 >>=
-          \(n, o, p, q, x2, b') -> type_matches_int a b c q o p h n m k x2 b' m' w2)
+          type_match_int a b c d f g h i l k x1 a' m' w2 anyconstrs >>=
+          \(n, o, p, q, x2, b') -> type_matches_int a b c q o p h n m k x2 b' m' w2 anyconstrs)
   type_matches_modular ::
     (
       Map' Unnamed_alg ->
@@ -1884,6 +1976,7 @@ module Awful.Typechecker (
       (Location, Integer) ->
       Map' Kind ->
       Map' Strct ->
+      Map' Anyconstr ->
       Err
         (
           Map Integer Typedexpr,
@@ -1892,13 +1985,13 @@ module Awful.Typechecker (
           Integer,
           Map Integer (Maybe Location),
           [(String, (Name, Type_1))]))
-  type_matches_modular a b c d f g h i j k u l w x' w1 =
+  type_matches_modular a b c d f g h i j k u l w x' w1 anyconstrs =
     case j of
       [] -> Right (i, f, g, d, u, l)
       m : n ->
         (
-          type_match_modular a b c d f g h i m k u l w x' w1 >>=
-          \(o, p, q, r, v, t) -> type_matches_modular a b c r p q h o n k v t w x' w1)
+          type_match_modular a b c d f g h i m k u l w x' w1 anyconstrs >>=
+          \(o, p, q, r, v, t) -> type_matches_modular a b c r p q h o n k v t w x' w1 anyconstrs)
   type_matches_unnamed_algebraic ::
     (
       Map' Unnamed_alg ->
@@ -1917,14 +2010,15 @@ module Awful.Typechecker (
       [(String, (Name, Type_1))] ->
       Map' Kind ->
       Map' Strct ->
+      Map' Anyconstr ->
       Err (Map' Tmatch', Set String, [(Type_1, Type_1)], Integer, Map' (Either Location [Type_1]), [(String, (Name, Type_1))]))
-  type_matches_unnamed_algebraic a b c d f g h i j k s u v a' m0 z1 =
+  type_matches_unnamed_algebraic a b c d f g h i j k s u v a' m0 z1 anyconstrs =
     case j of
       [] -> Right (i, f, g, d, s, a')
       l : m ->
         (
-          type_match_unnamed_algebraic a b c d f g h i l k s u v a' m0 z1 >>=
-          \(n, o, p, q, t, b') -> type_matches_unnamed_algebraic a b c q o p h n m k t u v b' m0 z1)
+          type_match_unnamed_algebraic a b c d f g h i l k s u v a' m0 z1 anyconstrs >>=
+          \(n, o, p, q, t, b') -> type_matches_unnamed_algebraic a b c q o p h n m k t u v b' m0 z1 anyconstrs)
   type_method :: (Location -> Location_1) -> Method_2 -> Map' Kind -> Err Method_3
   type_method a (Method_2 b c i d) e = type_kinds_0 a c e >>= \(g, h) -> Method_3 b g i <$> type_typ a d h Type_kind
   type_method_1 :: String -> Map' Class_5 -> Method_3 -> Err Method_4
@@ -1961,7 +2055,7 @@ module Awful.Typechecker (
       Set String ->
       [(Type_1, Type_1)] ->
       Name ->
-      Err ([(String, Pat_1)], Map' Type_2, Integer, Set String, [(Type_1, Type_1)]))
+      Err ([Pat_1], Map' Type_2, Integer, Set String, [(Type_1, Type_1)]))
   type_named_pats a b d e f g h i (Name x y) =
     let
       z a' = Left ("Constructor " ++ y ++ location (a x) ++ " has been given too " ++ a' ++ " arguments.")
@@ -1974,11 +2068,11 @@ module Awful.Typechecker (
         j : k ->
           case e of
             [] -> z "many"
-            (l, m) : n ->
+            (_, m) : n ->
               (
                 type_pat a b j m f g h i >>=
                 \(c, o, p, q, r) ->
-                  (\(s, t, u, v, w) -> ((l, c) : s, t, u, v, w)) <$> type_named_pats a b k n o p q r (Name x y))
+                  (\(s, t, u, v, w) -> (c : s, t, u, v, w)) <$> type_named_pats a b k n o p q r (Name x y))
   type_ops :: String -> Map' Type_2 -> [Name] -> Err ()
   type_ops a b c =
     case c of
@@ -2021,16 +2115,76 @@ module Awful.Typechecker (
               let
                 (p, q, r) = typevars i (l, Data.Map.empty, n) in
                 (
-                  (\ (s, t, u, v, w) -> (Named_application_pat_1 s, t, u, v, w)) <$>
+                  (\ (s, t, u, v, w) -> (Application_pat_1 s, t, u, v, w)) <$>
                   type_named_pats k h f (second (repl' q) <$> j) d p r ((c, repl' q m) : o) (Name g e))
             Unnamed_strct i j m ->
               let
                 (p, q, r) = typevars i (l, Data.Map.empty, n) in
                 (
-                  (\ (s, t, u, v, w) -> (Unnamed_application_pat_1 s, t, u, v, w)) <$>
+                  (\ (s, t, u, v, w) -> (Application_pat_1 s, t, u, v, w)) <$>
                   type_unnamed_pats k h f (repl' q <$> j) d p r ((c, repl' q m) : o) (Name g e)))
       Blank_pat -> Right (Blank_pat_1, d, l, n, o)
       Name_pat e -> Right (Name_pat_1 e, Data.Map.insert e (Basic_type_1 [] Nothing [] c) d, l, n, o)
+  type_pat_new ::
+    (
+      (Location -> Location_1) ->
+      Map' Anyconstr ->
+      New_pat_0 ->
+      Type_1 ->
+      Map' Type_2 ->
+      Integer ->
+      Set String ->
+      [(Type_1, Type_1)] ->
+      Err (New_pat_1, Map' Type_2, Integer, Set String, [(Type_1, Type_1)]))
+  type_pat_new k h b c d l n o =
+    case b of
+      New_application_pat_0 g e f ->
+        und_err
+        e
+        h
+        "constructor"
+        (k g)
+        (\ (Anyconstr i j m) ->
+          let
+            (p, q, r) = typevars i (l, Data.Map.empty, n) in
+            (
+              (\ (s, t, u, v, w) -> (New_application_pat_1 e s, t, u, v, w)) <$>
+              type_pats_new k h f (repl' q <$> j) d p r ((c, repl' q m) : o) (Name g e)))
+      New_blank_pat_0 -> Right (New_blank_pat_1, d, l, n, o)
+      New_int_pat_0 i -> Right (New_int_pat_1 i, d, l, n, (c, int_type) : o)
+      New_modular_pat_0 (m@(Modular _ _ md)) ->
+        do
+          m' <- check_mod k m
+          Right (New_modular_pat_1 m', d, l, n, (c, Application_type_1 (Name_type_1 "Modular") (int_to_nat_type md)) : o)
+      New_name_pat_0 _ e -> Right (New_name_pat_1 e, Data.Map.insert e (Basic_type_1 [] Nothing [] c) d, l, n, o)
+  type_pats_new ::
+    (
+      (Location -> Location_1) ->
+      Map' Anyconstr ->
+      [New_pat_0] ->
+      [Type_1] ->
+      Map' Type_2 ->
+      Integer ->
+      Set String ->
+      [(Type_1, Type_1)] ->
+      Name ->
+      Err ([New_pat_1], Map' Type_2, Integer, Set String, [(Type_1, Type_1)]))
+  type_pats_new a b d e f g h i (Name x y) =
+    let
+      z a' = Left ("Constructor " ++ y ++ location (a x) ++ " has been given too " ++ a' ++ " arguments.")
+    in
+      case d of
+        [] ->
+          case e of
+            [] -> Right ([], f, g, h, i)
+            _ -> z "few"
+        j : k ->
+          case e of
+            [] -> z "many"
+            m : n ->
+              (
+                type_pat_new a b j m f g h i >>=
+                \(c, o, p, q, r) -> (\(s, t, u, v, w) -> (c : s, t, u, v, w)) <$> type_pats_new a b k n o p q r (Name x y))
 {-
 TODO:
 Do it with 1 function that assembles a system of equations and one function that solves the system
@@ -2241,10 +2395,10 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
     Tree_5 ->
     (File, Map' Expression_2, Map' Kind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)])) ->
     Err (File, Map' Expression_2, Map' Kind, Map' (Map' Location'), Map' ([String], Map' [(String, Nat)]))
-  typing k (Tree_5 a a' x7 c) (File d t u v b' c5 x t2 k7, l, m, m', n4) =
+  typing k (Tree_5 a a' x7 c) (File d t u v b' c5 x t2 k7 anyconstrs, l, m, m', n4) =
     (
-      type_datas (Location_1 k) a (old d, old t, old u, old v, l, m, old k7) >>=
-      \(e, b, h, g, f, n, k8) ->
+      type_datas (Location_1 k) a (old d, old t, old u, old v, l, m, old k7, old anyconstrs) >>=
+      \(e, b, h, g, f, n, k8, anyconstrs') ->
         (
           type_classes k (fst <$> e) a' (old b', m', g, n4, old t2, old c5) >>=
           \(c', m2, g0, x1, x2, t3) ->
@@ -2260,7 +2414,8 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
                     (rem_old t3)
                     (rem_old' y)
                     (rem_old x2)
-                    (rem_old k8),
+                    (rem_old k8)
+                    (rem_old anyconstrs'),
                   i,
                   n,
                   n',
@@ -2276,7 +2431,8 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
                 m2
                 (old' x)
                 x1
-                (fst <$> k8))))
+                (fst <$> k8)
+                (fst <$> anyconstrs'))))
   unnamed_algebraics :: Map' Unnamed_alg
   unnamed_algebraics =
     Data.Map.fromList

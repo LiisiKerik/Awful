@@ -3,20 +3,20 @@ Load List.awf
 Load Logical.awf
 Load Pair.awf
 Load Unit.awf
-Def Equal[T : Type]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> True, Default -> False}
-Def Greater[T : Type]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> True, Default -> False}
-Def Greater_or_equal[T : Type]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> False, Default -> True}
-Def Less[T : Type]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> True, Default -> False}
-Def Less_or_equal[T : Type]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> False, Default -> True}
-Def Max[T : Type]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> y, Default -> x}
-Def Min[T : Type]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> x, Default -> y}
-Def Not_equal[T : Type]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> False, Default -> True}
+Def Equal[T : Type]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> True, _ -> False}
+Def Greater[T : Type]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> True, _ -> False}
+Def Greater_or_equal[T : Type]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> False, _ -> True}
+Def Less[T : Type]<Ord T>(x : T, y : T) : Logical = Match Compare x y {LT -> True, _ -> False}
+Def Less_or_equal[T : Type]<Ord T>(x : T, y : T) : Logical = Match Compare x y {GT -> False, _ -> True}
+Def Max[T : Type]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> y, _ -> x}
+Def Min[T : Type]<Ord T>(x : T, y : T) : T = Match Compare x y {LT -> x, _ -> y}
+Def Not_equal[T : Type]<Ord T>(x : T, y : T) : Logical = Match Compare x y {EQ -> False, _ -> True}
 Instance Ord{Comparison}(
   Compare x y =
     Match x {
-      LT -> Match y {LT -> EQ, Default -> LT},
+      LT -> Match y {LT -> EQ, _ -> LT},
       EQ -> Match y {LT -> GT, EQ -> EQ, GT -> LT},
-      GT -> Match y {GT -> EQ, Default -> GT}})
+      GT -> Match y {GT -> EQ, _ -> GT}})
 Instance Ord{Complex T}<Ord T>(Compare (Complex x y) (Complex z a) = Compare (Pair x y) (Pair z a))
 Instance Ord{List T}<Ord T>(
   Compare x y =

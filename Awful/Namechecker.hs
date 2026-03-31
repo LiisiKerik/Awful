@@ -45,9 +45,10 @@ module Awful.Namechecker (
     Basic_def_3 Location String [(String, Kind)] [Constraint_0] Type_8 Expression_1 |
     Instance_3 Location Name Name [Kind] [Pattern_0] [Constraint_0] [(Name, Expression_1)]
       deriving Show
+  data Eqq_2 = Eqq_2 New_pat_0 Expression_1 deriving Show
   data Expression_1 =
     Application_expression_1 Expression_1 Expression_1 |
-    Function_expression_1 Pat Expression_1 |
+    Function_expression_1 New_pat_0 Expression_1 |
     Int_expression_1 Integer |
     Match_expression_1 Location Expression_1 Matches_1 |
     Modular_expression_1 Modular |
@@ -207,26 +208,39 @@ module Awful.Namechecker (
       d : e -> naming_def_1 a d c >>= \(f, g) -> first ((:) f) <$> naming_defs_1 a e g
   naming_defs_2 :: String -> [Def_2] -> (Set String, Locations) -> Err [Def_3]
   naming_defs_2 = naming_list' naming_def_2
+  naming_eqs :: String -> (Set String, Locations) -> [Eqq'] -> Err (Locations, [Eqq_2])
+  naming_eqs fpath (constrs, locs) eqs =
+    case eqs of
+      [] -> Right (locs, [])
+      eq : eqs' ->
+        do
+          (locs', eq') <- naming_eq fpath (constrs, locs) eq
+          (locs'', eqs'') <- naming_eqs fpath (constrs, locs') eqs'
+          Right (locs'', eq' : eqs'')
+  naming_eq :: String -> (Set String, Locations) -> Eqq' -> Err (Locations, Eqq_2)
+  naming_eq fpath (constrs, locs) (Eqq' pat term) =
+    do
+      (locs', pat') <- naming_new_pat fpath pat (constrs, locs)
+      term' <- naming_expression fpath term (constrs, locs')
+      Right (locs', Eqq_2 pat' term')
   naming_expression :: String -> Expression_9 -> (Set String, Locations) -> Err Expression_1
   naming_expression g a (f, b) =
     case a of
       Application_expression_9 c d -> naming_application g (f, b) (naming_expression g c (f, b)) d
       Function_expression_9 c d -> naming_fun g (f, b) c d
       Int_expression_9 c -> Right (Int_expression_1 c)
-      Let_expression_9 (Eqq' (Name l c) d e) h ->
-        let
-          i j = naming_application g (f, b) (naming_fun g (f, b) (Pat l j) h)
-        in
-          case Data.Set.member c f of
-            False -> i (Name_pat c) (Prelude.foldr Function_expression_9 e d)
-            True -> i (Application_pat c d) e
+      Let_expression_9 eqs h ->
+        do
+          (b', eqs') <- naming_eqs g (f, b) eqs
+          h' <- naming_expression g h (f, b')
+          return (Prelude.foldr (\ (Eqq_2 pat x1) x2 -> Application_expression_1 (Function_expression_1 pat x2) x1) h' eqs')
       Match_expression_9 h c d -> naming_expression g c (f, b) >>= \e -> Match_expression_1 h e <$> naming_matches g d (f, b)
       Modular_expression_9 c -> Right (Modular_expression_1 c)
       Name_expression_9 c d e -> Right (Name_expression_1 c d e)
   naming_fields :: String -> [(Name, Type_8)] -> Locations -> Err (Locations, [(String, Type_8)])
   naming_fields = naming_arguments naming_name
-  naming_fun :: String -> (Set String, Locations) -> Pat -> Expression_9 -> Err Expression_1
-  naming_fun x (y, b) z w = naming_pat x z (y, b) >>= \(a, c) -> Function_expression_1 c <$> naming_expression x w (y, a)
+  naming_fun :: String -> (Set String, Locations) -> New_pat_0 -> Expression_9 -> Err Expression_1
+  naming_fun x (y, b) z w = naming_new_pat x z (y, b) >>= \(a, c) -> Function_expression_1 c <$> naming_expression x w (y, a)
   naming_list :: (String -> t -> u -> Err (u, v)) -> String -> [t] -> u -> Err (u, [v])
   naming_list a h b c =
     case b of
@@ -302,6 +316,22 @@ module Awful.Namechecker (
     case c of
       [] -> Right []
       d : e -> naming_name a d b >>= \(f, g) -> (:) g <$> naming_names' a f e
+  naming_new_pat :: String -> New_pat_0 -> (Set String, Locations) -> Err (Locations, New_pat_0)
+  naming_new_pat a c (f, d) =
+    case c of
+      New_application_pat_0 b g e -> second (New_application_pat_0 b g) <$> naming_new_pats a e (f, d)
+      New_blank_pat_0 -> Right (d, New_blank_pat_0)
+      New_int_pat_0 i -> Right (d, New_int_pat_0 i)
+      New_modular_pat_0 m -> Right (d, New_modular_pat_0 m)
+      New_name_pat_0 b e ->
+        case Data.Set.member e f of
+          False -> (\(g, _) -> (g, New_name_pat_0 b e)) <$> naming_name a (Name b e) d
+          True -> Right (d, New_application_pat_0 b e [])
+  naming_new_pats :: String -> [New_pat_0] -> (Set String, Locations) -> Err (Locations, [New_pat_0])
+  naming_new_pats a b (f, c) =
+    case b of
+      [] -> Right (c, [])
+      d : e -> naming_new_pat a d (f, c) >>= \(g, h) -> second ((:) h) <$> naming_new_pats a e (f, g)
   naming_ops :: String -> Locations -> [Opdecl_1] -> Err (Locations, [Name])
   naming_ops a b c =
     case c of

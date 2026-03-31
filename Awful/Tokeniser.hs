@@ -23,7 +23,6 @@ module Awful.Tokeniser (Err, Location_1 (..), Token (..), classify_char, locatio
     Class_token |
     Comma_token |
     Def_token |
-    Default_token |
     In_token |
     Instance_token |
     Int_token Integer |
@@ -149,7 +148,6 @@ module Awful.Tokeniser (Err, Location_1 (..), Token (..), classify_char, locatio
       "Case" -> Case_token
       "Class" -> Class_token
       "Def" -> Def_token
-      "Default" -> Default_token
       "In" -> In_token
       "Instance" -> Instance_token
       "Let" -> Let_token

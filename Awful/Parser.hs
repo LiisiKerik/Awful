@@ -23,6 +23,7 @@ module Awful.Parser (
   Method (..),
   Modular (..),
   Name (..),
+  New_pat_0 (..),
   Opdecl_0 (..),
   Pat (..),
   Pat_branch (..),
@@ -52,15 +53,15 @@ module Awful.Parser (
     Named_struct_data_0 [(Name, Type_7)] | Unnamed_algebraic_data_0 [Unnamed_form_0] | Unnamed_struct_data_0 [Type_7]
       deriving Show
   data Def_0 =
-    Basic_def_0 Name [(Name, Kind)] [Constraint_0] [(Pat, Type_7)] Type_7 Expression_0 |
-    Instance_def_0 Location Name Name [Kind] [Pattern_1] [Constraint_0] [(Name, ([Pat], Expression_0))]
+    Basic_def_0 Name [(Name, Kind)] [Constraint_0] [(New_pat_0, Type_7)] Type_7 Expression_0 |
+    Instance_def_0 Location Name Name [Kind] [Pattern_1] [Constraint_0] [(Name, ([New_pat_0], Expression_0))]
       deriving Show
-  data Eqq = Eqq Name [Pat] Expression_0 deriving Show
+  data Eqq = Eqq New_pat_0 Expression_0 deriving Show
   data Expression_0 =
     Application_expression_0 Expression_0 [Expression_0] |
-    Function_expression_0 Pat Expression_0 |
+    Function_expression_0 New_pat_0 Expression_0 |
     Int_expression_0 Integer |
-    Let_expression_0 Eqq Expression_0 |
+    Let_expression_0 [Eqq] Expression_0 |
     Match_expression_0 Location Expression_0 Matches_0 |
     Modular_expression_0 Modular |
     Name_expression_0 Name (Maybe Type_7) [Type_7] |
@@ -78,6 +79,13 @@ module Awful.Parser (
   data Method = Method Name [(Name, Kind)] [Constraint_0] Type_7 deriving Show
   data Modular = Modular Location Integer Integer deriving Show
   data Name = Name Location String deriving Show
+  data New_pat_0 =
+    New_application_pat_0 Location String [New_pat_0] |
+    New_blank_pat_0 |
+    New_int_pat_0 Integer |
+    New_modular_pat_0 Modular |
+    New_name_pat_0 Location String
+      deriving Show
   data Opdecl_0 = Opdecl_0 Location String Name Integer Assoc deriving Show
   data Pat = Pat Location Pat_branch deriving Show
   data Pat_branch = Application_pat String [Pat] | Blank_pat | Name_pat String deriving Show
@@ -121,6 +129,8 @@ module Awful.Parser (
   parse a b c = first (\ f -> f b) (fromJust (parse' classify_char next_location tokenise a (flip parse_error) c))
   parse_ap_expr :: Parser Expression_0
   parse_ap_expr = Application_expression_0 <$> parse_br_expr <*> parse_some parse_br_expr
+  parse_ap_new_pat :: Parser New_pat_0
+  parse_ap_new_pat = New_application_pat_0 <$> parse_location <*> parse_name <*> parse_some parse_br_new_pat
   parse_ap_type :: Parser Type_0
   parse_ap_type = Application_type_0 <$> parse_br_type <*> parse_some parse_br_type
   parse_application_pat :: Parser Pat
@@ -158,19 +168,26 @@ module Awful.Parser (
       parse_name'' Def_token <*>
       parse_kinds <*>
       parse_constraints <*>
-      parse_arguments' parse_pat <*
+      parse_arguments' parse_new_pat <*
       parse_colon <*>
       parse_type <*
       parse_eq <*>
       parse_expression')
   parse_blank :: Parser Pattern_0
   parse_blank = Blank_pattern <$ parse_token Blank_token
+  parse_blank_new_pat :: Parser New_pat_0
+  parse_blank_new_pat =
+    do
+      parse_token Blank_token
+      return New_blank_pat_0
   parse_blank_pat :: Parser Pat
   parse_blank_pat = (\x -> Pat x Blank_pat) <& parse_token Blank_token
   parse_br_expr :: Parser Expression_0
   parse_br_expr = parse_round (parse_comp_expr <+> parse_mid_expr) <+> parse_elementary_expression
   parse_br_expr' :: Parser Expression_0
   parse_br_expr' = parse_round parse_comp_expr <+> parse_mid_expr <+> parse_elementary_expression
+  parse_br_new_pat :: Parser New_pat_0
+  parse_br_new_pat = parse_round parse_mid_new_pat <+> parse_elementary_new_pat
   parse_brack_pat :: Parser Pat
   parse_brack_pat = parse_round parse_application_pat <+> parse_elementary_pat
   parse_bracketed_kind :: Parser Kind
@@ -221,15 +238,14 @@ module Awful.Parser (
   parse_def :: Parser Def_0
   parse_def = parse_basic <+> parse_instance
   parse_default_pat :: Parser Expression_0
-  parse_default_pat = parse_comma *> parse_token Default_token *> parse_arrow *> parse_expression'
+  parse_default_pat = parse_comma *> parse_token Blank_token *> parse_arrow *> parse_expression'
   parse_default_pat' :: Parser (Maybe (Location, Expression_0))
   parse_default_pat' =
-    Just <$ parse_comma <*> ((,) <& parse_token Default_token <* parse_arrow <*> parse_expression') <+> pure Nothing
+    Just <$ parse_comma <*> ((,) <& parse_token Blank_token <* parse_arrow <*> parse_expression') <+> pure Nothing
   parse_elementary_expression :: Parser Expression_0
-  parse_elementary_expression =
-    (
-      parse_int_expression <+>
-      parse_name_expression)
+  parse_elementary_expression = parse_int_expression <+> parse_name_expression
+  parse_elementary_new_pat :: Parser New_pat_0
+  parse_elementary_new_pat = parse_blank_new_pat <+> parse_int_new_pat <+> parse_name_new_pat
   parse_elementary_pat :: Parser Pat
   parse_elementary_pat = parse_blank_pat <+> parse_name_pat
   parse_elementary_type :: Parser Type_0
@@ -237,7 +253,12 @@ module Awful.Parser (
   parse_eq :: Parser ()
   parse_eq = parse_operator "="
   parse_eq' :: Parser Eqq
-  parse_eq' = Eqq <$> parse_name' <*> parse_many parse_brack_pat <* parse_eq <*> parse_expression'
+  parse_eq' =
+    do
+      pat <- parse_new_pat
+      parse_eq
+      term <- parse_expression'
+      return (Eqq pat term)
   parse_error :: (Location -> Location_1) -> Location -> String
   parse_error a b = "Parse error" ++ location' (a b)
   parse_expression :: String -> Err Expression_0
@@ -245,7 +266,7 @@ module Awful.Parser (
   parse_expression' :: Parser Expression_0
   parse_expression' = parse_comp_expr <+> parse_mid_expr <+> parse_elementary_expression
   parse_function :: Parser Expression_0
-  parse_function = parse_arrow' (Function_expression_0 <$> parse_pat)
+  parse_function = parse_arrow' (Function_expression_0 <$> parse_new_pat)
   parse_instance :: Parser Def_0
   parse_instance =
     (
@@ -261,7 +282,7 @@ module Awful.Parser (
       parse_constraints <*>
       parse_optional
         parse_round
-        ((\x -> \y -> \z -> (x, (y, z))) <$> parse_name' <*> parse_many parse_brack_pat <* parse_eq <*> parse_expression'))
+        ((\x -> \y -> \z -> (x, (y, z))) <$> parse_name' <*> parse_many parse_br_new_pat <* parse_eq <*> parse_expression'))
   parse_int :: Parser Integer
   parse_int =
     parse_token'
@@ -271,14 +292,16 @@ module Awful.Parser (
           _ -> Nothing)
   parse_int_expression :: Parser Expression_0
   parse_int_expression = Int_expression_0 <$> parse_int
+  parse_int_new_pat :: Parser New_pat_0
+  parse_int_new_pat = New_int_pat_0 <$> parse_int
   parse_let_expression :: Parser Expression_0
   parse_let_expression =
-    (
-      flip (foldr Let_expression_0) <$
-      parse_token Let_token <*>
-      parse_non_empty_list Comma_token parse_eq' <*
-      parse_token In_token <*>
-      parse_expression')
+    do
+      parse_token Let_token
+      eqs <- parse_non_empty_list Comma_token parse_eq'
+      parse_token In_token
+      term <- parse_expression'
+      return (Let_expression_0 eqs term)
   parse_kind :: Parser Kind
   parse_kind = parse_arrow_kind <+> parse_name_kind
   parse_kinds :: Parser [(Name, Kind)]
@@ -318,6 +341,8 @@ module Awful.Parser (
   parse_method = Method <$> parse_name' <*> parse_kinds <*> parse_constraints <* parse_colon <*> parse_type
   parse_mid_expr :: Parser Expression_0
   parse_mid_expr = parse_ap_expr <+> Modular_expression_0 <$> parse_modular
+  parse_mid_new_pat :: Parser New_pat_0
+  parse_mid_new_pat = parse_ap_new_pat <+> New_modular_pat_0 <$> parse_modular
   parse_modular :: Parser Modular
   parse_modular = (\x -> flip (Modular x)) <&> parse_int <* parse_token (Operator_token "#") <*> parse_int
   parse_name :: Parser String
@@ -343,6 +368,8 @@ module Awful.Parser (
       parse_optional' (Just <$> parse_brackets Left_curly_bracket_token Right_curly_bracket_token parse_type) <*>
       parse_optional'
         (parse_brackets Left_square_bracket_token Right_square_bracket_token (parse_non_empty_list Comma_token parse_type)))
+  parse_name_new_pat :: Parser New_pat_0
+  parse_name_new_pat = New_name_pat_0 <$> parse_location <*> parse_name
   parse_name_kind :: Parser Kind
   parse_name_kind = parse_nat_kind <+> parse_type_kind
   parse_name_pat :: Parser Pat
@@ -358,6 +385,8 @@ module Awful.Parser (
     do
       parse_name_4 "Nat"
       return Nat_kind
+  parse_new_pat :: Parser New_pat_0
+  parse_new_pat = parse_mid_new_pat <+> parse_elementary_new_pat
 {-
   parse_nothing :: Parser ()
   parse_nothing = Parser (\a -> Right ((), a))
@@ -407,8 +436,6 @@ module Awful.Parser (
   parse_optional a b = parse_optional' (a (parse_non_empty_list Comma_token b))
   parse_optional' :: Alternative f => Parser (f t) -> Parser (f t)
   parse_optional' a = a <+> pure empty
-  parse_pat :: Parser Pat
-  parse_pat = parse_application_pat <+> parse_elementary_pat
   parse_pattern_0 :: Parser Pattern_0
   parse_pattern_0 = parse_blank <+> parse_name_pattern
   parse_pattern_1 :: Parser Pattern_1

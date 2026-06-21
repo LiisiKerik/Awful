@@ -15,4 +15,4 @@ Instance Field{Unit}(Inverse = Wrap)
 Def Pow[T : Type]<Field T>(i : Int, x : T) : Maybe T =
   Match Less i 0 {False -> Wrap (Pow' i x), True -> Inverse (Pow' (Negate i) x)}
 Def Pow'[T : Type]<Ring T>(i : Int, x : T) : T =
-  Match i {0 -> Identity, _ -> Let y = Pow' (Div'{2} i) x, z = y * y In Match Convert i {0 # 2 -> z, 1 # 2 -> x * z}}
+  Match i {0 -> Identity, _ -> Let y = Pow' (Div'{{2}} i) x, z = y * y In Match Convert i {0 # 2 -> z, 1 # 2 -> x * z}}

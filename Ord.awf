@@ -28,7 +28,7 @@ Instance Ord{Logical}(
   Compare x y = Match x {False -> Match y {False -> EQ, True -> LT}, True -> Match y {False -> GT, True -> EQ}})
 Instance Ord{Maybe T}<Ord T>(
   Compare x y =
-    Match x {Nothing -> Match y {Nothing -> EQ, Wrap -> LT}, Wrap z -> Match y {Nothing -> GT, Wrap w -> Compare z w}})
+    Match x {Nothing -> Match y {Nothing -> EQ, Wrap _ -> LT}, Wrap z -> Match y {Nothing -> GT, Wrap w -> Compare z w}})
 Instance Ord{Pair T U}<Ord T, Ord U>(
   Compare (Pair x y) (Pair z a) = Match Compare x z {LT -> LT, EQ -> Compare y a, GT -> GT})
 Instance Ord{Unit}(Compare _ _ = EQ)

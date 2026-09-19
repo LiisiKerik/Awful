@@ -29,5 +29,4 @@ executable Awful
     Awful.Namechecker,
     Awful.Operators,
     Awful.Parser,
-    Awful.Tokeniser,
     Awful.Typechecker

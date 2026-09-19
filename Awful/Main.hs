@@ -3,7 +3,6 @@ module Main (main) where
   import Awful.Namechecker
   import Awful.Operators
   import Awful.Parser
-  import Awful.Tokeniser
   import Awful.Typechecker
   import Data.Bifunctor
   import Data.List

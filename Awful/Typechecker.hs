@@ -59,7 +59,6 @@ module Awful.Typechecker (
   import Awful.Namechecker
   import Awful.Operators
   import Awful.Parser
-  import Awful.Tokeniser
   import Control.Monad
   import Data.Bifunctor
   import Data.List
@@ -766,11 +765,11 @@ module Awful.Typechecker (
     case Data.Map.lookup g f of
       Just h ->
         case h of
-          Left i -> Left ("Conflicting data cases for " ++ g ++ location (e i) ++ " and" ++ location' (e a))
+          Left i -> Left ("Conflicting data cases for " ++ g ++ wrloc (e i) ++ " and" ++ location' (e a))
           Right i ->
             if length b == length i
               then Right (Data.Map.insert g (Left a) f, Brnch_3 g (zip b i) c d)
-              else Left ("Kind constructor " ++ g ++ location (e a) ++ " has a wrong number of arguments.")
+              else Left ("Kind constructor " ++ g ++ wrloc (e a) ++ " has a wrong number of arguments.")
       Nothing -> Left ("Undefined constructor for " ++ j ++ " " ++ g ++ location' (e a))
   type_branching_1 ::
     (
@@ -840,7 +839,7 @@ module Awful.Typechecker (
       [] -> Right ([], d, p, u, x)
       e : f ->
         case c of
-          [] -> Left ("Constructor " ++ l ++ location (j k) ++ " has been given too many arguments.")
+          [] -> Left ("Constructor " ++ l ++ wrloc (j k) ++ " has been given too many arguments.")
           g : h ->
             (
               type_pat j o e (repl' a g) d p u x >>=
@@ -1012,7 +1011,7 @@ module Awful.Typechecker (
       (p'@(Name h i), j) : k ->
 -- todo: distinguish between these two error messages
         let
-          o p = Left ("Definition " ++ i ++ location (l h) ++ " is not a component of class " ++ m ++ p)
+          o p = Left ("Definition " ++ i ++ wrloc (l h) ++ " is not a component of class " ++ m ++ p)
         in
           case b of
             [] -> o "."
@@ -1050,7 +1049,7 @@ module Awful.Typechecker (
                 Left
                   (
                     "Kind mismatch in constraint" ++
-                    location (Location_1 j b) ++
+                    wrloc (Location_1 j b) ++
                     " between class " ++
                     c ++
                     " and type variable " ++
@@ -1405,7 +1404,7 @@ module Awful.Typechecker (
               f4
               w3
               anyconstrs
-          s' w1 = Left (e' ++ " " ++ e ++ " at" ++ location (j l') ++ " is an illegal instance because " ++ w1 ++ ".")
+          s' w1 = Left (e' ++ " " ++ e ++ " at" ++ wrloc (j l') ++ " is an illegal instance because " ++ w1 ++ ".")
         in
           case w0 of
             Just q ->
@@ -1520,7 +1519,7 @@ module Awful.Typechecker (
                         (
                           "Function " ++
                           q ++
-                          location (a p') ++
+                          wrloc (a p') ++
                           " requires instance or constraint " ++
                           t ++
                           " " ++
@@ -1614,7 +1613,7 @@ module Awful.Typechecker (
                 [] -> undefined
                 Match_Modular_1 q3 (Modular _ m2 _) _ : _ ->
                   if m2 < 2
-                    then Left ("Match expression over Modular " ++ show m2 ++ location (r a7))
+                    then Left ("Match expression over Modular " ++ show m2 ++ wrloc (r a7))
                     else
                       (
                         type_expression v w r o f h d c (mod_type (int_to_nat_type m2)) c' r7 z8 anyconstrs >>=
@@ -1893,7 +1892,7 @@ module Awful.Typechecker (
                 show s ++
                 " and " ++
                 show j ++
-                location (c p) ++
+                wrloc (c p) ++
                 " and" ++
                 location' (c t)))
   type_match_unnamed_algebraic ::
@@ -1932,7 +1931,7 @@ module Awful.Typechecker (
         Left
           (
             case Data.Map.lookup k b of
-              Just _ -> "Incompatible constructors " ++ q ++ " and " ++ k ++ location (c q1) ++ " and" ++ location' (c j)
+              Just _ -> "Incompatible constructors " ++ q ++ " and " ++ k ++ wrloc (c q1) ++ " and" ++ location' (c j)
               Nothing -> "Undefined algebraic constructor " ++ k ++ location' (c j))
   type_matches_int ::
     (
@@ -2058,7 +2057,7 @@ module Awful.Typechecker (
       Err ([Pat_1], Map' Type_2, Integer, Set String, [(Type_1, Type_1)]))
   type_named_pats a b d e f g h i (Name x y) =
     let
-      z a' = Left ("Constructor " ++ y ++ location (a x) ++ " has been given too " ++ a' ++ " arguments.")
+      z a' = Left ("Constructor " ++ y ++ wrloc (a x) ++ " has been given too " ++ a' ++ " arguments.")
     in
       case d of
         [] ->
@@ -2089,7 +2088,7 @@ module Awful.Typechecker (
                 (Application_type_1 (Name_type_1 "Function") _)
                 (Application_type_1 (Application_type_1 (Name_type_1 "Function") _) _) ->
                   type_ops a b f
-              _ -> Left ("Function " ++ e ++ location (Location_1 a d) ++ " takes less than 2 arguments."))
+              _ -> Left ("Function " ++ e ++ wrloc (Location_1 a d) ++ " takes less than 2 arguments."))
   type_pat ::
     (
       (Location -> Location_1) ->
@@ -2171,7 +2170,7 @@ module Awful.Typechecker (
       Err ([New_pat_1], Map' Type_2, Integer, Set String, [(Type_1, Type_1)]))
   type_pats_new a b d e f g h i (Name x y) =
     let
-      z a' = Left ("Constructor " ++ y ++ location (a x) ++ " has been given too " ++ a' ++ " arguments.")
+      z a' = Left ("Constructor " ++ y ++ wrloc (a x) ++ " has been given too " ++ a' ++ " arguments.")
     in
       case d of
         [] ->
@@ -2248,7 +2247,7 @@ Make error messages similar to those for type errors ("Kind mismatch between x a
       Err ([Pat_1], Map' Type_2, Integer, Set String, [(Type_1, Type_1)]))
   type_unnamed_pats a b d e f g h i (Name x y) =
     let
-      z a' = Left ("Constructor " ++ y ++ location (a x) ++ " has been given too " ++ a' ++ " arguments.")
+      z a' = Left ("Constructor " ++ y ++ wrloc (a x) ++ " has been given too " ++ a' ++ " arguments.")
     in
       case d of
         [] ->

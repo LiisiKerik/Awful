@@ -21,7 +21,6 @@ module Awful.Namechecker (
   naming_expression) where
   import Awful.Operators
   import Awful.Parser
-  import Awful.Tokeniser
   import Data.Bifunctor
   import Data.Map
   import Data.Set
@@ -83,7 +82,7 @@ module Awful.Namechecker (
       a ++
       (case c of
         Language -> " in the language"
-        Library e -> location e) ++
+        Library e -> wrloc e) ++
       " and" ++
       location' d)
   naming :: String -> Tree_2 -> (Set String, Locations, Locations) -> Err ((Set String, Locations, Locations), Tree_5)

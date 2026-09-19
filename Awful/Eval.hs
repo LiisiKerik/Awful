@@ -3,7 +3,6 @@ module Awful.Eval (tokenise_parse_naming_typing_eval) where
   import Awful.Namechecker
   import Awful.Operators
   import Awful.Parser
-  import Awful.Tokeniser
   import Awful.Typechecker
   import Data.List
   import Data.Set

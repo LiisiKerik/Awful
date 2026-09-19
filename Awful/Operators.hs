@@ -29,7 +29,6 @@ module Awful.Operators (
   std_expr,
   und_err) where
   import Awful.Parser
-  import Awful.Tokeniser
   import Data.Bifunctor
   import Data.Map
   import Parser.Locations

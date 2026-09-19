@@ -14,8 +14,10 @@ module Awful.Parser (
   Data_branch_0 (..),
   Def_0 (..),
   Eqq (..),
+  Err,
   Expression_0 (..),
   Kind (..),
+  Location_1 (..),
   Match_Int_0 (..),
   Match_Modular_0 (..),
   Match_unnamed_algebraic_0 (..),
@@ -35,16 +37,29 @@ module Awful.Parser (
   Type_7 (..),
   Unnamed_form_0 (..),
   Get_location (..),
+  location',
   parse_expression,
-  parse_tree) where
-  import Awful.Tokeniser
+  parse_tree,
+  wrloc) where
   import Control.Applicative
   import Data.Bifunctor
+  import Data.Char
+  import Data.Functor
   import Data.Maybe
   import Parser.Locations
   import Parser.Parser
   data Assoc = Lft | Rght deriving (Eq, Show)
   data Brnch_0 = Brnch_0 Name [Name] Name [(Name, Type_7)] deriving Show
+  data Char_class =
+    Delimiter_char Token |
+    Invalid_char |
+    Letter_char Char |
+    Name_char Char |
+    Newline_char |
+    Nonzero_nat_char Char |
+    Operator_char Char |
+    Whitespace_char |
+    Zero_char
   data Class_0 = Class_0 Name (Name, Kind) (Maybe Name) [Method] deriving Show
   data Constraint_0 = Constraint_0 Name Name deriving Show
   data Data_0 = Data_0 Name Data_br_0 deriving Show
@@ -57,6 +72,7 @@ module Awful.Parser (
     Instance_def_0 Location Name Name [Kind] [Pattern_1] [Constraint_0] [(Name, ([New_pat_0], Expression_0))]
       deriving Show
   data Eqq = Eqq New_pat_0 Expression_0 deriving Show
+  type Err t = Either String t
   data Expression_0 =
     Application_expression_0 Expression_0 [Expression_0] |
     Function_expression_0 New_pat_0 Expression_0 |
@@ -68,6 +84,7 @@ module Awful.Parser (
     Op_expression_0 Expression_0 [(Name, Expression_0)]
       deriving Show
   data Kind = Function_kind Kind Kind | Nat_kind | Type_kind deriving (Eq, Show)
+  data Location_1 = Location_1 String Location deriving Show
   data Match_Int_0 = Match_Int_0 Location Integer Expression_0 deriving Show
   data Match_Modular_0 = Match_Modular_0 Location Modular Expression_0 deriving Show
   data Match_unnamed_algebraic_0 = Match_unnamed_algebraic_0 Name [Pat] Expression_0 deriving Show
@@ -92,6 +109,33 @@ module Awful.Parser (
   data Pattern_1 = Pattern_1 Location Pattern_0 deriving Show
   data Pattern_0 = Blank_pattern | Name_pattern String deriving Show
   type Parser = Parser' Token ((Location -> Location_1) -> String)
+  data Token =
+    Arrow_token |
+    Blank_token |
+    Branching_token |
+    Case_token |
+    Class_token |
+    Comma_token |
+    Def_token |
+    In_token |
+    Instance_token |
+    Int_token Integer |
+    Left_curly_bracket_token |
+    Left_round_bracket_token |
+    Left_square_bracket_token |
+    Let_token |
+    Load_token |
+    Match_token |
+    Name_token String |
+    Named_struct_token |
+    Opdecl_token |
+    Operator_token String |
+    Right_curly_bracket_token |
+    Right_round_bracket_token |
+    Right_square_bracket_token |
+    Unnamed_algebraic_token |
+    Unnamed_struct_token
+  type Tokeniser = Tokeniser' Char_class Token ((Location -> Location_1) -> String)
   data Tree_0 = Tree_0 [Data_0] [Class_0] [Opdecl_0] [Def_0] deriving Show
   data Tree_1 = Tree_1 [Name] Tree_0 deriving Show
   data Type_0 = Application_type_0 Type_0 [Type_0] | Name_type_0 Name | Op_type_0 Type_0 [(Name, Type_0)] deriving Show
@@ -102,18 +146,55 @@ module Awful.Parser (
   infixl 4 <&
   (<&) :: (Location -> t) -> Parser () -> Parser t
   f <& p = f <$> parse_location <* p
-  infixl 4 <&>
-  (<&>) :: (Location -> t -> u) -> Parser t -> Parser u
-  f <&> p = f <$> parse_location <*> p
+  deriving instance Eq Char_class
+  deriving instance Eq Token
   instance Get_location Pat where
     get_location (Pat a _) = a
   instance Get_location Pattern_1 where
     get_location (Pattern_1 a _) = a
+  deriving instance Show Char_class
+  deriving instance Show Token
+  classify_char :: Char -> Char_class
+  classify_char c =
+    case c of
+      '\n' -> Newline_char
+      ' ' -> Whitespace_char
+      _ | elem c "!\"#$%&*+-./:;<=>?@\\^`|~" -> Operator_char c
+      _ | elem c "'_" || isLetter c -> Letter_char c
+      '(' -> Delimiter_char Left_round_bracket_token
+      ')' -> Delimiter_char Right_round_bracket_token
+      ',' -> Delimiter_char Comma_token
+      '0' -> Zero_char
+      _ | isDigit c && c /= '0' -> Nonzero_nat_char c
+      '[' -> Delimiter_char Left_square_bracket_token
+      ']' -> Delimiter_char Right_square_bracket_token
+      '{' -> Delimiter_char Left_curly_bracket_token
+      '}' -> Delimiter_char Right_curly_bracket_token
+      _ -> Invalid_char
+  delimiter_char :: Char_class -> Maybe Token
+  delimiter_char char_class =
+    case char_class of
+      Delimiter_char token -> Just token
+      _ -> Nothing
   int_to_nat_type_0 :: Location -> Integer -> Type_0
   int_to_nat_type_0 l x =
     case x of
       0 -> Name_type_0 (Name l "Zr")
       _ -> Application_type_0 (Name_type_0 (Name l "Next")) [int_to_nat_type_0 l (x - 1)]
+  location' :: Location_1 -> String
+  location' a = wrloc a ++ "."
+  letter_char :: Char_class -> Maybe Char
+  letter_char char_class =
+    case char_class of
+      Letter_char c -> Just c
+      _ -> Nothing
+  letter_or_nat_char :: Char_class -> Maybe Char
+  letter_or_nat_char char_class =
+    case char_class of
+      Letter_char c -> Just c
+      Zero_char -> Just '0'
+      Nonzero_nat_char c -> Just c
+      _ -> Nothing
 {-
   mk_let :: [Eqq] -> Expression_0 -> Expression_branch_0
   mk_let x y = (\(Expression_0 _ z) -> z) (Prelude.foldr mk_let' y x)
@@ -125,6 +206,32 @@ module Awful.Parser (
         (Expression_0 l (Function_expression_0 (Pat l (Name_pat x)) w))
         (Prelude.foldr (\(Pat m a) -> \b -> Expression_0 m (Function_expression_0 (Pat m a) b)) z y))
 -}
+  nat_char :: Char_class -> Maybe Char
+  nat_char char_class =
+    case char_class of
+      Zero_char -> Just '0'
+      Nonzero_nat_char c -> Just c
+      _ -> Nothing
+  next_location :: Char_class -> Location -> Location
+  next_location char_class =
+    case char_class of
+      Newline_char -> next_line
+      _ -> next_char
+  nonzero_nat_char :: Char_class -> Maybe Char
+  nonzero_nat_char char_class =
+    case char_class of
+      Nonzero_nat_char c -> Just c
+      _ -> Nothing
+  operator_char :: Char_class -> Maybe Char
+  operator_char a =
+    case a of
+      Operator_char b -> Just b
+      _ -> Nothing
+  operator_token :: String -> Token
+  operator_token operator =
+    case operator of
+      "->" -> Arrow_token
+      _ -> Operator_token operator
   parse :: Show t => Parser t -> (Location -> Location_1) -> String -> Either String t
   parse a b c = first (\ f -> f b) (fromJust (parse' classify_char next_location tokenise a (flip parse_error) c))
   parse_ap_expr :: Parser Expression_0
@@ -136,7 +243,8 @@ module Awful.Parser (
   parse_application_pat :: Parser Pat
   parse_application_pat =
     (
-      (\a -> \x -> \y -> \z -> Pat a (Application_pat x (y : z))) <&>
+      (\a -> \x -> \y -> \z -> Pat a (Application_pat x (y : z))) <$>
+      parse_location <*>
       parse_name <*>
       parse_brack_pat <*>
       parse_many parse_brack_pat)
@@ -249,7 +357,7 @@ module Awful.Parser (
   parse_elementary_pat :: Parser Pat
   parse_elementary_pat = parse_blank_pat <+> parse_name_pat
   parse_elementary_type :: Parser Type_0
-  parse_elementary_type = parse_name_type <+> (int_to_nat_type_0 <&> parse_int)
+  parse_elementary_type = parse_name_type <+> (int_to_nat_type_0 <$> parse_location <*> parse_int)
   parse_eq :: Parser ()
   parse_eq = parse_operator "="
   parse_eq' :: Parser Eqq
@@ -323,9 +431,9 @@ module Awful.Parser (
       parse_matches <*
       parse_token Right_curly_bracket_token)
   parse_match_int :: Parser Match_Int_0
-  parse_match_int = parse_arrow' (Match_Int_0 <&> parse_int)
+  parse_match_int = parse_arrow' (Match_Int_0 <$> parse_location <*> parse_int)
   parse_match_modular :: Parser Match_Modular_0
-  parse_match_modular = parse_arrow' (Match_Modular_0 <&> parse_modular)
+  parse_match_modular = parse_arrow' (Match_Modular_0 <$> parse_location <*> parse_modular)
   parse_match_unnamed_algebraic :: Parser Match_unnamed_algebraic_0
   parse_match_unnamed_algebraic = parse_arrow' (Match_unnamed_algebraic_0 <$> parse_name' <*> parse_many parse_brack_pat)
   parse_matches :: Parser Matches_0
@@ -344,7 +452,7 @@ module Awful.Parser (
   parse_mid_new_pat :: Parser New_pat_0
   parse_mid_new_pat = parse_ap_new_pat <+> New_modular_pat_0 <$> parse_modular
   parse_modular :: Parser Modular
-  parse_modular = (\x -> flip (Modular x)) <&> parse_int <* parse_token (Operator_token "#") <*> parse_int
+  parse_modular = (\x -> flip (Modular x)) <$> parse_location <*> parse_int <* parse_token (Operator_token "#") <*> parse_int
   parse_name :: Parser String
   parse_name =
     parse_token'
@@ -353,7 +461,7 @@ module Awful.Parser (
           Name_token b -> Just b
           _ -> Nothing)
   parse_name' :: Parser Name
-  parse_name' = Name <&> parse_name
+  parse_name' = Name <$> parse_location <*> parse_name
   parse_name'' :: Token -> Parser Name
   parse_name'' = flip parse_name_3 parse_name
   parse_name_3 :: Token -> Parser String -> Parser Name
@@ -373,11 +481,11 @@ module Awful.Parser (
   parse_name_kind :: Parser Kind
   parse_name_kind = parse_nat_kind <+> parse_type_kind
   parse_name_pat :: Parser Pat
-  parse_name_pat = (\x -> \y -> Pat x (Name_pat y)) <&> parse_name
+  parse_name_pat = (\x -> \y -> Pat x (Name_pat y)) <$> parse_location <*> parse_name
   parse_name_pattern :: Parser Pattern_0
   parse_name_pattern = Name_pattern <$> parse_name
   parse_name_type :: Parser Type_0
-  parse_name_type = Name_type_0 <$> (Name <&> parse_name)
+  parse_name_type = Name_type_0 <$> (Name <$> parse_location <*> parse_name)
   parse_named_struct :: Parser Data_0
   parse_named_struct = parse_data' Named_struct_data_0 Named_struct_token (parse_arguments' parse_name')
   parse_nat_kind :: Parser Kind
@@ -391,14 +499,11 @@ module Awful.Parser (
   parse_nothing :: Parser ()
   parse_nothing = Parser (\a -> Right ((), a))
 -}
-{-
-  parse_op :: Parser Name
-  parse_op = Name <&> parse_op''
--}
   parse_op' :: Parser Name
   parse_op' =
     (
-      Name <&>
+      Name <$>
+      parse_location <*>
       parse_token'
         (\a ->
           case a of
@@ -416,7 +521,7 @@ module Awful.Parser (
           Operator_token b -> Just b
           _ -> Nothing)
   parse_op_0 :: Parser Name
-  parse_op_0 = Name <&> filter_parser ((/=) "#") (flip parse_error) parse_op''
+  parse_op_0 = Name <$> parse_location <*> filter_parser ((/=) "#") (\ _ -> flip parse_error) parse_op''
   parse_op_expr :: Parser Expression_0
   parse_op_expr = Op_expression_0 <$> parse_br_expr' <*> parse_some ((,) <$> parse_op_0 <*> parse_br_expr')
   parse_op_type :: Parser Type_0
@@ -439,9 +544,9 @@ module Awful.Parser (
   parse_pattern_0 :: Parser Pattern_0
   parse_pattern_0 = parse_blank <+> parse_name_pattern
   parse_pattern_1 :: Parser Pattern_1
-  parse_pattern_1 = Pattern_1 <&> parse_pattern_0
+  parse_pattern_1 = Pattern_1 <$> parse_location <*> parse_pattern_0
   parse_pattern' :: Parser Name
-  parse_pattern' = Name <&> ("_" <$ parse_token Blank_token <+> parse_name)
+  parse_pattern' = Name <$> parse_location <*> ("_" <$ parse_token Blank_token <+> parse_name)
   parse_round :: Parser t -> Parser t
   parse_round = parse_brackets Left_round_bracket_token Right_round_bracket_token
   parse_tree :: (Location -> Location_1) -> String -> Err Tree_1
@@ -453,7 +558,7 @@ module Awful.Parser (
       parse_many parse_load <*>
       (Tree_0 <$> parse_many parse_data <*> parse_many parse_class <*> parse_many parse_opdecl <*> parse_many parse_def))
   parse_type :: Parser Type_7
-  parse_type = Type_7 <&> (parse_op_type <+> parse_ap_type <+> parse_elementary_type)
+  parse_type = Type_7 <$> parse_location <*> (parse_op_type <+> parse_ap_type <+> parse_elementary_type)
   parse_type_kind :: Parser Kind
   parse_type_kind =
     do
@@ -466,6 +571,57 @@ module Awful.Parser (
       Unnamed_algebraic_token
       (parse_round (parse_non_empty_list Comma_token parse_unnamed_form))
   parse_unnamed_struct :: Parser Data_0
-  parse_unnamed_struct = parse_data' Unnamed_struct_data_0 Unnamed_struct_token (parse_many (Type_7 <&> parse_br_type))
+  parse_unnamed_struct =
+    parse_data' Unnamed_struct_data_0 Unnamed_struct_token (parse_many (Type_7 <$> parse_location <*> parse_br_type))
   parse_unnamed_form :: Parser Unnamed_form_0
-  parse_unnamed_form = Unnamed_form_0 <$> parse_name' <*> parse_many (Type_7 <&> parse_br_type)
+  parse_unnamed_form = Unnamed_form_0 <$> parse_name' <*> parse_many (Type_7 <$> parse_location <*> parse_br_type)
+  tokenise :: Tokeniser ()
+  tokenise = void (parse_many tokenise_1)
+  tokenise_1 :: Tokeniser ()
+  tokenise_1 =
+    tokenise_delimiter <+> tokenise_int <+> tokenise_newline <+> tokenise_operator <+> tokenise_whitespace <+> tokenise_word
+  tokenise_delimiter :: Tokeniser ()
+  tokenise_delimiter = add_token (parse_token' delimiter_char)
+  tokenise_int :: Tokeniser ()
+  tokenise_int = add_token (Int_token <$> (tokenise_negative_int <+> tokenise_zero <+> tokenise_positive_int))
+  tokenise_negative_int :: Tokeniser Integer
+  tokenise_negative_int =
+    do
+      parse_token (Operator_char '-')
+      i <- tokenise_positive_int
+      return (negate i)
+  tokenise_newline :: Tokeniser ()
+  tokenise_newline = parse_token Newline_char
+  tokenise_operator :: Tokeniser ()
+  tokenise_operator = add_token (operator_token <$> parse_some (parse_token' operator_char))
+  tokenise_positive_int :: Tokeniser Integer
+  tokenise_positive_int = read <$> ((:) <$> parse_token' nonzero_nat_char <*> parse_many (parse_token' nat_char))
+  tokenise_whitespace :: Tokeniser ()
+  tokenise_whitespace = parse_token Whitespace_char
+  tokenise_word :: Tokeniser ()
+  tokenise_word = add_token (word_token <$> ((:) <$> parse_token' letter_char <*> parse_many (parse_token' letter_or_nat_char)))
+  tokenise_zero :: Tokeniser Integer
+  tokenise_zero =
+    do
+      parse_token Zero_char
+      return 0
+  word_token :: String -> Token
+  word_token a =
+    case a of
+      "_" -> Blank_token
+      "Branching" -> Branching_token
+      "Case" -> Case_token
+      "Class" -> Class_token
+      "Def" -> Def_token
+      "In" -> In_token
+      "Instance" -> Instance_token
+      "Let" -> Let_token
+      "Load" -> Load_token
+      "Match" -> Match_token
+      "Named_struct" -> Named_struct_token
+      "Operator" -> Opdecl_token
+      "Unnamed_algebraic" -> Unnamed_algebraic_token
+      "Unnamed_struct" -> Unnamed_struct_token
+      _ -> Name_token a
+  wrloc :: Location_1 -> String
+  wrloc (Location_1 a b) = " at " ++ a ++ ":" ++ write_location b
